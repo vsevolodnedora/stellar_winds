@@ -55,7 +55,7 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-files = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
+files = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['1d-5'], 'sm.data')
 print(files)
 # files = get_files('../../sse/sm_e10z002ml/', ['sm0/', 'sm1/', 'sm2/', 'sm3/', 'sm4/', 'sm5/', 'sm6/', 'sm7/', 'sm8/', 'sm9/'], ['1d-5'])
 # files = get_files('./../../sse/', ['sm10z002/'], [])
@@ -69,12 +69,12 @@ t1 = 5.1
 t2 = 5.5
 r_s = 1.
 
-# cl1.xy_profile('r','l',False, None, None)
-# cl1.xyy_profile('r','rho','kappa')
+# cl1.xy_profile('r','kappa', 'Y_c', 'lm', 0)
+# cl1.xyy_profile('r','rho','kappa', 'Y_c', 'lm', 'mdot')
 # cl1.table()
 # cl1.opacity_check(1, None, None, None)
 # cl1.opacity_check(1, 4.75, None, 0.068)
-# cl1.plot_t_rho_kappa(t1, t2,None, None, 1000, None)
+cl1.plot_t_rho_kappa(4.5, 5.5, -9.5, -7.5, 1000, True)
 # cl1.plot_t_mdot_lm(  t1, t2, -5.5, -3, r_s)
 # cl1.plot_t_l_mdot('lm', t1, t2, 4.8, None, [0.70], 100, 100, 5.2, None)
 
@@ -202,4 +202,7 @@ print('T=5.2'.split('='))
 #
 #     return res
 
-print(Math.get_0_to_max([0,2,4,6,8,10,12,14,16,18,20,22], 10))
+print(Math.get_0_to_max([14], 9)[14])
+
+a = np.array([1,2,3,4,])
+print(np.insert(a,0,0))

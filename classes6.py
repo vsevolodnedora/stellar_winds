@@ -300,6 +300,10 @@ class Math:
 
     @staticmethod
     def get_0_to_max(arr, max):
+        if len(arr) == 1: # if ou supply only one element, it builds the array of ints up to that point
+            arr = np.linspace(0, int(arr[0]), num=int(arr[0])+1, dtype=int) # +1 to get step of 1
+            print(arr)
+
         j = 0
         n = 1
         res = []
@@ -2023,10 +2027,10 @@ class Read_SM_data_File:
              'dg', 'd1', 'd2', 'd3', 'd4', 'd5', 'bvis', 'bdiff', 'br', 'bphi',
              'bfq', 'bfq0', 'bfq1', 'ibflag', 'Pg', 'Pr', 'HP', 'Grav', 'kappa',
              'ediss', 'tau', 'nabla_rad', 'L/Ledd', 'nabla', 'P_total', 'mu',
-             'psi', 'dPg_dPr|rho', 'Pturb', 'beta', 'vel_conv', 'mdot', 'tau_ph',
+             'psi', 'dPg_dPr|rho', 'Pturb', 'beta', 'vel_conv', 'mdot', 'tau_ph', '-' # the last is an empty place
              ] # 84 names (0th is not physical)
 
-        if len(self.var_names) != len(self.table[0,:]):
+        if len(self.var_names)-1 != len(self.table[0,:]): # had to modify the -1 - to accoint for '-' case :(
             raise ValueError('len(var_names={})!=len(table[0,:]={}) in sm.file'.
                              format(len(self.var_names), len(self.table[0,:]) ))
 
@@ -2516,8 +2520,12 @@ class Read_SM_data_File:
         if v_n == 84 or v_n == self.var_names[84]: # 'tau_ph':
             return self.tau_ph_
 
-        sys.exit('\t__Error. Variable name is not found |get_col|. Available name list:\n\t {}'
-                 .format(self.var_names))
+        if v_n == '-': # to fill the empty arrays, (mask arrays)
+            return np.zeros(self.t_.shape)
+
+        raise NameError('\t__Error. Variable < {} > is not found |get_col|. Available name list:\n\t {}'
+                 .format(v_n,self.var_names))
+
     # def get_val(self, v_n, i = -1):
     #     if i > len(self.get_col(v_n)):
     #         sys.exit('\t__Error i {} > len(arr of v_n) {}'.format(i, v_n))
@@ -2592,13 +2600,30 @@ class Read_SM_data_File:
                           Physics.opt_depth_par(i, self.rho_, self.kappa_, self.u_, self.r_, self.t_, self.mu_),
                           self.HP_[i], self.tau_[i], ])
 
-    def get_set_of_rows(self, v_n_arr):
-        res = np.zeros(( len(v_n_arr), len(self.r_) ))
-        for v_n in v_n_arr:
-            res[v_n, : ] = self.get_col(v_n)
+    def get_set_of_cols(self, v_n_arr):
+        res = np.zeros(( len(self.r_), len(v_n_arr) ))
+        for i in range(len(v_n_arr)):
+            res[:,i] = self.get_col(v_n_arr[i])
 
         print('\t__Note: vars:[', v_n_arr, '] returned arr:', res.shape)
         return res
+
+    def get_spec_val(self, v_n):
+        '''
+        Available specific v_n:  'lm', 'Y_c'
+        :param v_n:
+        :return:
+        '''
+        if v_n == 'lm':
+            return Physics.loglm(self.l_[-1], self.xm_[-1], False)
+
+        if v_n == 'Y_c':
+            return self.He4_[0]
+
+        if v_n == '-': # mask value, if not nedeeded
+            return 0
+
+        return None
 
 class PhysPlots:
     def __init__(self):
@@ -3609,7 +3634,7 @@ class Treat_Numercials:
                 y_coord = self.mdl[i].get_col(y_name)[i_req]
 
             if y_name == 'lm':
-                y_coord = Physics.loglm(self.mdl[i].l_[i_req], self.mdl[i].xm_[i_req])
+                y_coord = self.mdl[i].get_lm[i_req]
 
             if var_for_label1 == 'Y_c':
                 add_data1 = self.mdl[i].get_col('He4')[0]
@@ -3617,7 +3642,7 @@ class Treat_Numercials:
                 add_data1 = self.mdl[i].get_col(var_for_label1)[i_req]
 
             if var_for_label2 == 'color':
-                add_data2 = int(i * 10 / self.n_of_files) # from 1 to 9 for plotting C+[1-9]
+                add_data2 = int(Math.get_0_to_max([i],9)[i]) # from 1 to 9 for plotting C+[1-9]
             else:
                 add_data2 = self.mdl[i].get_col(var_for_label2)[i_req]
 
@@ -3640,7 +3665,6 @@ class Treat_Numercials:
                         model_stars1 = np.vstack(( model_stars1, np.array(( i, x_y_coord[1, j],
                                                                                x_y_coord[0, j],
                                                                                add_data1,
-
                                                                                add_data2  ))))
             else:
                 if x_coord == None or y_coord == None:
@@ -3708,15 +3732,113 @@ class Treat_Numercials:
         #     fit_x_coord = np.mgrid[(model_stars2[1:, 1].min() - 0.02):(model_stars2[1:, 1].max() + 0.02):100j]
         #     plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
 
-class ClassPlots():
+
+    def get_x_y_z_arrays(self, n_of_model, x_name, y_name, z_name, var_for_label1, var_for_label2, var_for_label3):
+        '''
+        Returns                     0: [ var_for_label1  , var_for_label2 , var_for_label3 ]
+        :param x_name:              1: [ x_coord[:]      , y_coord[:]       z_coord[:]     ]
+        :param y_name:              2  [         :       ,         :                :      ]
+        :param var_for_label1:                      and off it goes
+        :param var_for_label2:
+        :return:
+        '''
+        x_coord = None
+        y_coord = None
+        z_coord = None
+
+        i_req = -1  # for the add_data, as a point
+        '''---------------------MAIN CYCLE-------------------'''
+        # -------------------SETTING-COORDINATES------------------------
+        if x_name in self.mdl [n_of_model].var_names:
+            x_coord = self.mdl[n_of_model].get_col(x_name)
+        if y_name in self.mdl [n_of_model].var_names:
+            y_coord = self.mdl[n_of_model].get_col(y_name)
+        if z_name in self.mdl [n_of_model].var_names:
+            z_coord = self.mdl[n_of_model].get_col(z_name)
+
+        add_data1 = self.mdl[n_of_model].get_spec_val(var_for_label1) # if v_n = Y_c or lm
+        add_data2 = self.mdl[n_of_model].get_spec_val(var_for_label2)
+        add_data3 = self.mdl[n_of_model].get_spec_val(var_for_label3)
+
+        if add_data1 == None:
+            add_data1 = self.mdl[n_of_model].get_col(var_for_label1)[i_req] # noraml bec variables
+        if add_data2 == None:
+            add_data2 = self.mdl[n_of_model].get_col(var_for_label2)[i_req]
+        if add_data3 == None:
+            add_data3 = self.mdl[n_of_model].get_col(var_for_label3)[i_req]
+
+        #
+        # if var_for_label1 == 'Y_c':
+        #     add_data1 = self.mdl[n_of_model].get_col('He4')[0]
+        # if var_for_label1 == 'lm':
+        #     add_data1 = self.mdl[n_of_model].get_lm_last()
+        #
+        # if add_data1 == None:
+        #     add_data1 = self.mdl[n_of_model].get_col(var_for_label1)[i_req]
+        #
+        # if var_for_label2 == 'color':
+        #     add_data2 = Math.get_0_to_max( [n_of_model], 9 )[n_of_model]  # from 1 to 9 for plotting C+[1-9]
+        # if var_for_label2 == 'lm':
+        #     add_data2 = self.mdl[n_of_model].get_lm_last()
+        # if var_for_label2 == 'Y_c':
+        #     add_data2 = self.mdl[n_of_model].get_col('He4')[0]
+        #
+        # if add_data2 == None:
+        #     add_data2 = self.mdl[n_of_model].get_col(var_for_label2)[i_req]
+
+        # if x_coord == None or y_coord == None:
+        #     raise ValueError('x_coord={} or y_coord={} is not obtained.'.format(x_coord, y_coord))
+
+        print(var_for_label3, add_data3)
+        if len(x_coord) != len(y_coord) or len(x_coord) != len(z_coord):
+            raise ValueError('x_coord and y_coord: \n\t {} \t\n {} have different shape.'.format(x_coord, y_coord))
+
+        return np.vstack(( np.insert(x_coord, 0, add_data1), np.insert(y_coord, 0, add_data2),
+                           np.insert(z_coord, 0, add_data3)  )).T
+
+
+    def get_set_of_cols(self, v_n_arr, n_of_model):
+        '''
+        Returns v_n_arr * length of each column array, [:,0] - first var, and so on.
+        :param v_n_arr:
+        :param n_of_model:
+        :return:
+        '''
+        return self.mdl[n_of_model].get_set_of_cols(v_n_arr)
+
+
+    def get_sonic_vel_array(self, n_of_model):
+        mu = self.mdl[n_of_model].get_col('mu')
+        t  = self.mdl[n_of_model].get_col('t')
+        return Physics.sound_speed(t, mu, True)
+
+    def table(self):
+        print(
+            '\n'
+            ' i'
+            ' |  Mdot '
+            '| Mass'
+            '|  R/Rs  '
+            '| L/Ls  '
+            '| kappa  '
+            '| l(Rho) '
+            '| Temp  '
+            '| mfp   '
+            '| vel   '
+            '| gamma  '
+            '| tpar  '
+            '|  HP   '
+            '| log(C)  ')
+        print('---|-------|-----|--------|-------|--------|--------|-------|------'
+              '-|-------|--------|-------|-------|-------')
+        for i in range(self.n_of_files):
+            self.mdl[i].get_par_table(i)
+
+class ClassPlots:
 
 
     def __init__(self, opal_file, smfls, obs_file, n_anal = 1000, load_lim_cases = False,
                  output_dir = '../data/output/', plot_dir = '../data/plots/'):
-
-        self.output_dir = output_dir
-        self.plot_dir = plot_dir
-
         '''
         :param path: './smdata/' filder with sm.datas
         :param smfls: '5d-6' name, extension sm.data added automatically
@@ -3724,7 +3846,8 @@ class ClassPlots():
         :param n_anal: interpolation depth
         '''
 
-        # Read_Observables.__init__(self, obs_file)
+        self.output_dir = output_dir
+        self.plot_dir = plot_dir
 
         self.obs_files = obs_file
         self.num_files = smfls
@@ -3755,179 +3878,255 @@ class ClassPlots():
 
         # self.tbl_anl.delete()
 
-    def xy_profile(self, v_n1, v_n2, sonic = False, lx1 = None, lx2 = None, ly1 = None, ly2 = None):
+    def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = -1):
 
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
         ax2 = ax1.twiny()
 
-        plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
-
-        # fig = plt.figure()
-        # ax = fig.add_subplot(1, 1, 1)
-
         tlt = v_n2 + '(' + v_n1 + ') profile'
         plt.title(tlt, loc='left')
 
         for i in range(len(self.num_files)):
-            x = self.nums[i].get_col(v_n1)
-            y = self.mdl[i].get_col(v_n2)
-            color = 'C' + str(i)
+            res = self.nums.get_x_y_z_arrays( i, v_n1, v_n2, '-', var_for_label1, var_for_label2, '-')
+            lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % res[0,0],var_for_label2,'%.2f' % res[0,1])
+            ax1.plot(res[1:, 0], res[1:, 1], '-', color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            ax1.plot(res[-1, 0], res[-1, 1], 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            ax1.annotate(str('%.2f' % res[0,0]), xy=(res[-1, 0], res[-1, 1]), textcoords='data')
+            if sonic != -1 and sonic < len(self.num_files) and v_n2 == 'u':
+                u_s = self.nums.get_sonic_vel_array(i)
+                ax1.plot(res[1:, 0], u_s, '-', color='black')
 
-            lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
-                   str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
-                   str('%.2f' % self.mdl[i].get_col('mdot')[-1])
-            ax1.plot(x, y, '-', color=color, label=lbl)
-            ax1.plot(x[-1], y[-1], 'x', color=color)
-
-        r_arr = []
-        for i in range(self.nmdls):
-            r_arr = np.append(r_arr, self.mdl[i].get_col(v_n1)[-1] )
-        ind = np.where(r_arr == r_arr.max())
-        # print(int(ind[-1]))
-
-        if sonic:
-            for i in range(self.nmdls):
-                x = self.mdl[i].get_col(v_n1)
-                t = self.mdl[i].get_col('t')
-                mu = self.mdl[i].get_col('mu')
-                ax1.plot(x, Physics.sound_speed(t, mu, True), '-', color='black')
-
-        ax1.set_xlabel(v_n1)
-        ax1.set_ylabel(v_n2)
-
-        #---------------------------------------MINOR-TICKS-------------------------------
-        if lx1 != None and lx2 != None:
-            plt.xlim(lx1, lx2)
-
-        if ly1 != None and ly2 != None:
-            plt.ylim(ly1, ly2)
-
-        ax1.grid(which='both')
-        ax1.grid(which='minor', alpha=0.2)
-        ax1.grid(which='major', alpha=0.2)
-
+        last_model_t = self.nums.get_set_of_cols(['t'], sonic )[:,0]
         n_tic_loc = []
         n_tic_lbl = []
-        temps = [self.mdl[-1].t_[-1], 4.2, 4.6, 5.2, 6.2, self.mdl[-1].t_[0]]
+        temps = [last_model_t[-1], 4.2, 4.6, 5.2, 6.2, last_model_t[0]]
         for t in temps:
-            if t <= self.mdl[-1].t_[0] and t >= self.mdl[-1].t_[-1]:
-                i = Math.find_nearest_index(self.mdl[-1].t_, t)
-                n_tic_loc  = np.append(n_tic_loc, self.mdl[-1].get_col(v_n1)[i])
+            if t <= last_model_t[0] and t >= last_model_t[-1]:
+                i = Math.find_nearest_index(last_model_t, t)
+                n_tic_loc  = np.append(n_tic_loc, self.nums.get_set_of_cols([v_n1], sonic )[i,0])
                 n_tic_lbl = np.append(n_tic_lbl, "%.1f" % t)
-                # plt.axvline(x=self.mdl[-1].get_col(v_n1)[i], linestyle='dashed', color='black', label = 'log(T):{}'.format(t))
 
         ax2.set_xlim(ax1.get_xlim())
         ax2.set_xticks(n_tic_loc)
         ax2.set_xticklabels(n_tic_lbl)
         ax2.set_xlabel('log(T)')
 
+        ax1.set_xlabel(v_n1)
+        ax1.set_ylabel(v_n2)
+
+        ax1.grid(which='both')
+        ax1.grid(which='minor', alpha=0.2)
+        ax1.grid(which='major', alpha=0.2)
 
         ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
-
+        plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
         plt.savefig(plot_name)
-
         plt.show()
 
-    def xyy_profile(self, v_n1, v_n2, v_n3, lx = np.zeros(1,)):
+        # col = []
+        # for i in range(len(self.num_files)):
+        #     col.append(i)
+        #     res = self.nums.get_set_of_cols([v_n1,v_n2, 'xm','l', 'mdot'],i)
+        #     lbl = 'M:' + str('%.2f' % res[-1,2]) + ' L:' + \
+        #           str('%.2f' % res[-1,3]) + ' Mdot:' + \
+        #           str('%.2f' % res[-1,4])
+        #     ax1.plot(res[:,0],res[:,1], '-', color='C'+str(Math.get_0_to_max(col,9)[i]), label=lbl)
+        #     ax1.plot(res[-1,0], res[-1,1], 'x', color='C'+str(Math.get_0_to_max(col,9)[i]))
+        #     if sonic and v_n2 == 'u':
+        #         u_s = self.nums.get_sonic_vel_array(i)
+        #         ax1.plot(res[:,0], u_s, '-', color='black')
 
-        plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_' + 'v_n3' + '_profile.pdf'
-        tlt = v_n2 + ' , '+ v_n3 + ' = f(' + v_n1 + ') profile'
-        # plt.title(tlt)
+
+        # res = self.nums.get_set_of_cols([v_n1,v_n2, 'xm','l', 'mdot'], -1 )
+        # n_tic_loc = []
+        # n_tic_lbl = []
+        # temps = [self.mdl[-1].t_[-1], 4.2, 4.6, 5.2, 6.2, self.mdl[-1].t_[0]]
+        # for t in temps:
+        #     if t <= self.mdl[-1].t_[0] and t >= self.mdl[-1].t_[-1]:
+        #         i = Math.find_nearest_index(self.mdl[-1].t_, t)
+        #         n_tic_loc  = np.append(n_tic_loc, self.mdl[-1].get_col(v_n1)[i])
+        #         n_tic_lbl = np.append(n_tic_lbl, "%.1f" % t)
+        #         # plt.axvline(x=self.mdl[-1].get_col(v_n1)[i], linestyle='dashed', color='black', label = 'log(T):{}'.format(t))
+        #
+        # ax2.set_xlim(ax1.get_xlim())
+        # # ax2.set_xticks(n_tic_loc)
+        # # ax2.set_xticklabels(n_tic_lbl)
+        # ax2.set_xlabel('log(T)')
+
+
+
+
+
+        # for i in range(len(self.num_files)):
+        #     x = self.nums[i].get_col(v_n1)
+        #     y = self.mdl[i].get_col(v_n2)
+        #     color = 'C' + str(i)
+        #
+        #     lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
+        #            str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
+        #            str('%.2f' % self.mdl[i].get_col('mdot')[-1])
+        #     ax1.plot(x, y, '-', color=color, label=lbl)
+        #     ax1.plot(x[-1], y[-1], 'x', color=color)
+        #
+        # r_arr = []
+        # for i in range(self.nmdls):
+        #     r_arr = np.append(r_arr, self.mdl[i].get_col(v_n1)[-1] )
+        # ind = np.where(r_arr == r_arr.max())
+        # # print(int(ind[-1]))
+
+        # if sonic:
+        #     for i in range(self.nmdls):
+        #         x = self.mdl[i].get_col(v_n1)
+        #         t = self.mdl[i].get_col('t')
+        #         mu = self.mdl[i].get_col('mu')
+        #         ax1.plot(x, Physics.sound_speed(t, mu, True), '-', color='black')
+
+        # ax1.set_xlabel(v_n1)
+        # ax1.set_ylabel(v_n2)
+
+        #---------------------------------------MINOR-TICKS-------------------------------
+        # if lx1 != None and lx2 != None:
+        #     plt.xlim(lx1, lx2)
+        #
+        # if ly1 != None and ly2 != None:
+        #     plt.ylim(ly1, ly2)
+
+        # ax1.grid(which='both')
+        # ax1.grid(which='minor', alpha=0.2)
+        # ax1.grid(which='major', alpha=0.2)
+
+        # n_tic_loc = []
+        # n_tic_lbl = []
+        # temps = [self.mdl[-1].t_[-1], 4.2, 4.6, 5.2, 6.2, self.mdl[-1].t_[0]]
+        # for t in temps:
+        #     if t <= self.mdl[-1].t_[0] and t >= self.mdl[-1].t_[-1]:
+        #         i = Math.find_nearest_index(self.mdl[-1].t_, t)
+        #         n_tic_loc  = np.append(n_tic_loc, self.mdl[-1].get_col(v_n1)[i])
+        #         n_tic_lbl = np.append(n_tic_lbl, "%.1f" % t)
+        #         # plt.axvline(x=self.mdl[-1].get_col(v_n1)[i], linestyle='dashed', color='black', label = 'log(T):{}'.format(t))
+
+        # ax2.set_xlim(ax1.get_xlim())
+        # # ax2.set_xticks(n_tic_loc)
+        # # ax2.set_xticklabels(n_tic_lbl)
+        # ax2.set_xlabel('log(T)')
+
+    def xyy_profile(self, v_n1, v_n2, v_n3, var_for_label1, var_for_label2, var_for_label3, edd_kappa = True, mdl_for_t_axis = 0):
+
+        # for i in range(self.nmdls):
+        #     x = self.mdl[i].get_col(v_n1)
+        #     y = self.mdl[i].get_col(v_n2)
+        #     color = 'C' + str(i)
+        #
+        #     lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
+        #            str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
+        #            str('%.2f' % self.mdl[i].get_col('mdot')[-1])
+        #     ax1.plot(x, y, '-', color=color, label=lbl)
+        #     ax1.plot(x[-1], y[-1], 'x', color=color)
 
         fig, ax1 = plt.subplots()
-
-        for i in range(self.nmdls):
-            x = self.mdl[i].get_col(v_n1)
-            y = self.mdl[i].get_col(v_n2)
-            color = 'C' + str(i)
-
-            lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
-                   str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
-                   str('%.2f' % self.mdl[i].get_col('mdot')[-1])
-            ax1.plot(x, y, '-', color=color, label=lbl)
-            ax1.plot(x[-1], y[-1], 'x', color=color)
+        tlt = v_n2 + ' , '+ v_n3 + ' = f(' + v_n1 + ') profile'
+        plt.title(tlt)
 
         ax1.set_xlabel(v_n1)
         # Make the y-axis label, ticks and tick labels match the line color.
         ax1.set_ylabel(v_n2, color='b')
         ax1.tick_params('y', colors='b')
-        if lx.shape!=(1,):
-            ax1.set_xlim(lx[0], lx[-1])
         ax1.grid()
-        #----------------------------------------
-
         ax2 = ax1.twinx()
-        k_edd = Physics.edd_opacity(self.mdl[-1].xm_[-1], self.mdl[-1].l_[-1])
-        ax2.plot(ax1.get_xlim(), [k_edd,k_edd], c='black')
-        # ----------------------------EDDINGTON OPACITY------------------------------------
-        # ax2.plot(np.mgrid[x1.min():x1.max():100j], np.mgrid[edd_k:edd_k:100j], c='black')
 
-        for i in range(self.nmdls):
-            x = self.mdl[i].get_col(v_n1)
-            y = self.mdl[i].get_col(v_n3)
-            color = 'C' + str(i)
+        for i in range(len(self.num_files)):
+            res = self.nums.get_x_y_z_arrays( i, v_n1, v_n2, v_n3, var_for_label1, var_for_label2, var_for_label3)
 
-            lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
-                   str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
-                   str('%.2f' % self.mdl[i].get_col('mdot')[-1])
-            ax2.plot(x, y, '--', color=color, label=lbl)
-            ax2.plot(x[-1], y[-1], 'o', color=color)
+            color = 'C' + str(Math.get_0_to_max([i], 9)[i])
+            lbl = '{}:{} , {}:{} , {}:{}'.format(var_for_label1,'%.2f' % res[0,0], var_for_label2,'%.2f' % res[0,1], var_for_label3,'%.2f' % res[0,2])
+            ax1.plot(res[1:, 0], res[1:, 1], '-', color = color, label=lbl)
+            ax1.plot(res[-1, 0], res[-1, 1], 'x', color = color )
+            ax1.annotate(str('%.2f' % res[0,0]), xy=(res[-1, 0], res[-1, 1]), textcoords='data')
 
+            if edd_kappa and v_n3 == 'kappa':
+                k_edd = Physics.edd_opacity(self.nums.get_set_of_cols(['xm'], i)[-1], self.nums.get_set_of_cols(['l'], i)[-1])
+                ax2.plot(ax1.get_xlim(), [k_edd, k_edd], color=color, label = 'Model: {}, k_edd: {}'.format(i, k_edd))
 
-        ax2.set_ylabel(v_n3, color='r')
-        ax2.tick_params('y', colors='r')
+            ax2.plot(res[1:, 0], res[1:, 2], '--', color = color)
+            ax2.plot(res[-1, 0], res[-1, 2], 'o',  color = color)
 
-        # plt.axvline(x=4.6, color='black', linestyle='solid', label='T = 4.6, He Op Bump')
-        # plt.axvline(x=5.2, color='black', linestyle='solid', label='T = 5.2, Fe Op Bump')
-        # plt.axvline(x=6.2, color='black', linestyle='solid', label='T = 6.2, Deep Fe Op Bump')
-
-        ax3 = ax2.twiny()
+        ax3 = ax2.twiny() # for temp
+        last_model_t = self.nums.get_set_of_cols(['t'], mdl_for_t_axis)[:, 0]
         n_tic_loc = []
         n_tic_lbl = []
-        temps = [self.mdl[-1].t_[-1], 4.2, 4.6, 5.2, 6.2, self.mdl[-1].t_[0]]
+        temps = [last_model_t[-1], 4.2, 4.6, 5.2, 6.2, last_model_t[0]]
         for t in temps:
-            if t <= self.mdl[-1].t_[0] and t >= self.mdl[-1].t_[-1]:
-                i = Math.find_nearest_index(self.mdl[-1].t_, t)
-                n_tic_loc = np.append(n_tic_loc, self.mdl[-1].get_col(v_n1)[i])
+            if t <= last_model_t[0] and t >= last_model_t[-1]:
+                i = Math.find_nearest_index(last_model_t, t)
+                n_tic_loc  = np.append(n_tic_loc, self.nums.get_set_of_cols([v_n1], mdl_for_t_axis)[i, 0])
                 n_tic_lbl = np.append(n_tic_lbl, "%.1f" % t)
-                # plt.axvline(x=self.mdl[-1].get_col(v_n1)[i], linestyle='dashed', color='black', label = 'log(T):{}'.format(t))
 
         ax3.set_xlim(ax1.get_xlim())
         ax3.set_xticks(n_tic_loc)
         ax3.set_xticklabels(n_tic_lbl)
         ax3.set_xlabel('log(T)')
 
+        ax2.set_ylabel(v_n3, color='r')
+        ax2.tick_params('y', colors='r')
+
         plt.title(tlt, loc='left')
-        # plt.ylim(-8.5, -4)
         fig.tight_layout()
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+        plot_name = self.plot_dir + v_n1 + '_' + v_n2 + '_' + v_n3 + '_profile.pdf'
         plt.savefig(plot_name)
         plt.show()
 
-    def table(self):
-        print(
-            '\n'
-            ' i'
-            ' |  Mdot '
-            '| Mass'
-            '|  R/Rs  '
-            '| L/Ls  '
-            '| kappa  '
-            '| l(Rho) '
-            '| Temp  '
-            '| mfp   '
-            '| vel   '
-            '| gamma  '
-            '| tpar  '
-            '|  HP   '
-            '| log(C)  ')
-        print('---|-------|-----|--------|-------|--------|--------|-------|------'
-              '-|-------|--------|-------|-------|-------')
-        for i in range(self.nmdls):
-            self.mdl[i].get_par_table(i)
 
-    def plot_t_rho_kappa(self, t1, t2, rho1 = None, rho2 = None, n_int = 1000, n_model_for_edd_k = None):
+        # k_edd = Physics.edd_opacity(self.mdl[-1].xm_[-1], self.mdl[-1].l_[-1])
+        # ax2.plot(ax1.get_xlim(), [k_edd,k_edd], c='black')
+        # ----------------------------EDDINGTON OPACITY------------------------------------
+        # ax2.plot(np.mgrid[x1.min():x1.max():100j], np.mgrid[edd_k:edd_k:100j], c='black')
+
+        # for i in range(self.nmdls):
+        #     x = self.mdl[i].get_col(v_n1)
+        #     y = self.mdl[i].get_col(v_n3)
+        #     color = 'C' + str(i)
+        #
+        #     lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
+        #            str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
+        #            str('%.2f' % self.mdl[i].get_col('mdot')[-1])
+        #     ax2.plot(x, y, '--', color=color, label=lbl)
+        #     ax2.plot(x[-1], y[-1], 'o', color=color)
+
+
+        # ax2.set_ylabel(v_n3, color='r')
+        # ax2.tick_params('y', colors='r')
+
+        # plt.axvline(x=4.6, color='black', linestyle='solid', label='T = 4.6, He Op Bump')
+        # plt.axvline(x=5.2, color='black', linestyle='solid', label='T = 5.2, Fe Op Bump')
+        # plt.axvline(x=6.2, color='black', linestyle='solid', label='T = 6.2, Deep Fe Op Bump')
+
+        # ax3 = ax2.twiny()
+        # n_tic_loc = []
+        # n_tic_lbl = []
+        # temps = [self.mdl[-1].t_[-1], 4.2, 4.6, 5.2, 6.2, self.mdl[-1].t_[0]]
+        # for t in temps:
+        #     if t <= self.mdl[-1].t_[0] and t >= self.mdl[-1].t_[-1]:
+        #         i = Math.find_nearest_index(self.mdl[-1].t_, t)
+        #         n_tic_loc = np.append(n_tic_loc, self.mdl[-1].get_col(v_n1)[i])
+        #         n_tic_lbl = np.append(n_tic_lbl, "%.1f" % t)
+        #         # plt.axvline(x=self.mdl[-1].get_col(v_n1)[i], linestyle='dashed', color='black', label = 'log(T):{}'.format(t))
+
+        # ax3.set_xlim(ax1.get_xlim())
+        # ax3.set_xticks(n_tic_loc)
+        # ax3.set_xticklabels(n_tic_lbl)
+        # ax3.set_xlabel('log(T)')
+        #
+        # plt.title(tlt, loc='left')
+        # # plt.ylim(-8.5, -4)
+        # fig.tight_layout()
+        # plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        # plot_name = self.plot_dir + v_n1 + '_' + v_n2 + '_' + v_n3 + '_profile.pdf'
+        # plt.savefig(plot_name)
+        # plt.show()
+
+    def plot_t_rho_kappa(self, t1, t2, rho1 = None, rho2 = None, n_int = 1000, plot_edd = True):
         # self.int_edd = self.tbl_anlom_OPAL_table(self.op_name, 1, n_int, load_lim_cases)
 
 
@@ -3937,72 +4136,67 @@ class ClassPlots():
         rho = t_k_rho[1:, 0]  # y
         kappa = t_k_rho[1:, 1:]  # z
 
-        name = self.plot_dir + 't_rho_kappa.pdf'
         plt.figure()
-
-        if t1 == t2 and rho1 == rho2:
-            print('\t__Note: Single Kappa Task: for t: {} and rho: {}, log10(kappa): {}, kappa: {}'
-                  .format("%.3f" % t[0], "%.3f" % rho[0],"%.3f" % kappa[0,0], "%.3f" % 10**kappa[0,0]))
-            return 0
-
         levels = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
-
         pl.xlim(t.min(), t.max())
         pl.ylim(rho.min(), rho.max())
-        contour_filled = plt.contourf(t, rho, 10 ** (kappa), levels)
+        contour_filled = plt.contourf(t, rho, 10 ** (kappa), levels, cmap=plt.get_cmap('RdYlBu_r'))
         plt.colorbar(contour_filled)
         contour = plt.contour(t, rho, 10 ** (kappa), levels, colors='k')
         plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
         plt.title('OPACITY PLOT')
         plt.xlabel('Log(T)')
         plt.ylabel('log(rho)')
-        # plt.axvline(x=4.2, color='r', linestyle='dashed', label='HeI Bump')
-        # plt.axvline(x=4.6, color='r', linestyle='dashed', label='HeII Fe Bump')
-        # plt.axvline(x=5.2, color='r', linestyle='dashed', label='Fe Bump')
-        # plt.axvline(x=6.2, color='r', linestyle='dashed', label='Deep Fe Bump')
-        # plt.axhline(y = vrho, color='r', linestyle='dashed', label = lbl2)
-        # pl.plot(t_edd, rho_edd, marker='o', color = 'r')
 
         #------------------------EDDINGTON-----------------------------------
         Table_Analyze.plot_k_vs_t = False # there is no need to plot just one kappa in the range of availability
 
-        if n_model_for_edd_k != None:
-            if n_model_for_edd_k > 0 and n_model_for_edd_k <= self.nmdls:
-                for i in range(n_model_for_edd_k): #self.nmdls
-                    k_edd = Physics.edd_opacity(self.mdl[i].xm_[-1], self.mdl[i].l_[-1])
-                    print(k_edd)
+        if plot_edd: #n_model_for_edd_k.any():
+            for i in range(len(self.num_files)):  # self.nmdls
+                res = self.nums.get_set_of_cols(['xm', 'l', 'He4'], i)
+                k_edd = Physics.edd_opacity(res[-1, 0], res[-1, 1])
+                # print(k_edd)
 
-                    n_model_for_edd_k = self.tbl_anl.interp_for_single_k(t1, t2, n_int, k_edd)
-                    x = n_model_for_edd_k[0, :]
-                    y = n_model_for_edd_k[1, :]
-                    color = 'w'
-
-                    lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
-                           str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
-                           str('%.2f' % self.mdl[i].get_col('mdot')[-1]) + ' k_edd:' + \
-                           str('%.2f' % 10**k_edd)
-                    plt.plot(x, y, '-', color=color, label=lbl)
-                    # plt.plot(x[-1], y[-1], 'x', color=color)
+                n_model_for_edd_k = self.tbl_anl.interp_for_single_k(t1, t2, n_int, k_edd)
+                x = n_model_for_edd_k[0, :]
+                y = n_model_for_edd_k[1, :]
+                color = 'black'
+                lbl = 'Model:{}, k_edd:{}'.format(i,'%.2f' % 10**k_edd)
+                plt.plot(x, y, '-.', color=color, label=lbl)
+                plt.plot(x[-1], y[-1], 'x', color=color)
 
         Table_Analyze.plot_k_vs_t = True
         #----------------------DENSITY----------------------------------------
-        for i in range(self.nmdls):
 
-            x = self.mdl[i].t_
-            y = self.mdl[i].rho_
-            color = color = 'C' + str(i)
+        for i in range(len(self.num_files)):
+            res = self.nums.get_set_of_cols(['t', 'rho', 'He4', 'mdot'], i)
+            # res = self.nums.get_x_y_z_arrays( i, 't', 'rho', '', 'l', 'mdot', '-')
+            print(res.shape)
+            # lbl = 'Model:{} , Yc:{} , mdot:{}'.format(i, 't','%.2f' % res[0,0], 'mdot','%.2f' % res[0,1])
+            lbl = 'Model:{} , Yc:{} , mdot:{}'.format(i, '%.2f' % res[0,2], '%.2f' % res[0,3])
+            plt.plot(res[:, 0], res[:, 1], '-', color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            plt.plot(res[-1, 0], res[-1, 1], 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            plt.annotate(str('%.2f' % res[0,2]), xy=(res[-1, 0], res[-1, 1]), textcoords='data')
 
-            lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
-                  str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
-                  str('%.2f' % self.mdl[i].get_col('mdot')[-1])
-            plt.plot(x, y, '-', color=color, label=lbl)
-            plt.plot(x[-1], y[-1], 'x', color=color)
+
+
+        # for i in range(self.nmdls):
+        #
+        #     x = self.mdl[i].t_
+        #     y = self.mdl[i].rho_
+        #     color = color = 'C' + str(i)
+        #
+        #     lbl = 'M:' + str('%.2f' % self.mdl[i].get_col('xm')[-1]) + ' L:' + \
+        #           str('%.2f' % self.mdl[i].get_col('l')[-1]) + ' Mdot:' + \
+        #           str('%.2f' % self.mdl[i].get_col('mdot')[-1])
+        #     plt.plot(x, y, '-', color=color, label=lbl)
+        #     plt.plot(x[-1], y[-1], 'x', color=color)
 
         plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
+        name = self.plot_dir + 't_rho_kappa.pdf'
         plt.savefig(name)
 
         plt.show()
-
 
     def plot_t_mdot_lm(self, t1, t2, mdot1 = None, mdot2 = None, r_s = 1.):
         name = self.plot_dir + 't_mdot_lm_plot.pdf'

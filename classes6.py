@@ -218,7 +218,6 @@ class Math:
 
         return f(new_x_arr)
 
-
     @staticmethod
     def get_largest_rising_by_1_area(ints_arr):
         #
@@ -241,7 +240,6 @@ class Math:
             return ints_arr[int(n[d.argmax()]) + 1: int(n[d.argmax() + 1]) + 1]
         else:
             return ints_arr
-
 
     @staticmethod
     def get_mins_in_every_row(x_arr, y_arr, z2d_arr, depth, from_ = None, to_ = None):
@@ -757,7 +755,6 @@ class Physics:
         c2 = 0.055467
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
 
-
 class Read_Table:
     '''
         This class reads the 2D OPAL table, where
@@ -1265,11 +1262,14 @@ class Table_Analyze(Read_Table):
 
     plot_k_vs_t = True  # plots the available kappa region, the selected and the interpolated areas as well.
 
-    def __init__(self, table_name, n_anal_, load_lim_cases):
+    def __init__(self, table_name, n_anal_, load_lim_cases, output_dir = '../data/output/', plot_dir = '../data/plots/'):
 
         # super().__init__(table_name) # using inheritance instead of calling for an instance, to get the rho, kappa and t
         Read_Table.__init__(self, table_name) # better way of inheritting it... The previous one required me to override something
         # cl1 = Read_Table(table_name)
+
+        self.output_dir = output_dir
+        self.plot_dir = plot_dir
 
 
         self.rho2d = Physics.get_rho(self.r, self.t)
@@ -1328,7 +1328,10 @@ class Table_Analyze(Read_Table):
 
         # ----------------------------Saving the Table --------------------------
         out = np.vstack((cases, min_k, max_k, t_avl))
-        out_name = self.table_name + '.caslim'
+
+        table_name_extension = self.table_name.split('/')[-1]
+        table_name = table_name_extension.split('.')[0]
+        out_name = self.output_dir + table_name + '.caslim'
         np.savetxt(out_name, out, delimiter='  ', fmt='%1.3e')
 
         return out
@@ -1339,11 +1342,14 @@ class Table_Analyze(Read_Table):
         or by loading the special file with 'out_name'
         :return:
         '''
-
-        out_name = self.table_name + '.caslim'
+        table_name_extension = self.table_name.split('/')[-1]
+        table_name = table_name_extension.split('.')[0]
+        out_name = self.output_dir +  table_name + '.caslim' # like ../data/table8.data.caslim
 
         if load_lim_cases :
             load = np.loadtxt(out_name, dtype=float, delimiter='  ')
+            print('\t__Note. Table with cases and limits for opal table: < {} > has been loaded succesfully.'
+                  .format(self.table_name))
 
         else:
             load = self.case_limits_in_table()
@@ -1573,7 +1579,8 @@ class Table_Analyze(Read_Table):
                                             self.kappa2d[i, :])  # I have to cut masked values, or they
 
             PhysPlots.Rho_k_plot(tmp2[0], tmp2[1], tmp3[0], tmp3[1],  # screw up the scale of the plot :(
-                                 self.min_k[i], self.max_k[i], self.cases[i], self.t[i], i)
+                                 self.min_k[i], self.max_k[i], self.cases[i], self.t[i], i,
+                                 self.plot_dir + 'opal_plots/')
             s = s + 1
             print('\t <----------------------------------------------------------------------------------->\n')
 
@@ -1624,7 +1631,7 @@ class Table_Analyze(Read_Table):
                                                 self.kappa2d[i, :])  # I have to cut masked values, or they
 
                 PhysPlots.Rho_k_plot(tmp2[0], tmp2[1], tmp3[0], tmp3[1],  # screw up the scale of the plot :(
-                                     k1, k2, self.cases[i], self.t[i], i)
+                                     k1, k2, self.cases[i], self.t[i], i, self.plot_dir)
             s = s + 1
             print('\t <----------------------------------------------------------------------------------->\n')
         print('\t__Note: t_limited output: (--) k: {}  (|) t: {}  (|-) rho: {}'.format(f_kappa[0,:].shape, f_t.shape, f_rho.shape))
@@ -1678,14 +1685,6 @@ class Table_Analyze(Read_Table):
 
         print('\t__Note: Single t output: (1--) t: {}  (2--) rho: {}'.format(t.shape, rho.shape))
         return np.vstack((t, rho))
-
-    def delete(self):
-        self.t_avl = []
-        self.rho2d = []
-        self.kappa2d = []
-        self.cases = []
-        self.min_k = []
-        self.max_k = []
 
 class OPAL_Interpol(Read_Table):
 
@@ -1807,7 +1806,7 @@ class OPAL_Interpol(Read_Table):
 
 class Read_Observables:
 
-    def __init__(self, observ_name, path = './data/', exten = '.data'):
+    def __init__(self, observ_name, path = '../data/obs/', exten = '.data'):
 
         self.table = []
         with open(path + observ_name + exten, 'r') as f:
@@ -2823,11 +2822,11 @@ class PhysPlots:
 
     @staticmethod
     def Rho_k_plot(f_rho, f_kappa, rho_row = None, kappa_row = None,
-                     lim_k1=None, lim_k2=None, case=None, temp=None, step=None):
+                     lim_k1=None, lim_k2=None, case=None, temp=None, step=None, plot_dir = '../data/plot/'):
 
         plot_name = 'Rho_k_plot.pdf'
         # path = '/media/vnedora/HDD/opal_anal4/'
-        path = './results/opal_plots/'
+        path = plot_dir
 
         if (temp == None and step == None):
             plot_name = ''.join([path, 'plot_one_raw.pdf'])
@@ -3712,7 +3711,12 @@ class Treat_Numercials:
 class ClassPlots():
 
 
-    def __init__(self, opal_file, smfls, obs_file, n_anal = 1000, load_lim_cases = False):
+    def __init__(self, opal_file, smfls, obs_file, n_anal = 1000, load_lim_cases = False,
+                 output_dir = '../data/output/', plot_dir = '../data/plots/'):
+
+        self.output_dir = output_dir
+        self.plot_dir = plot_dir
+
         '''
         :param path: './smdata/' filder with sm.datas
         :param smfls: '5d-6' name, extension sm.data added automatically
@@ -3729,8 +3733,8 @@ class ClassPlots():
         self.nums= Treat_Numercials(self.num_files)
 
         # --- INSTANCES
-        self.opal = OPAL_Interpol(opal_file, n_anal)
-        self.tbl_anl = Table_Analyze(opal_file, n_anal, load_lim_cases)
+        self.opal    = OPAL_Interpol(opal_file, n_anal)
+        self.tbl_anl = Table_Analyze(opal_file, n_anal, load_lim_cases, output_dir, plot_dir)
 
         # self.obs = None
         # if obs_file != None:
@@ -3757,7 +3761,7 @@ class ClassPlots():
         ax1 = fig.add_subplot(111)
         ax2 = ax1.twiny()
 
-        plot_name = './results/' + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
+        plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
 
         # fig = plt.figure()
         # ax = fig.add_subplot(1, 1, 1)
@@ -3765,8 +3769,8 @@ class ClassPlots():
         tlt = v_n2 + '(' + v_n1 + ') profile'
         plt.title(tlt, loc='left')
 
-        for i in range(self.nmdls):
-            x = self.mdl[i].get_col(v_n1)
+        for i in range(len(self.num_files)):
+            x = self.nums[i].get_col(v_n1)
             y = self.mdl[i].get_col(v_n2)
             color = 'C' + str(i)
 
@@ -3827,7 +3831,7 @@ class ClassPlots():
 
     def xyy_profile(self, v_n1, v_n2, v_n3, lx = np.zeros(1,)):
 
-        plot_name = './results/' + v_n1 + '_vs_' + v_n2 + '_' + 'v_n3' + '_profile.pdf'
+        plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_' + 'v_n3' + '_profile.pdf'
         tlt = v_n2 + ' , '+ v_n3 + ' = f(' + v_n1 + ') profile'
         # plt.title(tlt)
 
@@ -3933,7 +3937,7 @@ class ClassPlots():
         rho = t_k_rho[1:, 0]  # y
         kappa = t_k_rho[1:, 1:]  # z
 
-        name = './results/t_rho_kappa.pdf'
+        name = self.plot_dir + 't_rho_kappa.pdf'
         plt.figure()
 
         if t1 == t2 and rho1 == rho2:
@@ -4001,7 +4005,7 @@ class ClassPlots():
 
 
     def plot_t_mdot_lm(self, t1, t2, mdot1 = None, mdot2 = None, r_s = 1.):
-        name = './results/t_mdot_lm_plot.pdf'
+        name = self.plot_dir + 't_mdot_lm_plot.pdf'
 
         # mdot1 = -6  # new way of setting limits to the plot!!!
         # mdot2 = -4
@@ -4102,238 +4106,249 @@ class ClassPlots():
         #         # label = str(obs.numb[i]) + ' ' + obs.type[i])
         #         ax.annotate(str(obs.numb[i]), xy=(t_c, y_val), textcoords='data')
 
-    def plot_t_lm_mdot(self, t1, t2, lm1, lm2, r_s_, n_int = 100, n_out = 100,
-                       lim_t1_obs = None, lim_t2_obs = None):
-
-        # loglm1 = 3.8
-        # loglm2 = 4.4
-
-        r_s = r_s_[0]
-        if lm1 != None:
-            k2 = Physics.loglm_logk(lm1)
-        else:
-            k2 = None
-        if lm2 != None:
-            k1 = Physics.loglm_logk(lm2)
-        else:
-            k1 = None
-
-
-        # i_t1 = Math.find_nearest_index(t, t1)
-        # i_t2 = Math.find_nearest_index(t, t2)
-        print("Selected T range: ", t1, ' to ', t2)
-        print("Selected k range: ", k1, ' to ', k2)
-
-        # ta = Table_Analyze.from_OPAL_table(self.op_name, n_out, n_int, load_lim_cases)
-        res_ = self.tbl_anl.treat_tasks_interp_for_t(t1, t2, n_out, n_int, k1, k2)
-
-        kap = res_[0, 1:]
-        t =   res_[1:, 0]
-        rho2d = res_[1:, 1:]
-
-        # loglm = np.zeros((r_s_, ))
-        # for i in range(len(r_s_)):
-
-        loglm = Physics.logk_loglm(kap, True)
-        m_dot = Physics.rho_mdot(t, rho2d.T, 2, r_s)
-
-
-
-        print(t.shape, loglm.shape, m_dot.shape)
-        #-------------------------------------------POLT-Ts-LM-MODT-COUTUR------------------------------------
-        name = './results/t_LM_Mdot_plot.pdf'
-
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-
-        pl.xlim(t.min(), t.max())
-        pl.ylim(loglm.min(), loglm.max())
-        levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
-        # levels = [-10, -9, -8, -7, -6, -5, -4]
-        contour_filled = plt.contourf(t, loglm, m_dot, levels, cmap=plt.get_cmap('RdYlBu_r'))
-        plt.colorbar(contour_filled)
-        contour = plt.contour(t, loglm, m_dot, levels, colors='k')
-        plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
-        plt.title('MASS LOSS PLOT')
-        plt.xlabel('Log(t)')
-        plt.ylabel('log(L/M)')
-
-        #--------------------------------------------------PLOT-MINS-------------------------------------------
-        self.mins = Math.get_mins_in_every_row(t, loglm, m_dot, 5000, 5.1, 5.3)
-        plt.plot(self.mins[0, :], self.mins[1, :], '-.', color='red', label='min_Mdot')
-
-        #-----------------------------------------------PLOT-OBSERVABLES-----------------------------------
-        types = []
-        if self.obs != None: # plot observed stars
-
-            ''' Read the observables file and get the necessary values'''
-            import re  # for searching the number in 'WN7-e' string, to plot them different colour
-            ts_ = []
-            lm_ = []
-            for i in range(self.obs.num_stars):
-                s = re.search(r"\d+(\.\d+)?", self.obs.obs_par('type', str)[i])  # this is searching for the niumber
-                color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
-
-                star_lm = Physics.loglm(self.obs.obs_par('log(L)', float)[i], self.obs.obs_par('M', float)[i])
-                # Effective T << T_s, that you have to get from mass loss!
-                ts_lm = Physics.lm_mdot_obs_to_ts_lm(t, loglm, m_dot, star_lm, self.obs.obs_par('log(Mdot)',float)[i],
-                                                     self.obs.obs_par('WR',int)[i], lim_t1_obs, lim_t2_obs)
-                # ts_lm = np.vstack((star_lm, np.log10(obs.get_parms('T_*', float)[i])))
-
-                if ts_lm.any():
-                    # print(ts_lm[1, :], ts_lm[0, :])
-                    ts_ = np.append(ts_, ts_lm[1, :]) # FOR linear fit
-                    lm_ = np.append(lm_, ts_lm[0, :])
-                    # print(len(ts_lm[0,:]))
-                    for j in range(len(ts_lm[0,:])): # plot every solution in the degenerate set of solutions
-                        plt.plot(ts_lm[1, j], ts_lm[0, j], marker='^', color=color, ls='')
-                        ax.annotate(self.obs.obs_par('WR',str)[i], xy=(ts_lm[1, j], ts_lm[0, j]), textcoords='data')
-
-                        if int(s.group(0)) not in types: # plotting the legent for unique class of stars
-                            plt.plot(ts_lm[1, j], ts_lm[0, j], marker='^', color=color, ls='',
-                                     label=self.obs.obs_par('type',str)[i])
-                        types.append(int(s.group(0)))
-
-        # -----------------------------------------------LINEAR FIT TO THE DATA-------------------------------------
-            ts_grid_lm_grid = Math.line_fit(ts_, lm_)
-            plt.plot(ts_grid_lm_grid[0,:],ts_grid_lm_grid[1,:], '-.', color='blue')
-
-        #----------------------------------------------PLOT-NUMERICAL-MODELS-----------------------------
-        # m_dots = ["%.2f" %  self.mdl[i].mdot_[-1] for i in range(self.nmdls)]
-        # colors = Math.get_list_uniq_ints(m_dots)
-        # print(m_dots)
-        # print(colors)
-
-        for i in range(self.nmdls):
-            p_lm = Physics.loglm(self.mdl[i].l_[-1], self.mdl[i].xm_[-1], False)
-            p_mdot = self.mdl[i].mdot_[-1]
-            p_t = self.mdl[i].t_[-1]
-
-
-            color = 'C' + str(int(i*10/self.nmdls))
-            plt.plot(p_t, p_lm, marker='.', markersize=9, color=color)
-                     # label='Model {}: T_s {} , L/M {} , Mdot {}'.format(i, "%.2f" % p_t, "%.2f" % p_lm, "%.2f" % p_mdot))
-            ax.annotate(str(i), xy=(p_t, p_lm), textcoords='data')
-
-
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-
-        plt.savefig(name)
-
-        plt.show()
-
-        #===============================================================================================================
-        #           Minimum Mass loss = f(L/M)
-        #===============================================================================================================
-        '''<<< Possible to treat multiple sonic radii >>>'''
-
-        plot_name = './results/Min_Mdot.pdf'
-
-
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-
-        plt.title('L/M = f(min M_dot)')
-
-        #--------------------------------------_PLOT MINS-------------------------------------------------
-        for i in range(len(r_s_)):
-            loglm_ = Physics.logk_loglm(kap, True)
-            m_dot_ = Physics.rho_mdot(t, rho2d.T, 2, r_s_[i])
-
-            self.mins_ = Math.get_mins_in_every_row(t, loglm_, m_dot_, 5000, 5.1, 5.3)
-
-            min_mdot_arr_ = np.array(self.mins_[2, :])
-            color = 'C' + str(i)
-            plt.plot(min_mdot_arr_, loglm_, '-', color=color, label='min_Mdot for r_s: {}'.format(r_s_[i]))
-
-        #---------------------------------------ADJUST MAXIMUM L/M FOR OBSERVATIONS------------------------
-
-        min_mdot_arr = np.array(self.mins[2, :])
-        plt.xlim(-6.0, min_mdot_arr.max())
-
-        if self.obs != None:
-            star_lm = np.zeros(self.obs.num_stars)
-            for i in range(self.obs.num_stars):
-                star_lm[i] = Physics.loglm(self.obs.obs_par('log(L)', float)[i], self.obs.obs_par('M', float)[i])
-
-            plt.ylim(loglm.min(), star_lm.max())
-
-        plt.xlabel('log(M_dot)')
-        plt.ylabel('log(L/M)')
-
-
-        # major_xticks = np.array([-6.5,-6,-5.5,-5,-4.5,-4,-3.5])
-        # minor_xticks = np.arange(-7.0,-3.5,0.1)
-        #
-        # major_yticks = np.array([3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5])
-        # minor_yticks = np.arange(3.8, 4.5, 0.05)
-
-        # major_xticks = np.arange(min_mdot_arr.min(), min_mdot_arr.max()+0.1, (min_mdot_arr.max() - min_mdot_arr.min())/4)
-        # minor_xticks = np.arange(min_mdot_arr.min(), min_mdot_arr.max(), (min_mdot_arr.max() - min_mdot_arr.min())/8)
-        #
-        # major_yticks = np.arange(lm_arr.min(), lm_arr.max() + 0.1, ((lm_arr.max() - lm_arr.min()) / 4))
-        # minor_yticks = np.arange(lm_arr.min(), lm_arr.max(), ((lm_arr.max() - lm_arr.min()) / 8))
-
-        ax.grid(which='major', alpha=0.2)
-
-        plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
-
-        #--------------------------------------PLOT-OBSERVABLES----------------------------------------
-        x_data = []
-        y_data = []
-        types = []
-        if self.obs != None:  # plot array of observed stars from Read_Observ()
-            import re  # for searching the number in 'WN7-e' string, to plot them different colour
-
-            x_data = []
-            y_data = [] # for linear fit as well
-            for i in range(self.obs.num_stars):
-                s = re.search(r"\d+(\.\d+)?", self.obs.obs_par('type', str)[i])  # this is searching for the niumber
-                color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
-
-                x_data = np.append(x_data, self.obs.obs_par('log(Mdot)', float)[i])
-                y_data = np.append(y_data, Physics.loglm(self.obs.obs_par('log(L)', float)[i], self.obs.obs_par('M', float)[i]) )
-
-                plt.plot(x_data[i], y_data[i], marker='^', color=color, ls='')  # plot dots
-                # label = str(obs.numb[i]) + ' ' + obs.type[i])
-                ax.annotate(self.obs.obs_par('WR', str)[i], xy=(x_data[i], y_data[i]), textcoords='data')  # plot names next to dots
-
-                if int(s.group(0)) not in types:  # plotting the legent for unique class of stars
-                    plt.plot(x_data[i], y_data[i], marker='^', color=color, ls='',
-                             label=self.obs.obs_par('type', str)[i])
-                types.append(int(s.group(0)))
-
-        # -----------------------------------------------LINEAR FIT TO THE DATA-------------------------------------
-            xy_line = Math.line_fit(x_data, y_data)
-            plt.plot(xy_line[0,:], xy_line[1,:], '-.', color='blue')
-
-
-        # ---------------------------------------PLOT MODELS ------------------------------------------
-        for i in range(self.nmdls):
-            y = Physics.loglm(self.mdl[i].l_[-1],self.mdl[i].xm_[-1])
-            x = self.mdl[i].mdot_[-1]
-
-            color = 'C' + str(int(i * 10 / self.nmdls))
-            plt.plot(x, y, marker='.', markersize=9, color=color)
-                # label='Model {}: T_s {} , L/M {} , Mdot {}'.format(i, "%.2f" % p_t, "%.2f" % p_lm, "%.2f" % p_mdot))
-            ax.annotate(str(i), xy=(x, y), textcoords='data')
-
-
-        # ax.set_xticks(major_xticks)
-        # ax.set_xticks(minor_xticks, minor=True)
-        # ax.set_yticks(major_yticks)
-        # ax.set_yticks(minor_yticks, minor=True)
-
-
-        ax.grid(which='both')
-        ax.grid(which='minor', alpha=0.2)
-        ax.fill_between(min_mdot_arr, loglm, color="lightgray", label = 'Mdot < Minimun')
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plt.savefig(plot_name)
-        plt.show()
+    # def plot_t_lm_mdot(self, t1, t2, lm1, lm2, r_s_, n_int = 100, n_out = 100,
+    #                    lim_t1_obs = None, lim_t2_obs = None):
+    #
+    #     # loglm1 = 3.8
+    #     # loglm2 = 4.4
+    #
+    #     r_s = r_s_[0]
+    #     if lm1 != None:
+    #         k2 = Physics.loglm_logk(lm1)
+    #     else:
+    #         k2 = None
+    #     if lm2 != None:
+    #         k1 = Physics.loglm_logk(lm2)
+    #     else:
+    #         k1 = None
+    #
+    #
+    #     # i_t1 = Math.find_nearest_index(t, t1)
+    #     # i_t2 = Math.find_nearest_index(t, t2)
+    #     print("Selected T range: ", t1, ' to ', t2)
+    #     print("Selected k range: ", k1, ' to ', k2)
+    #
+    #     # ta = Table_Analyze.from_OPAL_table(self.op_name, n_out, n_int, load_lim_cases)
+    #     res_ = self.tbl_anl.treat_tasks_interp_for_t(t1, t2, n_out, n_int, k1, k2)
+    #
+    #     kap = res_[0, 1:]
+    #     t =   res_[1:, 0]
+    #     rho2d = res_[1:, 1:]
+    #
+    #     # loglm = np.zeros((r_s_, ))
+    #     # for i in range(len(r_s_)):
+    #
+    #     loglm = Physics.logk_loglm(kap, True)
+    #     m_dot = Physics.rho_mdot(t, rho2d.T, 2, r_s)
+    #
+    #
+    #
+    #     print(t.shape, loglm.shape, m_dot.shape)
+    #     #-------------------------------------------POLT-Ts-LM-MODT-COUTUR------------------------------------
+    #     name = './results/t_LM_Mdot_plot.pdf'
+    #
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(1, 1, 1)
+    #
+    #     pl.xlim(t.min(), t.max())
+    #     pl.ylim(loglm.min(), loglm.max())
+    #     levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
+    #     # levels = [-10, -9, -8, -7, -6, -5, -4]
+    #     contour_filled = plt.contourf(t, loglm, m_dot, levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #     plt.colorbar(contour_filled)
+    #     contour = plt.contour(t, loglm, m_dot, levels, colors='k')
+    #     plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
+    #     plt.title('MASS LOSS PLOT')
+    #     plt.xlabel('Log(t)')
+    #     plt.ylabel('log(L/M)')
+    #
+    #     #--------------------------------------------------PLOT-MINS-------------------------------------------
+    #     self.mins = Math.get_mins_in_every_row(t, loglm, m_dot, 5000, 5.1, 5.3)
+    #     plt.plot(self.mins[0, :], self.mins[1, :], '-.', color='red', label='min_Mdot')
+    #
+    #     #-----------------------------------------------PLOT-OBSERVABLES-----------------------------------
+    #     types = []
+    #     if self.obs != None: # plot observed stars
+    #
+    #         ''' Read the observables file and get the necessary values'''
+    #         import re  # for searching the number in 'WN7-e' string, to plot them different colour
+    #         ts_ = []
+    #         lm_ = []
+    #         for i in range(self.obs.num_stars):
+    #             s = re.search(r"\d+(\.\d+)?", self.obs.obs_par('type', str)[i])  # this is searching for the niumber
+    #             color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
+    #
+    #             star_lm = Physics.loglm(self.obs.obs_par('log(L)', float)[i], self.obs.obs_par('M', float)[i])
+    #             # Effective T << T_s, that you have to get from mass loss!
+    #             ts_lm = Physics.lm_mdot_obs_to_ts_lm(t, loglm, m_dot, star_lm, self.obs.obs_par('log(Mdot)',float)[i],
+    #                                                  self.obs.obs_par('WR',int)[i], lim_t1_obs, lim_t2_obs)
+    #             # ts_lm = np.vstack((star_lm, np.log10(obs.get_parms('T_*', float)[i])))
+    #
+    #             if ts_lm.any():
+    #                 # print(ts_lm[1, :], ts_lm[0, :])
+    #                 ts_ = np.append(ts_, ts_lm[1, :]) # FOR linear fit
+    #                 lm_ = np.append(lm_, ts_lm[0, :])
+    #                 # print(len(ts_lm[0,:]))
+    #                 for j in range(len(ts_lm[0,:])): # plot every solution in the degenerate set of solutions
+    #                     plt.plot(ts_lm[1, j], ts_lm[0, j], marker='^', color=color, ls='')
+    #                     ax.annotate(self.obs.obs_par('WR',str)[i], xy=(ts_lm[1, j], ts_lm[0, j]), textcoords='data')
+    #
+    #                     if int(s.group(0)) not in types: # plotting the legent for unique class of stars
+    #                         plt.plot(ts_lm[1, j], ts_lm[0, j], marker='^', color=color, ls='',
+    #                                  label=self.obs.obs_par('type',str)[i])
+    #                     types.append(int(s.group(0)))
+    #
+    #     # -----------------------------------------------LINEAR FIT TO THE DATA-------------------------------------
+    #         ts_grid_lm_grid = Math.line_fit(ts_, lm_)
+    #         plt.plot(ts_grid_lm_grid[0,:],ts_grid_lm_grid[1,:], '-.', color='blue')
+    #
+    #     #----------------------------------------------PLOT-NUMERICAL-MODELS-----------------------------
+    #     # m_dots = ["%.2f" %  self.mdl[i].mdot_[-1] for i in range(self.nmdls)]
+    #     # colors = Math.get_list_uniq_ints(m_dots)
+    #     # print(m_dots)
+    #     # print(colors)
+    #
+    #     for i in range(self.nmdls):
+    #         p_lm = Physics.loglm(self.mdl[i].l_[-1], self.mdl[i].xm_[-1], False)
+    #         p_mdot = self.mdl[i].mdot_[-1]
+    #         p_t = self.mdl[i].t_[-1]
+    #
+    #
+    #         color = 'C' + str(int(i*10/self.nmdls))
+    #         plt.plot(p_t, p_lm, marker='.', markersize=9, color=color)
+    #                  # label='Model {}: T_s {} , L/M {} , Mdot {}'.format(i, "%.2f" % p_t, "%.2f" % p_lm, "%.2f" % p_mdot))
+    #         ax.annotate(str(i), xy=(p_t, p_lm), textcoords='data')
+    #
+    #
+    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #
+    #     plt.savefig(name)
+    #
+    #     plt.show()
+    #
+    #     #===============================================================================================================
+    #     #           Minimum Mass loss = f(L/M)
+    #     #===============================================================================================================
+    #     '''<<< Possible to treat multiple sonic radii >>>'''
+    #
+    #     plot_name = './results/Min_Mdot.pdf'
+    #
+    #
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(1, 1, 1)
+    #
+    #     plt.title('L/M = f(min M_dot)')
+    #
+    #     #--------------------------------------_PLOT MINS-------------------------------------------------
+    #     for i in range(len(r_s_)):
+    #         loglm_ = Physics.logk_loglm(kap, True)
+    #         m_dot_ = Physics.rho_mdot(t, rho2d.T, 2, r_s_[i])
+    #
+    #         self.mins_ = Math.get_mins_in_every_row(t, loglm_, m_dot_, 5000, 5.1, 5.3)
+    #
+    #         min_mdot_arr_ = np.array(self.mins_[2, :])
+    #         color = 'C' + str(i)
+    #         plt.plot(min_mdot_arr_, loglm_, '-', color=color, label='min_Mdot for r_s: {}'.format(r_s_[i]))
+    #
+    #     #---------------------------------------ADJUST MAXIMUM L/M FOR OBSERVATIONS------------------------
+    #
+    #     min_mdot_arr = np.array(self.mins[2, :])
+    #     plt.xlim(-6.0, min_mdot_arr.max())
+    #
+    #     if self.obs != None:
+    #         star_lm = np.zeros(self.obs.num_stars)
+    #         for i in range(self.obs.num_stars):
+    #             star_lm[i] = Physics.loglm(self.obs.obs_par('log(L)', float)[i], self.obs.obs_par('M', float)[i])
+    #
+    #         plt.ylim(loglm.min(), star_lm.max())
+    #
+    #     plt.xlabel('log(M_dot)')
+    #     plt.ylabel('log(L/M)')
+    #
+    #
+    #     # major_xticks = np.array([-6.5,-6,-5.5,-5,-4.5,-4,-3.5])
+    #     # minor_xticks = np.arange(-7.0,-3.5,0.1)
+    #     #
+    #     # major_yticks = np.array([3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5])
+    #     # minor_yticks = np.arange(3.8, 4.5, 0.05)
+    #
+    #     # major_xticks = np.arange(min_mdot_arr.min(), min_mdot_arr.max()+0.1, (min_mdot_arr.max() - min_mdot_arr.min())/4)
+    #     # minor_xticks = np.arange(min_mdot_arr.min(), min_mdot_arr.max(), (min_mdot_arr.max() - min_mdot_arr.min())/8)
+    #     #
+    #     # major_yticks = np.arange(lm_arr.min(), lm_arr.max() + 0.1, ((lm_arr.max() - lm_arr.min()) / 4))
+    #     # minor_yticks = np.arange(lm_arr.min(), lm_arr.max(), ((lm_arr.max() - lm_arr.min()) / 8))
+    #
+    #     ax.grid(which='major', alpha=0.2)
+    #
+    #     plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+    #
+    #     #--------------------------------------PLOT-OBSERVABLES----------------------------------------
+    #     x_data = []
+    #     y_data = []
+    #     types = []
+    #     if self.obs != None:  # plot array of observed stars from Read_Observ()
+    #         import re  # for searching the number in 'WN7-e' string, to plot them different colour
+    #
+    #         x_data = []
+    #         y_data = [] # for linear fit as well
+    #         for i in range(self.obs.num_stars):
+    #             s = re.search(r"\d+(\.\d+)?", self.obs.obs_par('type', str)[i])  # this is searching for the niumber
+    #             color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
+    #
+    #             x_data = np.append(x_data, self.obs.obs_par('log(Mdot)', float)[i])
+    #             y_data = np.append(y_data, Physics.loglm(self.obs.obs_par('log(L)', float)[i], self.obs.obs_par('M', float)[i]) )
+    #
+    #             plt.plot(x_data[i], y_data[i], marker='^', color=color, ls='')  # plot dots
+    #             # label = str(obs.numb[i]) + ' ' + obs.type[i])
+    #             ax.annotate(self.obs.obs_par('WR', str)[i], xy=(x_data[i], y_data[i]), textcoords='data')  # plot names next to dots
+    #
+    #             if int(s.group(0)) not in types:  # plotting the legent for unique class of stars
+    #                 plt.plot(x_data[i], y_data[i], marker='^', color=color, ls='',
+    #                          label=self.obs.obs_par('type', str)[i])
+    #             types.append(int(s.group(0)))
+    #
+    #     # -----------------------------------------------LINEAR FIT TO THE DATA-------------------------------------
+    #         xy_line = Math.line_fit(x_data, y_data)
+    #         plt.plot(xy_line[0,:], xy_line[1,:], '-.', color='blue')
+    #
+    #
+    #     # ---------------------------------------PLOT MODELS ------------------------------------------
+    #     for i in range(self.nmdls):
+    #         y = Physics.loglm(self.mdl[i].l_[-1],self.mdl[i].xm_[-1])
+    #         x = self.mdl[i].mdot_[-1]
+    #
+    #         color = 'C' + str(int(i * 10 / self.nmdls))
+    #         plt.plot(x, y, marker='.', markersize=9, color=color)
+    #             # label='Model {}: T_s {} , L/M {} , Mdot {}'.format(i, "%.2f" % p_t, "%.2f" % p_lm, "%.2f" % p_mdot))
+    #         ax.annotate(str(i), xy=(x, y), textcoords='data')
+    #
+    #
+    #     # ax.set_xticks(major_xticks)
+    #     # ax.set_xticks(minor_xticks, minor=True)
+    #     # ax.set_yticks(major_yticks)
+    #     # ax.set_yticks(minor_yticks, minor=True)
+    #
+    #
+    #     ax.grid(which='both')
+    #     ax.grid(which='minor', alpha=0.2)
+    #     ax.fill_between(min_mdot_arr, loglm, color="lightgray", label = 'Mdot < Minimun')
+    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     plt.savefig(plot_name)
+    #     plt.show()
 
     @staticmethod
     def get_min_mdot_set(r_s_, y_label, t, kap, rho2d, ):
+        '''
+        Permorms interpolation over a set of soinic rs, returning: Math.combine(r_s_, y_coord_, min_mdot_arr_.T)
+        (Transposed, because initially in rho, the t - x.
+        :param r_s_:
+        :param y_label:
+        :param t:
+        :param kap:
+        :param rho2d:
+        :return:
+        '''
+
         min_mdot_arr_ = np.zeros((len(r_s_), len(kap)))
         r_s_ = np.array(r_s_)
 
@@ -4367,12 +4382,12 @@ class ClassPlots():
 
         y_coord = np.flip(y_coord, 0)  # as you flip the mdot 2d array.
 
-        plot_name = './results/Min_Mdot.pdf'
+        plot_name = self.plot_dir+'minMdot_l.pdf'
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 
-        plt.title('L/M = f(min M_dot)')
+        plt.title('L or L/M = f(min M_dot)')
 
         # --------------------------------------_PLOT MINS-------------------------------------------------
         ClassPlots.get_min_mdot_set(r_s_,y_label,t,kap,rho2d)
@@ -4422,7 +4437,7 @@ class ClassPlots():
 
         # --------------------------------------PLOT-OBSERVABLES----------------------------------------
         obs = Treat_Observables(self.obs_files)
-        res = obs.get_x_y_of_all_observables('log(Mdot)', 'log(L)', 'type')
+        res = obs.get_x_y_of_all_observables('mdot', 'l', 'type')
 
         for i in range(len(res[0][:, 1])):
             ax.annotate(int(res[0][i, 0]), xy=(res[0][i, 1], res[0][i, 2]), textcoords='data')  # plot numbers of stars
@@ -4546,7 +4561,9 @@ class ClassPlots():
 
         r_s_ = np.mgrid[r_s1:r_s2:n_r_s*1j]
 
-        name_out = 'rs_l_mdot.data'
+
+
+        name_out = self.output_dir + 'rs_l_mdot.data'
         if load:
             min_mdot = np.loadtxt(name_out, dtype=float, delimiter=' ').T
         else:
@@ -4571,7 +4588,7 @@ class ClassPlots():
 
 
         obs = Treat_Observables(self.obs_files)
-        res = obs.get_x_y_of_all_observables('ts', 'log(L)', 'type', min_mdot[0,1:], min_mdot[1:,0], min_mdot[1:,1:])
+        res = obs.get_x_y_of_all_observables('ts', 'l', 'type', min_mdot[0,1:], min_mdot[1:,0], min_mdot[1:,1:])
 
         for i in range(len(res[0][:, 1])):
             ax.annotate(int(res[0][i, 0]), xy=(res[0][i, 1], res[0][i, 2]), textcoords='data')  # plot numbers of stars
@@ -4611,9 +4628,10 @@ class ClassPlots():
             ax.annotate(str(i), xy=(mod_x_coord, mod_y_coord), textcoords='data')
 
 
+        name = self.plot_dir + 'rs_l_minMdot.pdf'
         plt.ylabel(y_label)
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plt.savefig('./results/rs_l_minMdot.pdf')
+        plt.savefig(name)
         plt.show()
 
         #======================================================================
@@ -4665,11 +4683,11 @@ class ClassPlots():
         #
         # plt.show()
 
-    def plot_t_l_mdot(self, y_name, t1, t2, l1, l2, r_s_, n_int = 100, n_out = 100,
-                       lim_t1_obs = None, lim_t2_obs = None):
+    def plot_t_l_mdot(self, y_name, t1, t2, y1, y2, r_s_, n_int = 100, n_out = 100,
+                      lim_t1_obs = None, lim_t2_obs = None):
         # ---------------------SETTING LM1 LM2 K1 K2---------------------------
 
-        k1, k2 = ClassPlots.get_k1_k2_from_l1_l2(t1,t2,l1,l2)
+        k1, k2 = ClassPlots.get_k1_k2_from_l1_l2(t1, t2, y1, y2)
 
         #---------------------Getting KAPPA[], T[], RHO2D[]-------------------------
         res_ = self.tbl_anl.treat_tasks_interp_for_t(t1, t2, n_out, n_int, k1, k2)
@@ -4680,13 +4698,13 @@ class ClassPlots():
         if y_name == 'l':
             y_mode = 'l '
             l_lm_arr  = Physics.lm_to_l( Physics.logk_loglm(kap, True) ) # Kappa -> L/M -> L
-            y_label = 'log(L)'
+            # y_label = 'log(L)'
         else:
             y_mode = 'lm'
             l_lm_arr = Physics.logk_loglm(kap, 1)
             y_label = 'log(L/M)'
 
-        self.plot_min_mdot(t, kap, rho2d, l_lm_arr, y_label, r_s_)
+        self.plot_min_mdot(t, kap, rho2d, l_lm_arr, y_name, r_s_)
 
         m_dot = Physics.rho_mdot(t, rho2d.T, 2, r_s_[0])
 
@@ -4695,7 +4713,7 @@ class ClassPlots():
         print('\t__Note: PLOT: x: {}, y: {}, z: {} shapes.'.format(t.shape, l_lm_arr.shape, m_dot.shape))
 
         #-------------------------------------------POLT-Ts-LM-MODT-COUTUR------------------------------------
-        name = './results/r_s_Lm_minMdot_plot.pdf'
+        name = self.plot_dir + 'rs_lm_minMdot_plot.pdf'
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -4708,7 +4726,7 @@ class ClassPlots():
         plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
         plt.title('MASS LOSS PLOT')
         plt.xlabel('Log(t)')
-        plt.ylabel(y_label)
+        plt.ylabel(y_name)
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plt.savefig(name)
 
@@ -4881,7 +4899,7 @@ class ClassPlots():
         plt.show()
 
     def hrd(self, t1,t2, observ_table_name, plot_file_names):
-        plot_name = './results/hrd.pdf'
+        plot_name = self.output_dir+'hrd.pdf'
         fig, ax = plt.subplots(1, 1)
         # from matplotlib.collections import LineCollection
         # from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -4938,27 +4956,27 @@ class ClassPlots():
             plt.plot(res[1][j, 1], res[1][j, 2], marker='^', color='C' + str(int(res[1][j, 3])), ls='',
                      label='WN' + str(int(res[1][j, 3])))
 
-        # if observ_table_name != None:  # plot array of observed stars from Read_Observ()
-        #     import re  # for searching the number in 'WN7-e' string, to plot them different colour
-        #     obs = Read_Observables(observ_table_name)
-        #
-        #     for i in range(obs.num_stars):
-        #         s = re.search(r"\d+(\.\d+)?", obs.obs_par('type', str)[i])  # this is searching for the niumber
-        #         # n_in_type.append(int(s.group(0)))
-        #         color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
-        #
-        #         x = np.append(x, np.log10(obs.obs_par('T_*', float)[i]*1000) )
-        #         y = np.append(y, obs.obs_par('log(L)', float)[i] )
-        #         # y = Physics.loglm(obs.obs_par('log(L)', float)[i], obs.obs_par('M', float)[i])
-        #
-        #         plt.plot(x[i], y[i], marker='o', color=color, ls='')  # plot dots
-        #         # label = str(obs.numb[i]) + ' ' + obs.type[i])
-        #         axs.annotate(obs.obs_par('WR', str)[i], xy=(x[i], y[i]), textcoords='data')  # plot names next to dots
-        #
-        #         if int(s.group(0)) not in n_in_type:  # plotting the legent for unique class of stars
-        #             plt.plot(x[i], y[i], marker='o', color=color, ls='',
-        #                      label=obs.obs_par('type', str)[i])
-        #         n_in_type.append(int(s.group(0)))
+        if observ_table_name != None:  # plot array of observed stars from Read_Observ()
+            import re  # for searching the number in 'WN7-e' string, to plot them different colour
+            obs = Read_Observables(observ_table_name)
+
+            for i in range(obs.num_stars):
+                s = re.search(r"\d+(\.\d+)?", obs.obs_par('type', str)[i])  # this is searching for the niumber
+                # n_in_type.append(int(s.group(0)))
+                color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
+
+                x = np.append(x, np.log10(obs.obs_par('T_*', float)[i]*1000) )
+                y = np.append(y, obs.obs_par('log(L)', float)[i] )
+                # y = Physics.loglm(obs.obs_par('log(L)', float)[i], obs.obs_par('M', float)[i])
+
+                plt.plot(x[i], y[i], marker='o', color=color, ls='')  # plot dots
+                # label = str(obs.numb[i]) + ' ' + obs.type[i])
+                axs.annotate(obs.obs_par('WR', str)[i], xy=(x[i], y[i]), textcoords='data')  # plot names next to dots
+
+                if int(s.group(0)) not in n_in_type:  # plotting the legent for unique class of stars
+                    plt.plot(x[i], y[i], marker='o', color=color, ls='',
+                             label=obs.obs_par('type', str)[i])
+                n_in_type.append(int(s.group(0)))
 
         # axs.set_ylim(  np.array(y_coord.min(), y.min()).min() , np.array(y_coord.max(), y.max()).max()  )
 
@@ -5113,7 +5131,8 @@ class ClassPlots():
                   '| {} | {} |'.format("%.3f" % plfl[i].t_eff[-1], "%.3f" % plfl[i].l_[-1]))
 
 class New_Table:
-    def __init__(self, path, tables, values):
+    def __init__(self, path, tables, values, out_dir_name):
+        self.plot_dir_name = out_dir_name
         self.tbls = []
         self.val = values
         if len(values)!=len(tables):
@@ -5171,7 +5190,7 @@ class New_Table:
                         new_kappa[i, j] = mask
 
         # "%.2f" %
-        fname = './opal/table_x.data'
+        fname = self.plot_dir_name
         res = Math.combine(self.tbls[0].r,self.tbls[0].t, new_kappa)
         np.savetxt(fname,res,'%.3f','\t')
         return res

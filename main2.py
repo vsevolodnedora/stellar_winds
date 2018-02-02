@@ -30,7 +30,8 @@ from classes6 import Treat_Observables
 #--------------------------------------------
 ''' --------------------evolved models -------------------'''
 from os import listdir
-
+output_dir = '../data/output'
+plot_dir = '../data/plots'
 
 def get_files(compath, req_dirs, requir_files, extension):
     comb = []
@@ -60,7 +61,7 @@ print(files)
 # files = get_files('./../../sse/', ['sm10z002/'], [])
 #'sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'
 # Read_SM_data_File.compart = ''
-cl1 = ClassPlots('./opal/table8.data',files, ['gal_wn'], 1000, True)
+cl1 = ClassPlots('../data/opal/table8.data',files, ['gal_wn'], 1000, True, '../data/output/', '../data/plots/')
 
 
 
@@ -80,10 +81,10 @@ r_s = 1.
 # cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, False)
 
 # 'e10z002/', 'e15z002/, 'e10z002ml/',',
-files = get_files('../../sse/', ['e10z002/', 'e15z002/','e20z002/','e10z002ml/', 'e15z002ml/', 'e17z002ml/',
-'e20z002ml/', 'e20z002ml_2/', 'test/'], [], '.plot1')
-# print(files)
-cl1.hrd(4.5, 5.2,'gal_wn', files)
+# files = get_files('../../sse/', ['e10z002/', 'e15z002/','e20z002/','e10z002ml/', 'e15z002ml/', 'e17z002ml/',
+# 'e20z002ml/', 'e20z002ml_2/', 'test/'], [], '.plot1')
+# # print(files)
+# cl1.hrd(4.5, 5.2,'gal_wn', files)
 
 # cl_plot= Read_Plot_file.from_file('../../sse/e20z002ml/ev.plot1')
 # plt.plot(cl_plot.time, cl_plot.t_eff)

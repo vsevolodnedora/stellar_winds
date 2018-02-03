@@ -55,7 +55,9 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-files = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['1d-5'], 'sm.data')
+# files = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
+files = get_files('../../sse/', ['sm_e10z002ml/sm7/', 'test_ml_sp/7/sm/'], [], 'sm.data')
+
 print(files)
 # files = get_files('../../sse/sm_e10z002ml/', ['sm0/', 'sm1/', 'sm2/', 'sm3/', 'sm4/', 'sm5/', 'sm6/', 'sm7/', 'sm8/', 'sm9/'], ['1d-5'])
 # files = get_files('./../../sse/', ['sm10z002/'], [])
@@ -65,23 +67,23 @@ cl1 = ClassPlots('../data/opal/table8.data',files, ['gal_wn'], 1000, True, '../d
 
 
 
-t1 = 5.1
+t1 = 4.6
 t2 = 5.5
 r_s = 1.
 
-# cl1.xy_profile('r','kappa', 'Y_c', 'lm', 0)
-# cl1.xyy_profile('r','rho','kappa', 'Y_c', 'lm', 'mdot')
-# cl1.table()
+# cl1.xy_profile('r','u', 'mdot', 'lm', 0)
+# cl1.xyy_profile('r','rho','kappa', 'mdot', 'l', 'r')
+# cl1.()
 # cl1.opacity_check(1, None, None, None)
 # cl1.opacity_check(1, 4.75, None, 0.068)
-cl1.plot_t_rho_kappa(4.5, 5.5, -9.5, -7.5, 1000, True)
-# cl1.plot_t_mdot_lm(  t1, t2, -5.5, -3, r_s)
-# cl1.plot_t_l_mdot('lm', t1, t2, 4.8, None, [0.70], 100, 100, 5.2, None)
+# cl1.plot_t_rho_kappa(4.5, 5.5, -9.5, -7.5, 1000, True)
+# cl1.plot_t_mdot_lm(  t1, t2, 'Y_c',-5.5, -3, r_s)
+# cl1.plot_t_l_mdot('l', t1, t2, 3.8, None, [0.8,1.2,1.6], 500, 500, 'Y_c', 5.2, None)
 
 # cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, False)
 
-# 'e10z002/', 'e15z002/, 'e10z002ml/',',
-# files = get_files('../../sse/', ['e10z002/', 'e15z002/','e20z002/','e10z002ml/', 'e15z002ml/', 'e17z002ml/',
+# 'e10z002/', 'e15z002/','e20z002/'
+# files = get_files('../../sse/', ['e10z002ml/', 'e15z002ml/', 'e17z002ml/',
 # 'e20z002ml/', 'e20z002ml_2/', 'test/'], [], '.plot1')
 # # print(files)
 # cl1.hrd(4.5, 5.2,'gal_wn', files)

@@ -8,21 +8,21 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import os
-from classes6 import Errors
-from classes6 import Read_Table
-from classes6 import Row_Analyze
-from classes6 import Table_Analyze
-from classes6 import Math
-from classes6 import Physics
-from classes6 import PhysPlots
-from classes6 import OPAL_Interpol
-from classes6 import Constants
-from classes6 import Read_SM_data_File
-from classes6 import ClassPlots
-from classes6 import Read_Observables
-from classes6 import New_Table
-from classes6 import Read_Plot_file
-from classes6 import Treat_Observables
+from Plots_Obs_treat import Errors
+from Plots_Obs_treat import Read_Table
+from Plots_Obs_treat import Row_Analyze
+from Plots_Obs_treat import Table_Analyze
+from Plots_Obs_treat import Math
+from Plots_Obs_treat import Physics
+from Plots_Obs_treat import PhysPlots
+from Plots_Obs_treat import OPAL_Interpol
+from Plots_Obs_treat import Constants
+from Plots_Obs_treat import Read_SM_data_File
+from Plots_Obs_treat import ClassPlots
+from Plots_Obs_treat import Read_Observables
+from Plots_Obs_treat import New_Table
+from Plots_Obs_treat import Read_Plot_file
+from Plots_Obs_treat import Treat_Observables
 #--------------------------------------------
 #
 # Here, the actual work proceeds,
@@ -55,15 +55,15 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-# files = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
-files = get_files('../../sse/', ['sm_e10z002ml/sm7/', 'test_ml_sp/7/sm/'], [], 'sm.data')
+files = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
+# files = get_files('../../sse/', ['e10z002ml/7/test/', 'test_ml_sp/7/test/'], [], 'sm.data')
 
 print(files)
 # files = get_files('../../sse/sm_e10z002ml/', ['sm0/', 'sm1/', 'sm2/', 'sm3/', 'sm4/', 'sm5/', 'sm6/', 'sm7/', 'sm8/', 'sm9/'], ['1d-5'])
 # files = get_files('./../../sse/', ['sm10z002/'], [])
 #'sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'
 # Read_SM_data_File.compart = ''
-cl1 = ClassPlots('../data/opal/table8.data',files, ['gal_wn'], 1000, True, '../data/output/', '../data/plots/')
+cl1 = ClassPlots('../data/opal/table8.data',files, ['../data/obs/gal_wn.data'], 1000, True, '../data/output/', '../data/plots/')
 
 
 
@@ -71,16 +71,18 @@ t1 = 4.6
 t2 = 5.5
 r_s = 1.
 
-# cl1.xy_profile('r','u', 'mdot', 'lm', 0)
+Treat_Observables.cluming_required = 10
+
+# cl1.xy_profile('He4','r', 'Y_c', 'lm', 0)
 # cl1.xyy_profile('r','rho','kappa', 'mdot', 'l', 'r')
 # cl1.()
 # cl1.opacity_check(1, None, None, None)
 # cl1.opacity_check(1, 4.75, None, 0.068)
 # cl1.plot_t_rho_kappa(4.5, 5.5, -9.5, -7.5, 1000, True)
 # cl1.plot_t_mdot_lm(  t1, t2, 'Y_c',-5.5, -3, r_s)
-# cl1.plot_t_l_mdot('l', t1, t2, 3.8, None, [0.8,1.2,1.6], 500, 500, 'Y_c', 5.2, None)
+# cl1.plot_t_l_mdot('l', t1, t2, 3.8, None, [0.8], 500, 500, 'Y_c', 5.2, None)
 
-# cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, False)
+cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, True)
 
 # 'e10z002/', 'e15z002/','e20z002/'
 # files = get_files('../../sse/', ['e10z002ml/', 'e15z002ml/', 'e17z002ml/',
@@ -189,7 +191,7 @@ var_names = ['nan', 'u', 'r', 'rho', 't', 'l', 'vu', 'vr',
              'psi', 'dPg_dPr|rho', 'Pturb', 'beta', 'vel_conv', 'mdot', 'tau_ph',
              ]
 
-print('T=5.2'.split('='))
+# print('T=5.2'.split('='))
 
 # def get_0_to_max(arr, max):
 #     j = 0
@@ -204,7 +206,7 @@ print('T=5.2'.split('='))
 #
 #     return res
 
-print(Math.get_0_to_max([14], 9)[14])
-
-a = np.array([1,2,3,4,])
-print(np.insert(a,0,0))
+# print(Math.get_0_to_max([14], 9)[14])
+#
+# a = np.array([1,2,3,4,])
+# print(np.insert(a,0,0))

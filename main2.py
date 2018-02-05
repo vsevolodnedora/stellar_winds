@@ -55,15 +55,15 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-files = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
+smfiles = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
 # files = get_files('../../sse/', ['e10z002ml/7/test/', 'test_ml_sp/7/test/'], [], 'sm.data')
-
-print(files)
+plotfls = get_files('../../sse/', ['plots_ml/'], [], '.plot1')
+print(smfiles)
 # files = get_files('../../sse/sm_e10z002ml/', ['sm0/', 'sm1/', 'sm2/', 'sm3/', 'sm4/', 'sm5/', 'sm6/', 'sm7/', 'sm8/', 'sm9/'], ['1d-5'])
 # files = get_files('./../../sse/', ['sm10z002/'], [])
 #'sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'
 # Read_SM_data_File.compart = ''
-cl1 = ClassPlots('../data/opal/table8.data',files, ['../data/obs/gal_wn.data'], 1000, True, '../data/output/', '../data/plots/')
+cl1 = ClassPlots('../data/opal/table8.data', smfiles, ['../data/obs/gal_wn.data'], plotfls, 1000, True, '../data/output/', '../data/plots/')
 
 
 
@@ -80,13 +80,12 @@ Treat_Observables.cluming_required = 10
 # cl1.opacity_check(1, 4.75, None, 0.068)
 # cl1.plot_t_rho_kappa(4.5, 5.5, -9.5, -7.5, 1000, True)
 # cl1.plot_t_mdot_lm(  t1, t2, 'Y_c',-5.5, -3, r_s)
-# cl1.plot_t_l_mdot('l', t1, t2, 3.8, None, [0.8], 500, 500, 'Y_c', 5.2, None)
+cl1.plot_t_l_mdot('l', t1, t2, 4.8, None, [0.8], 500, 500, 'Y_c', 5.2, None)
 
-cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, True)
+# cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, True)
 
-# 'e10z002/', 'e15z002/','e20z002/'
-# files = get_files('../../sse/', ['e10z002ml/', 'e15z002ml/', 'e17z002ml/',
-# 'e20z002ml/', 'e20z002ml_2/', 'test/'], [], '.plot1')
+# 'e10z002/', 'e15z002/','e20z002/' # 'e20z002ml/', 'e20z002ml_2/', 'test/', 'e20z002ml_test2/' # 'plots_ml/'
+# files = get_files('../../sse/', ['e20z002ml_test2/'], [], '.plot1')
 # # print(files)
 # cl1.hrd(4.5, 5.2,'gal_wn', files)
 
@@ -210,3 +209,8 @@ var_names = ['nan', 'u', 'r', 'rho', 't', 'l', 'vu', 'vr',
 #
 # a = np.array([1,2,3,4,])
 # print(np.insert(a,0,0))
+
+def a(list=list()):
+    print(list)
+
+a()

@@ -346,7 +346,7 @@ class PhysPlots:
     def k_vs_t(t_arr, y_arr, y2_arr, show = False, save = False,
                lim_k1 = None, lim_k2 = None, lim_t1 = None, lim_t2 = None, it1 = None, it2 = None, plot_dir = '../data/plots/'):
 
-        plot_name = './results/Kappa_Limits.pdf'
+        # plot_name = './results/Kappa_Limits.pdf'
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)

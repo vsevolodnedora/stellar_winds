@@ -65,7 +65,7 @@ class Treat_Observables:
                     print('\t__Error. Files with observations contain different *names* row')
                     print('\t  {} has: {} \n\t  {} has: {} '
                           .format(obs_files[i-1], self.obs[i-1].names, obs_files[i], self.obs[i].names))
-                    raise NameError
+                    raise NameError('Files with observations contain different *names* row')
 
     def check_if_var_name_in_list(self, var_name):
         if var_name == 'lm' or var_name == 'ts' or var_name == 'rs': # special case for L/M and sonic temperature
@@ -207,8 +207,6 @@ class Treat_Observables:
 
         return( np.array( [plotted_stars, plotted_labels] ) )
 
-
-
 class Treat_Numercials:
 
     def __init__(self, files):
@@ -289,7 +287,7 @@ class Treat_Numercials:
                 y_coord = self.mdl[i].get_col(y_name)[i_req]
 
             if y_name == 'lm':
-                y_coord = self.mdl[i].get_spec_val('lm')
+                y_coord = self.mdl[i].get_spec_val('lm', i_req)
 
             if var_for_label1 == 'Y_c':
                 add_data1 = self.mdl[i].get_col('He4')[0]
@@ -367,7 +365,7 @@ class Treat_Numercials:
             print('\t__Warning: No stars to Print. Coordinates are not obtained')
 
 
-        self.table()
+        self.table(y_name, -1)
 
         return model_stars1
 
@@ -471,31 +469,53 @@ class Treat_Numercials:
         t  = self.mdl[n_of_model].get_col('t')
         return Physics.sound_speed(t, mu, True)
 
-    def table(self):
-        print(
-            '\n'
-            ' i'
-            ' |  Mdot '
-            '| Mass'
-            '|  R/Rs  '
-            '| L/Ls  '
-            '| kappa  '
-            '| l(Rho) '
-            '| Temp  '
-            '| mfp   '
-            '| vel   '
-            '| gamma  '
-            '| tpar  '
-            '|  HP   '
-            '| log(C)  ')
+    def table(self, y_name = 'l', i_req = -1):
+
+        if y_name == 'l':
+
+            print(
+                '\n'
+                ' i'
+                ' |  Mdot '
+                '| Mass'
+                '|  R/Rs  '
+                '| L/Ls  '
+                '| kappa  '
+                '| l(Rho) '
+                '| Temp  '
+                '| mfp   '
+                '| vel   '
+                '| gamma  '
+                '| tpar  '
+                '|  HP   '
+                '| log(C)  ')
+        if y_name == 'lm':
+            print(
+                '\n'
+                ' i'
+                ' |  Mdot '
+                '| Mass'
+                '|  R/Rs  '
+                '| L/M   '
+                '| kappa  '
+                '| l(Rho) '
+                '| Temp  '
+                '| mfp   '
+                '| vel   '
+                '| gamma  '
+                '| tpar  '
+                '|  HP   '
+                '| log(C)  ')
+
         print('---|-------|-----|--------|-------|--------|--------|-------|------'
               '-|-------|--------|-------|-------|-------')
+
         for i in range(self.n_of_files):
-            self.mdl[i].get_par_table(i)
+            self.mdl[i].get_par_table(i, y_name, i_req)
 
 class ClassPlots:
 
-    def __init__(self, opal_file, smfls, obs_file, n_anal = 1000, load_lim_cases = False,
+    def __init__(self, opal_file, smfls = list(), obs_fils = list(), plot_files = list(), n_anal = 1000, load_lim_cases = False,
                  output_dir = '../data/output/', plot_dir = '../data/plots/'):
         '''
         :param path: './smdata/' filder with sm.datas
@@ -507,7 +527,7 @@ class ClassPlots:
         self.output_dir = output_dir
         self.plot_dir = plot_dir
 
-        self.obs_files = obs_file
+        self.obs_files = obs_fils
         self.num_files = smfls
 
         self.obs = Treat_Observables(self.obs_files)
@@ -516,6 +536,11 @@ class ClassPlots:
         # --- INSTANCES
         self.opal    = OPAL_Interpol(opal_file, n_anal)
         self.tbl_anl = Table_Analyze(opal_file, n_anal, load_lim_cases, output_dir, plot_dir)
+
+        self.plotcl = []
+        self.plot_files = plot_files
+        for i in range(len(plot_files)):
+            self.plotcl.append(Read_Plot_file.from_file(plot_files[i]))
 
         # self.obs = None
         # if obs_file != None:
@@ -1243,7 +1268,7 @@ class ClassPlots:
 
             # plt.plot(min_mdot_arr_[i,:], y_coord_, '-', color=color, label='min_Mdot for r_s: {}'.format(r_s_[i]))
 
-    def plot_min_mdot(self, t, kap, rho2d, y_coord, r_s_, y_label, num_var_plot = 'Y_c'):
+    def plot_min_mdot(self, t, kap, rho2d, y_coord, r_s_, y_name, num_var_plot ='Y_c'):
         # ===============================================================================================================
         #           Minimum Mass loss = f(L/M)
         # ===============================================================================================================
@@ -1259,7 +1284,7 @@ class ClassPlots:
         plt.title('L or L/M = f(min M_dot)')
 
         # --------------------------------------_PLOT MINS-------------------------------------------------
-        ClassPlots.get_min_mdot_set(r_s_,y_label,t,kap,rho2d)
+        ClassPlots.get_min_mdot_set(r_s_, y_name, t, kap, rho2d)
 
         # min_mdot_arr_ = np.zeros((len(r_s_), len(y_coord)))  # Down are the r_s, -> are the min mass losses
         # for i in range(len(r_s_)):
@@ -1277,7 +1302,7 @@ class ClassPlots:
         #     color = 'C' + str(i)
         #     plt.plot(min_mdot_arr_[i,:], y_coord_, '-', color=color, label='min_Mdot for r_s: {}'.format(r_s_[i]))
 
-        min_mdot_arr_ = ClassPlots.get_min_mdot_set(r_s_, y_label, t, kap, rho2d)
+        min_mdot_arr_ = ClassPlots.get_min_mdot_set(r_s_, y_name, t, kap, rho2d)
         min_mdot_0 = min_mdot_arr_[1:, 1]
 
         for i in range(len(r_s_)):
@@ -1288,15 +1313,17 @@ class ClassPlots:
 
         plt.xlim(-6.0, min_mdot_0.max())
 
+        #----------------------------------------------PLOT-NUMERICALS--------------------------------------------------
         nums = Treat_Numercials(self.num_files) # Surface Temp as a x coordinate
-        res = nums.get_x_y_of_all_numericals('sp', 'mdot', y_label, num_var_plot, 'color')
+        res = nums.get_x_y_of_all_numericals('sp', 'mdot', y_name, num_var_plot, 'color')
         for i in range(len(res[:,0])):
             plt.plot(res[i, 1], res[i, 2], marker='.', color='C' + str(int(res[i, 4])), ls='',
                      label='{}:{}'.format(num_var_plot, "%.2f" % res[i, 3]))  # plot color dots)))
             ax.annotate(str("%.2f" % res[i, 3]), xy=(res[i, 1], res[i, 2]), textcoords='data')
 
+        #-----------------------------------------------PLOT-OBSERVABLES------------------------------------------------
         obs = Treat_Observables(self.obs_files)
-        res = obs.get_x_y_of_all_observables('mdot', y_label, 'type')
+        res = obs.get_x_y_of_all_observables('mdot', y_name, 'type')
         for i in range(len(res[0][:, 1])):
             ax.annotate(int(res[0][i, 0]), xy=(res[0][i, 1], res[0][i, 2]), textcoords='data')  # plot numbers of stars
             plt.plot(res[0][i, 1], res[0][i, 2], marker='^', color='C' + str(int(res[0][i, 3])),
@@ -1306,12 +1333,20 @@ class ClassPlots:
             plt.plot(res[1][j, 1], res[1][j, 2], marker='^', color='C' + str(int(res[1][j, 3])), ls='',
                      label='WN'+str(int(res[1][j, 3])))
 
+
         x_grid_y_grid = Math.line_fit(res[0][:, 1], res[0][:, 2])
         plt.plot(x_grid_y_grid[0, :], x_grid_y_grid[1, :], '-.', color='blue')
 
+        #------------------------------------------PLOT-LUMINOCITY-RANGES-OF-MODELS-------------------------------------
+        for i in range(len(self.plot_files)):
+            min_l, max_l = self.plotcl[i].get_min_max_l_lm_val(y_name)
+            ax.fill_between(np.array([-6.0, min_mdot_0.max()]), np.array([min_l]), np.array([max_l]),  alpha=0.5,
+                            label='L range of ({}->{})sm star'.format(self.plotcl[i].m_[0], self.plotcl[i].m_[-1]))
+
+
 
         plt.xlabel('log(M_dot)')
-        plt.ylabel(y_label)
+        plt.ylabel(y_name)
         ax.grid(which='major', alpha=0.2)
         plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
 
@@ -1495,7 +1530,7 @@ class ClassPlots:
         plt.plot(x_grid_y_grid[0, :], x_grid_y_grid[1, :], '-.', color='blue')
 
         #------------------------------------------------------ATTEMPT-TO-SET-THE-Rs-AND-GET-THE-MDOT-------------------
-        new_rs = 2.5
+        new_rs = 1.
         obs = Treat_Observables(self.obs_files)
         # res = obs.get_x_y_of_all_observables('mdot', 'l', 'type', rs_arr, l_lm_arr, minmdot_arr)
         res = obs.get_x_y_of_all_observables('rs', 'l', 'type', rs_arr, l_lm_arr, minmdot_arr)
@@ -1665,8 +1700,8 @@ class ClassPlots:
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        pl.xlim(t.min(), t.max())
-        pl.ylim(l_lm_arr.min(), l_lm_arr.max())
+        plt.xlim(t.min(), t.max())
+        plt.ylim(l_lm_arr.min(), l_lm_arr.max())
         levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
         contour_filled = plt.contourf(t, l_lm_arr, m_dot, levels, cmap=plt.get_cmap('RdYlBu_r'))
         plt.colorbar(contour_filled)
@@ -1721,6 +1756,13 @@ class ClassPlots:
         f = np.poly1d(fit)
         fit_x_coord = np.mgrid[(res[1:, 1].min() - 0.02):(res[1:, 1].max() + 0.02):100j]
         plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
+
+        #------------------------------------------PLOT-LUMINOCITY-RANGES-OF-MODELS-------------------------------------
+        for i in range(len(self.plot_files)):
+            min_l, max_l = self.plotcl[i].get_min_max_l_lm_val(y_name)
+            ax.fill_between(np.array([t.min(), t.max()]), np.array([min_l]), np.array([max_l]),  alpha=0.5,
+                            label='L range of ({}->{})sm star'.format(self.plotcl[i].m_[0], self.plotcl[i].m_[-1]))
+
 
 
         #

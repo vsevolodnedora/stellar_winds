@@ -222,6 +222,26 @@ class Read_Plot_file:
         # attached an empty raw to match the index of array
         return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T)
 
+    def get_min_max_l_lm_val(self, y_name):
+        '''
+        Returns max and min available l or lm in .plot1 file
+        :param y_name:
+        :return:
+        '''
+        if y_name == 'l':
+            min_l = self.l_.min()
+            max_l = self.l_.max()
+        else:
+            # print('---------------------------------------------------------------------------')
+            lm = np.log10(
+                np.array([10 ** self.l_[j] / self.m_[j] for j in range(len(self.l_))]))
+            min_l = lm.min()
+            max_l = lm.max()
+
+        return (min_l, max_l)
+
+
+
 class Read_SM_data_File:
     '''
     The following data are available in file sm.data
@@ -796,7 +816,7 @@ class Read_SM_data_File:
 
         return i
 
-    def get_par_table(self, model, i = -1):
+    def get_par_table(self, model, y_name = 'l', i = -1):
 
 
         # print(
@@ -815,34 +835,51 @@ class Read_SM_data_File:
         #     '\t\t| tau '
         #     '\t\t|')
 
-        print(
-            "%2.0f" % model,
-            '|', "%.2f" % self.mdot_[i],
-            '|', "%.1f" % self.xm_[i],
-            '|', "%.4f" % self.r_[i],
-            '|', "%.3f" % self.l_[i],
-            '|', "%.4f" % 10**self.kappa_[i],
-            '|', "%.3f" % self.rho_[i],
-            '|', "%.3f" % self.t_[i],
-            '|', "%.3f" % Physics.mean_free_path(self.rho_[i], self.kappa_[i]),
-            '|', "%5.2f" % self.u_[i],
-            '|', "%.4f" % self.LLedd_[i],
-            '|', "%.3f" % Physics.opt_depth_par(i, self.rho_,self.kappa_,self.u_,self.r_, self.t_, self.mu_),
-            '|', "%.3f" % self.HP_[i],
-            '|', "%.3f" % np.log10(self.C12_[i]))
+        if y_name == 'l':
+            print(
+                "%2.0f" % model,
+                '|', "%.2f" % self.mdot_[i],
+                '|', "%.1f" % self.xm_[i],
+                '|', "%.4f" % self.r_[i],
+                '|', "%.3f" % self.l_[i],
+                '|', "%.4f" % 10**self.kappa_[i],
+                '|', "%.3f" % self.rho_[i],
+                '|', "%.3f" % self.t_[i],
+                '|', "%.3f" % Physics.mean_free_path(self.rho_[i], self.kappa_[i]),
+                '|', "%5.2f" % self.u_[i],
+                '|', "%.4f" % self.LLedd_[i],
+                '|', "%.3f" % Physics.opt_depth_par(i, self.rho_,self.kappa_,self.u_,self.r_, self.t_, self.mu_),
+                '|', "%.3f" % self.HP_[i],
+                '|', "%.3f" % np.log10(self.C12_[i]))
+        if y_name == 'lm':
+            print(
+                "%2.0f" % model,
+                '|', "%.2f" % self.mdot_[i],
+                '|', "%.1f" % self.xm_[i],
+                '|', "%.4f" % self.r_[i],
+                '|', "%.3f" % np.log10(10**self.l_[i]/self.xm_[i]),
+                '|', "%.4f" % 10**self.kappa_[i],
+                '|', "%.3f" % self.rho_[i],
+                '|', "%.3f" % self.t_[i],
+                '|', "%.3f" % Physics.mean_free_path(self.rho_[i], self.kappa_[i]),
+                '|', "%5.2f" % self.u_[i],
+                '|', "%.4f" % self.LLedd_[i],
+                '|', "%.3f" % Physics.opt_depth_par(i, self.rho_,self.kappa_,self.u_,self.r_, self.t_, self.mu_),
+                '|', "%.3f" % self.HP_[i],
+                '|', "%.3f" % np.log10(self.C12_[i]))
 
 
-        return np.array([ self.mdot_[i],
-                          self.xm_[i],
-                          self.r_[i],
-                          self.l_[i],
-                          self.kappa_[i],
-                          self.rho_[i],
-                          self.t_[i],
-                          Physics.mean_free_path(self.rho_[i], self.kappa_[i]),
-                          self.u_[i],self.LLedd_[i],
-                          Physics.opt_depth_par(i, self.rho_, self.kappa_, self.u_, self.r_, self.t_, self.mu_),
-                          self.HP_[i], self.tau_[i], ])
+        # return np.array([ self.mdot_[i],
+        #                   self.xm_[i],
+        #                   self.r_[i],
+        #                   self.l_[i],
+        #                   self.kappa_[i],
+        #                   self.rho_[i],
+        #                   self.t_[i],
+        #                   Physics.mean_free_path(self.rho_[i], self.kappa_[i]),
+        #                   self.u_[i],self.LLedd_[i],
+        #                   Physics.opt_depth_par(i, self.rho_, self.kappa_, self.u_, self.r_, self.t_, self.mu_),
+        #                   self.HP_[i], self.tau_[i], ])
 
     def get_set_of_cols(self, v_n_arr):
         res = np.zeros(( len(self.r_), len(v_n_arr) ))
@@ -852,14 +889,14 @@ class Read_SM_data_File:
         print('\t__Note: vars:[', v_n_arr, '] returned arr:', res.shape)
         return res
 
-    def get_spec_val(self, v_n):
+    def get_spec_val(self, v_n, i = -1):
         '''
         Available specific v_n:  'lm', 'Y_c'
         :param v_n:
         :return:
         '''
         if v_n == 'lm':
-            return Physics.loglm(self.l_[-1], self.xm_[-1], False)
+            return Physics.loglm(self.l_[i], self.xm_[i], False)
 
         if v_n == 'Y_c':
             return self.He4_[0]

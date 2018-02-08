@@ -473,6 +473,9 @@ class Physics:
         else:
             sys.exit('\t__Error. Wrong number of dimensions. Use 0,1,2. Given: {} | m_dot |'.format(dimensions))
 
+
+
+
     @staticmethod
     def mdot_rho(t, mdot, dimensions = 1, r_s = 1., mu = 1.34):
         smperyear = Constants.solar_m / Constants.yr

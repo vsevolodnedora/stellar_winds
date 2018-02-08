@@ -240,8 +240,6 @@ class Read_Plot_file:
 
         return (min_l, max_l)
 
-
-
 class Read_SM_data_File:
     '''
     The following data are available in file sm.data

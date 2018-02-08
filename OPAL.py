@@ -1038,41 +1038,41 @@ class OPAL_Interpol(Read_Table):
 
         return np.array([t1, t2, rho1, rho2])
 
-    @staticmethod
-    def interpolate_2d(x, y, z, x_coord, y_coord, depth):
-
-        x_coord = np.array(x_coord, dtype=float)
-        y_coord = np.array(y_coord, dtype=float)
-        # interpolating every row< going down in y.
-        if len(x_coord)!=len(y_coord):
-            raise ValueError('x and y coord must be equal in length (x:{}, y:{})'.format(len(x_coord),len(y_coord)))
-        #
-        # if x_coord.min() < x.min() or x_coord.max() > x.max():
-        #     raise ValueError('x_min:{} < x.min:{} or x_max:{} > '.format(x_coord.min(), x.min()))
-        # if
-        #
-        print(x.shape, y.shape, z.shape)
-        new_z = []#np.zeros((len(y), len(x_coord)))
-        for si in range(len(y)):
-            # new_x[si,:] = Math.interp_row(x, z[si,:], x_coord)
-            new_z = np.append(new_z, Math.interp_row(x, z[si,:], x_coord))
-
-        # inteprolating every column, going right in x.
-        new_z2 = []#np.zeros(( len(y_coord), len(new_x[:,0]) ))
-        for si in range(len(x)):
-            # new_y[:,si] = Math.interp_row(y, new_x[:,si], y_coord)
-            new_z2 = np.append(new_z2, Math.interp_row(y, new_z, y_coord))
-
-        print(new_z.shape, new_z2.shape)
-
-
-        f = interpolate.interp2d(x, y, z, kind='cubic')
-
-
-        print(f(x_coord, y_coord))
-
-
-        return None
+    # @staticmethod
+    # def interpolate_2d(x, y, z, x_coord, y_coord, depth):
+    #
+    #     x_coord = np.array(x_coord, dtype=float)
+    #     y_coord = np.array(y_coord, dtype=float)
+    #     # interpolating every row< going down in y.
+    #     if len(x_coord)!=len(y_coord):
+    #         raise ValueError('x and y coord must be equal in length (x:{}, y:{})'.format(len(x_coord),len(y_coord)))
+    #     #
+    #     # if x_coord.min() < x.min() or x_coord.max() > x.max():
+    #     #     raise ValueError('x_min:{} < x.min:{} or x_max:{} > '.format(x_coord.min(), x.min()))
+    #     # if
+    #     #
+    #     print(x.shape, y.shape, z.shape)
+    #     new_z = []#np.zeros((len(y), len(x_coord)))
+    #     for si in range(len(y)):
+    #         # new_x[si,:] = Math.interp_row(x, z[si,:], x_coord)
+    #         new_z = np.append(new_z, Math.interp_row(x, z[si,:], x_coord))
+    #
+    #     # inteprolating every column, going right in x.
+    #     new_z2 = []#np.zeros(( len(y_coord), len(new_x[:,0]) ))
+    #     for si in range(len(x)):
+    #         # new_y[:,si] = Math.interp_row(y, new_x[:,si], y_coord)
+    #         new_z2 = np.append(new_z2, Math.interp_row(y, new_z, y_coord))
+    #
+    #     print(new_z.shape, new_z2.shape)
+    #
+    #
+    #     f = interpolate.interp2d(x, y, z, kind='cubic')
+    #
+    #
+    #     print(f(x_coord, y_coord))
+    #
+    #
+    #     return None
 
 
     def interp_opal_table(self, t1, t2, rho1 = None, rho2 = None):

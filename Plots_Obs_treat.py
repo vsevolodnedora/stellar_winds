@@ -424,29 +424,6 @@ class Treat_Numercials:
         if add_data3 == None:
             add_data3 = self.mdl[n_of_model].get_col(var_for_label3)[i_req]
 
-        #
-        # if var_for_label1 == 'Y_c':
-        #     add_data1 = self.mdl[n_of_model].get_col('He4')[0]
-        # if var_for_label1 == 'lm':
-        #     add_data1 = self.mdl[n_of_model].get_lm_last()
-        #
-        # if add_data1 == None:
-        #     add_data1 = self.mdl[n_of_model].get_col(var_for_label1)[i_req]
-        #
-        # if var_for_label2 == 'color':
-        #     add_data2 = Math.get_0_to_max( [n_of_model], 9 )[n_of_model]  # from 1 to 9 for plotting C+[1-9]
-        # if var_for_label2 == 'lm':
-        #     add_data2 = self.mdl[n_of_model].get_lm_last()
-        # if var_for_label2 == 'Y_c':
-        #     add_data2 = self.mdl[n_of_model].get_col('He4')[0]
-        #
-        # if add_data2 == None:
-        #     add_data2 = self.mdl[n_of_model].get_col(var_for_label2)[i_req]
-
-        # if x_coord == None or y_coord == None:
-        #     raise ValueError('x_coord={} or y_coord={} is not obtained.'.format(x_coord, y_coord))
-
-        print(var_for_label3, add_data3)
         if len(x_coord) != len(y_coord) or len(x_coord) != len(z_coord):
             raise ValueError('x_coord and y_coord: \n\t {} \t\n {} have different shape.'.format(x_coord, y_coord))
 
@@ -512,6 +489,189 @@ class Treat_Numercials:
 
         for i in range(self.n_of_files):
             self.mdl[i].get_par_table(i, y_name, i_req)
+
+
+class Tables:
+    def __init__(self, opal_name, t1, t2, n_interp = 1000, load_lim_cases = False, output_dir = '../data/output/', plot_dir = '../data/plots/'):
+        self.op_name = opal_name
+        self.t1 = t1
+        self.t2 = t2
+        self.n_inter = n_interp
+
+        self.out_dir = output_dir
+        self.plot_dir = plot_dir
+
+        self.opal = OPAL_Interpol(opal_name, n_interp)
+        self.tbl_anl = Table_Analyze(opal_name, n_interp, load_lim_cases, output_dir, plot_dir)
+
+    def save_interp_opals(self, rho1 = None, rho2=None):
+        op_cl = OPAL_Interpol(self.op_name, self.n_inter)
+        t1, t2, rho1, rho2 = op_cl.check_t_rho_limits(self.t1, self.t2, rho1, rho2)
+        op_table = op_cl.interp_opal_table(self.t1, self.t2, rho1, rho2)
+
+        header = np.zeros(len(op_table[0, :]))
+        header[0] = self.t1
+        header[1] = self.t2
+        header[2] = rho1
+        header[3] = rho2
+
+        op_and_head = np.vstack((header, op_table))
+
+        part = self.op_name.split('/')[-1]
+        name = self.out_dir + 'interp_' + part
+        np.savetxt(name, op_and_head, '%.4f', '  ', '\n',
+                   'INTERPOLATED {} TABLE'.format(part), '', '# Table:{}, t1:{}, t2:{}, rho1:{}, rho2:{}, grid:{}'
+                   .format(self.op_name, self.t1, self.t2, rho1, rho2, self.n_inter))
+
+        x = np.loadtxt('TEST.data', dtype=float)
+        print(x)
+
+        # def read_interp_opal(table_names):
+
+    def save_t_kappa_rho(self, k1 = None, k2 = None, n_out = 1000):
+
+        cl = Table_Analyze(self.op_name, self.n_inter, False, self.out_dir, self.plot_dir)
+        cl.treat_tasks_tlim(n_out, self.t1, self.t2, k1, k2, False)
+
+
+
+    @staticmethod
+    def get_k1_k2_from_llm1_llm2(t1, t2, l1, l2):
+        lm1 = None
+        if l1 != None:
+            lm1 = Physics.l_to_lm(l1)
+        lm2 = None
+        if l2 != None:
+            lm2 = Physics.l_to_lm(l2)
+
+        if lm1 != None:
+            k2 = Physics.loglm_logk(lm1)
+        else:
+            k2 = None
+        if lm2 != None:
+            k1 = Physics.loglm_logk(lm2)
+        else:
+            k1 = None
+
+        print('\t__Provided LM limits ({}, {}), translated to L limits: ({}, {})'.format(lm1, lm2, l1, l2))
+        print('\t__Provided T limits ({},{}), and kappa limits ({}, {})'.format(t1, t2, k1, k2))
+        return [k1, k2]
+
+    @staticmethod
+    def save_table(d2arr, opal_used, name, x_name, x1, x2, y_name, y1, y2, z_name, n_int, n_out, output_dir = '../data/output/'):
+
+        header = np.zeros(len(d2arr)) # will be first row with limtis and
+        header[0] = x1
+        header[1] = x2
+        header[2] = y1
+        header[3] = y2
+        # tbl_name = 't_k_rho'
+        # op_and_head = np.vstack((header, d2arr))  # arraching the line with limits to the array
+
+        part = opal_used.split('/')[-1]
+        full_name = output_dir + name + '_' + part  # dir/t_k_rho_table8.data
+
+        np.savetxt(full_name, d2arr, '%.4f', '  ', '\n',
+                   '\nINTERPOLATED OPAL {} TABLE for {} relation'.format(part, name), '',
+                   '# {} | {} {} {} | {} {} {} | {} | {} | {}'
+                   .format(opal_used, x_name, x1, x2, y_name, y1, y2, z_name, n_int, n_out))
+
+    def read_table(self, name, x_name, y_name, z_name, opal_used):
+        part = opal_used.split('/')[-1]
+        full_name = self.out_dir + name + '_' + part
+        f = open(full_name, 'r').readlines()
+
+        boxes = f[0].split('|')
+        f.clear()
+        print(boxes)
+        r_table = boxes[0].split()[-1]
+        r_x_name = boxes[1].split()[0]
+        x1 = boxes[1].split()[1]
+        x2 = boxes[1].split()[2]
+        r_y_name = boxes[2].split()[0]
+        y1 = boxes[2].split()[1]
+        y2 = boxes[2].split()[2]
+        r_z_name = boxes[3].split()[0]
+        n1 = boxes[4].split()[-1]
+        n2 = boxes[5].split()[-1]
+
+        if r_table != opal_used:
+            raise NameError('Read OPAL | {} | not the same is opal_used | {} |'.format(r_table, opal_used))
+
+        if x_name != r_x_name:
+            raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(x_name, r_x_name))
+
+        if y_name != r_y_name:
+            raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(y_name, r_y_name))
+
+        if z_name != r_z_name:
+            raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(z_name, r_z_name))
+
+        if x1 == 'None':
+            x1 = None
+        else:
+            x1 = float(x1)
+
+        if x2 == 'None:':
+            x2 = None
+        else:
+            x2 = float(x2)
+
+        if y1 == 'None':
+            y1 = None
+        else:
+            y1 = float(y1)
+
+        if y2 == 'None':
+            y2 = None
+        else:
+            y2 = float(y2)
+
+        n1 = int(n1)
+        n2 = int(n2)
+
+        print('\t__OPAL: {}, X is {} [{} to {}], Y is {} [{} to {}] Z is {} Number1: {}, Number 2: {}'
+              .format(r_table, r_x_name, x1, x2, r_y_name, y1, y2, r_z_name, n1, n2))
+
+        print('\t__File | {} | is loaded successfully'.format(full_name))
+
+        # global file_table
+        file_table = np.loadtxt(full_name, dtype=float)
+
+        return file_table #[x1, x2, y1, y2, n1, n2]
+
+
+
+
+    def save_t_k_rho(self, llm1=None, llm2=None, n_out = 1000):
+        k1, k2 = Tables.get_k1_k2_from_llm1_llm2(self.t1, self.t2, llm1, llm2)
+
+        global t_k_rho
+        t_k_rho = self.tbl_anl.treat_tasks_interp_for_t(self.t1, self.t2, n_out, self.n_inter, k1, k2)
+
+        Tables.save_table(t_k_rho, self.op_name, 't_k_rho', 't', self.t1, self.t2, 'k', k1, k2, 'rho', self.n_inter, n_out, self.out_dir)
+
+        Tables.read_table('t_k_rho', 't', 'k', 'rho', self.op_name)
+        # def save_t_llm_vrho(self, llm1=None, llm2=None, n_out = 1000):
+
+    def save_t_llm_vrho(self, l_or_lm):
+
+        # 1 load the t_k_rho
+        t_k_rho = self.read_table('t_k_rho', 't', 'k', 'rho', self.op_name)
+
+        k = t_k_rho[0, 1:]
+        t = t_k_rho[1:, 0]
+        rho2d = t_k_rho[1:, 1:]
+
+        if l_or_lm == 'l':
+            l_lm_arr  = Physics.lm_to_l( Physics.logk_loglm(k, True) ) # Kappa -> L/M -> L
+        else:
+            l_lm_arr = Physics.logk_loglm(k, 1)
+
+
+        m_dot = Physics.rho_mdot(t, rho2d.T, 2, 0) # r_s = 0 -> logMdot = logX + log(4*pi*rs)
+
+
 
 class ClassPlots:
 
@@ -1456,7 +1616,7 @@ class ClassPlots:
         # plt.show()
 
     @staticmethod
-    def get_k1_k2_from_l1_l2(t1, t2, l1, l2):
+    def get_k1_k2_from_llm1_llm2(t1, t2, l1, l2):
         lm1 = None
         if l1 != None:
             lm1 = Physics.l_to_lm(l1)
@@ -1476,6 +1636,8 @@ class ClassPlots:
         print('\t__Provided LM limits ({}, {}), translated to L limits: ({}, {})'.format(lm1, lm2, l1, l2))
         print('\t__Provided T limits ({},{}), and kappa limits ({}, {})'.format(t1, t2, k1, k2))
         return [k1, k2]
+
+
 
     def plot_rs_l_mdot_min(self, y_name, t1, t2, l1, l2, r_s1, r_s2, n_int = 100, n_out = 100, n_r_s = 100, load = False):
         # ---------------------SETTING LM1 LM2 K1 K2---------------------------
@@ -1536,10 +1698,7 @@ class ClassPlots:
         res = obs.get_x_y_of_all_observables('rs', 'l', 'type', rs_arr, l_lm_arr, minmdot_arr)
 
         f = interpolate.interp2d(rs_arr, l_lm_arr, minmdot_arr, kind='cubic')
-        # print(f(10,5.8), 10, 5.8)
-        # mdot = f(res[0][13, 1], res[0][13, 2])
-        # print(mdot, res[0][13, 1], res[0][13, 2])
-        # rs_lm = Physics.lm_mdot_obs_to_ts_lm(rs_arr, l_lm_arr, minmdot_arr, res[0][:, 2], mdot, i)
+
 
         for i in range(len(res[0][:, 1])):
             # mdot = f(res[0][i, 1], res[0][i, 2])
@@ -1553,21 +1712,7 @@ class ClassPlots:
                 ax.annotate(int(res[0][i, 0]), xy=(rs_lm[1,:], rs_lm[0,:]), textcoords='data')  # plot numbers of stars
                 plt.plot(rs_lm[1,:], rs_lm[0,:], marker='*', ms=12,  color='C' + str(int(res[0][i, 3])),
                          ls='')  # plot color dots)))
-        #
-        # for j in range(len(res[1][:, 0])):
-        #     plt.plot(res[1][j, 1], res[1][j, 2], marker='^', ms=8, color='C' + str(int(res[1][j, 3])), ls='',
-        #              label='WN'+str(int(res[1][j, 3])))
-        #
-        # x_grid_y_grid = Math.line_fit(res[0][:, 1], res[0][:, 2])
-        # plt.plot(x_grid_y_grid[0, :], x_grid_y_grid[1, :], '-.', color='blue')
 
-
-        # new_rs = 11
-        # l = 5.8
-        # exp_mdot = -5.1-0.2
-        # OPAL_Interpol.interpolate_2d(rs_arr,l_lm_arr,minmdot_arr,[new_rs],[l], 'nan')
-        # plt.plot(new_rs, l, marker='x', ms=8, color='red', ls='')  # plot color dots)))
-        # ax.annotate(exp_mdot, xy=(new_rs, l), textcoords='data')
 
         #-------------------------------------------------------NUMERICALS----------------------------------------------
         nums = Treat_Numercials(self.num_files)  # Surface Temp as a x coordinate
@@ -1583,97 +1728,12 @@ class ClassPlots:
         name = self.plot_dir + 'rs_l_minMdot.pdf'
         plt.savefig(name)
         plt.show()
-        # obs = Treat_Observables(self.obs_files)
-        # res = obs.get_x_y_of_all_observables('mdot', y_name, 'type')
-        # for i in range(len(res[0][:, 1])):
-        #     ax.annotate(int(res[0][i, 0]), xy=(res[0][i, 1], res[0][i, 2]), textcoords='data')  # plot numbers of stars
-        #     plt.plot(res[0][i, 1], res[0][i, 2], marker='^', color='C' + str(int(res[0][i, 3])),
-        #              ls='')  # plot color dots)))
-        # # marker='s', mec='w', mfc='g', mew='3', ms=8
-        # for j in range(len(res[1][:, 0])):
-        #     plt.plot(res[1][j, 1], res[1][j, 2], marker='^', color='C' + str(int(res[1][j, 3])), ls='',
-        #              label='WN' + str(int(res[1][j, 3])))
 
-        # x_grid_y_grid = Math.line_fit(res[0][:, 1], res[0][:, 2])
-        # plt.plot(x_grid_y_grid[0, :], x_grid_y_grid[1, :], '-.', color='blue')
-
-        # for i in range(self.nmdls):
-        #     sp_v = Physics.sound_speed(self.mdl[i].t_, self.mdl[i].mu_)
-        #     for k in range(len(sp_v)):
-        #         if sp_v[k] <= self.mdl[i].u_[k]:
-        #             sp_i = k
-        #             break
-        #     if sp_i == -1:
-        #         print('Warning! Sonic Velocity is not resolved. Using -1 element f the u arrau.')
-        #         # print('\t__Note: Last l: {} | sp_l {} '.format("%.3f" % self.mdl[i].l_[-1], "%.3f" % self.mdl[i].l_[sp_i]))
-        #         # print('\t__Note: Last t: {} | sp_t {} '.format("%.3f" % self.mdl[i].t_[-1], "%.3f" % self.mdl[i].t_[sp_i]))
-        #
-        #     mod_x_coord = self.mdl[i].r_[sp_i]
-        #     if y_name == 'l':
-        #         mod_y_coord = self.mdl[i].l_[sp_i]
-        #     else:
-        #         mod_y_coord = Physics.loglm(self.mdl[i].l_[sp_i], self.mdl[i].xm_[sp_i])
-        #
-        #     color = 'C' + str(int(i*10/self.nmdls))
-        #     plt.plot(mod_x_coord, mod_y_coord, marker='.', markersize=9, color=color)
-        #              # label='Model {}: T_s {} , L/M {} , Mdot {}'.format(i, "%.2f" % p_t, "%.2f" % p_lm, "%.2f" % p_mdot))
-        #     ax.annotate(str(i), xy=(mod_x_coord, mod_y_coord), textcoords='data')
-
-
-        #======================================================================
-
-        # cl2 = Table_Analyze(name_out,1000,True)
-        # # cl2.table_plotting(4.8,5.8)
-        # rs_l_mimmdot = cl2.treat_tasks_tlim(1000, 0.52,2.0) # x = l
-        #
-        # print(rs_l_mimmdot)
-        #
-        # fig = plt.figure()
-        # ax = fig.add_subplot(1, 1, 1)
-        # #
-        # # pl.xlim(rs_l_mimmdot[1:, 0].min(), rs_l_mimmdot[1:, 0].max())
-        # # pl.ylim(rs_l_mimmdot[0, 1:].min(), rs_l_mimmdot[0, 1:].max())
-        # # levels = [-7.5, -7.3, -7, -6.7, -6.5, -6.3, -6, -5.7, -5.5, -5.3, -5, -4.7, -4.5, -4.3, -4, -3.7, -3.5, -3.3,
-        # #           -3]
-        # # levels = [-10, -9, -8, -7, -6, -5, -4]
-        # contour_filled = plt.contourf(rs_l_mimmdot[1:, 0], rs_l_mimmdot[0, 1:], rs_l_mimmdot[1:, 1:].T,
-        #                               cmap=plt.get_cmap('RdYlBu_r'))
-        # plt.colorbar(contour_filled)
-        # contour = plt.contour(rs_l_mimmdot[1:, 0], rs_l_mimmdot[0, 1:], rs_l_mimmdot[1:, 1:].T, colors='k')
-        # plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
-        # plt.title('MINIMUM MASS LOSS RATE PLOT')
-        # plt.xlabel('Log(r_s)')
-        # plt.ylabel(y_label)
-        #
-        # # for i in range(self.nmdls):
-        # #     sp_v = Physics.sound_speed(self.mdl[i].t_, self.mdl[i].mu_)
-        # #     for k in range(len(sp_v)):
-        # #         if sp_v[k] <= self.mdl[i].u_[k]:
-        # #             sp_i = k
-        # #             break
-        # #     if sp_i == -1:
-        # #         print('Warning! Sonic Velocity is not resolved. Using -1 element f the u arrau.')
-        # #         # print('\t__Note: Last l: {} | sp_l {} '.format("%.3f" % self.mdl[i].l_[-1], "%.3f" % self.mdl[i].l_[sp_i]))
-        # #         # print('\t__Note: Last t: {} | sp_t {} '.format("%.3f" % self.mdl[i].t_[-1], "%.3f" % self.mdl[i].t_[sp_i]))
-        # #
-        # #     mod_x_coord = self.mdl[i].r_[sp_i]
-        # #     if y_name == 'l':
-        # #         mod_y_coord = self.mdl[i].l_[sp_i]
-        # #     else:
-        # #         mod_y_coord = Physics.loglm(self.mdl[i].l_[sp_i], self.mdl[i].xm_[sp_i])
-        # #
-        # #     color = 'C' + str(int(i * 10 / self.nmdls))
-        # #     plt.plot(mod_x_coord, mod_y_coord, marker='.', markersize=9, color=color)
-        # #     # label='Model {}: T_s {} , L/M {} , Mdot {}'.format(i, "%.2f" % p_t, "%.2f" % p_lm, "%.2f" % p_mdot))
-        # #     ax.annotate(str(i), xy=(mod_x_coord, mod_y_coord), textcoords='data')
-        #
-        # plt.show()
-
-    def plot_t_l_mdot(self, y_name, t1, t2, y1, y2, r_s_, n_int = 100, n_out = 100,
-                      num_var_plot = 'Y_c', lim_t1_obs = None, lim_t2_obs = None):
+    def plot_t_l_mdot(self, l_or_lm, t1, t2, llm1, llm2, r_s_, n_int = 100, n_out = 100,
+                      num_var_plot = 'xm', num_pol_fit = None, lim_t1_obs = None, lim_t2_obs = None):
         # ---------------------SETTING LM1 LM2 K1 K2---------------------------
 
-        k1, k2 = ClassPlots.get_k1_k2_from_l1_l2(t1, t2, y1, y2)
+        k1, k2 = ClassPlots.get_k1_k2_from_llm1_llm2(t1, t2, llm1, llm2)
 
         #---------------------Getting KAPPA[], T[], RHO2D[]-------------------------
         res_ = self.tbl_anl.treat_tasks_interp_for_t(t1, t2, n_out, n_int, k1, k2)
@@ -1681,13 +1741,13 @@ class ClassPlots:
         t =   res_[1:, 0]
         rho2d = res_[1:, 1:]
 
-        if y_name == 'l':
+        if l_or_lm == 'l':
             l_lm_arr  = Physics.lm_to_l( Physics.logk_loglm(kap, True) ) # Kappa -> L/M -> L
         else:
             l_lm_arr = Physics.logk_loglm(kap, 1)
 
 
-        self.plot_min_mdot(t, kap, rho2d, l_lm_arr, r_s_, y_name, num_var_plot)
+        self.plot_min_mdot(t, kap, rho2d, l_lm_arr, r_s_, l_or_lm, num_var_plot)
 
         m_dot = Physics.rho_mdot(t, rho2d.T, 2, r_s_[0]) # the
 
@@ -1709,7 +1769,7 @@ class ClassPlots:
         plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
         plt.title('MASS LOSS PLOT')
         plt.xlabel('Log(t)')
-        plt.ylabel(y_name)
+        plt.ylabel(l_or_lm)
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plt.savefig(name)
 
@@ -1719,7 +1779,7 @@ class ClassPlots:
 
         #-----------------------------------------------PLOT-OBSERVABLES-----------------------------------
         obs = Treat_Observables(self.obs_files)
-        res = obs.get_x_y_of_all_observables('ts',y_name,'type',t,l_lm_arr,m_dot, lim_t1_obs, lim_t2_obs)
+        res = obs.get_x_y_of_all_observables('ts', l_or_lm, 'type', t, l_lm_arr, m_dot, lim_t1_obs, lim_t2_obs)
 
         for i in range(len( res[0][:, 1] )):
             ax.annotate(int(res[0][i, 0]), xy=(res[0][i, 1], res[0][i, 2]), textcoords='data') # plot numbers of stars
@@ -1735,31 +1795,32 @@ class ClassPlots:
         # ------------------------------------------------PLOT-NUMERICALS-----------------------------------
 
         nums = Treat_Numercials(self.num_files) # Surface Temp as a x coordinate
-        res = nums.get_x_y_of_all_numericals('sp', 't', y_name, 'Y_c', 'color' ,t, l_lm_arr,m_dot, lim_t1_obs, lim_t2_obs)
+        res = nums.get_x_y_of_all_numericals('sp', 't', l_or_lm, num_var_plot, 'color', t, l_lm_arr, m_dot, lim_t1_obs, lim_t2_obs)
         for i in range(len(res[:,0])):
             plt.plot(res[i, 1], res[i, 2], marker='.', color='C' + str(int(res[i, 4])), ls='')  # plot color dots)))
             ax.annotate(str("%.2f" % res[i, 3]), xy=(res[i, 1], res[i, 2]), textcoords='data')
 
-        fit = np.polyfit(res[:, 1], res[:, 2], 3)  # fit = set of coeddicients (highest first)
-        f = np.poly1d(fit)
-        fit_x_coord = np.mgrid[(res[1:, 1].min() - 0.02):(res[1:, 1].max() + 0.02):100j]
-        plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
+        if num_pol_fit !=None:
+            fit = np.polyfit(res[:, 1], res[:, 2], 3)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            fit_x_coord = np.mgrid[(res[1:, 1].min() - 0.02):(res[1:, 1].max() + 0.02):100j]
+            plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
 
 
-        res = nums.get_x_y_of_all_numericals('sp', 'ts', y_name, 'Y_c', 'color' ,t, l_lm_arr,m_dot, lim_t1_obs, lim_t2_obs)
+        res = nums.get_x_y_of_all_numericals('sp', 'ts', l_or_lm, num_var_plot, 'color', t, l_lm_arr, m_dot, lim_t1_obs, lim_t2_obs)
         for i in range(len(res[:,0])):
             plt.plot(res[i, 1], res[i, 2], marker='.', color='C' + str(int(res[i, 4])), ls='')  # plot color dots)))
             ax.annotate(str("%.2f" % res[i, 3]), xy=(res[i, 1], res[i, 2]), textcoords='data')
 
-
-        fit = np.polyfit(res[:, 1], res[:, 2], 3)  # fit = set of coeddicients (highest first)
-        f = np.poly1d(fit)
-        fit_x_coord = np.mgrid[(res[1:, 1].min() - 0.02):(res[1:, 1].max() + 0.02):100j]
-        plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
+        if num_pol_fit != None:
+            fit = np.polyfit(res[:, 1], res[:, 2], 3)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            fit_x_coord = np.mgrid[(res[1:, 1].min() - 0.02):(res[1:, 1].max() + 0.02):100j]
+            plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
 
         #------------------------------------------PLOT-LUMINOCITY-RANGES-OF-MODELS-------------------------------------
         for i in range(len(self.plot_files)):
-            min_l, max_l = self.plotcl[i].get_min_max_l_lm_val(y_name)
+            min_l, max_l = self.plotcl[i].get_min_max_l_lm_val(l_or_lm)
             ax.fill_between(np.array([t.min(), t.max()]), np.array([min_l]), np.array([max_l]),  alpha=0.5,
                             label='L range of ({}->{})sm star'.format(self.plotcl[i].m_[0], self.plotcl[i].m_[-1]))
 

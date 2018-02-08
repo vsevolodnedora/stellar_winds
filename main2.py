@@ -55,7 +55,11 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-smfiles = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
+# smfiles = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
+smfiles = get_files('../../sse/sp_z002new/', ['13/'], [], 'sm.data')
+# smfiles = get_files('../../sse/sp_z002/', ['16/','17/','18/'], [], 'sm.data')
+
+
 # files = get_files('../../sse/', ['e10z002ml/7/test/', 'test_ml_sp/7/test/'], [], 'sm.data')
 plotfls = get_files('../../sse/', ['plots_ml/'], [], '.plot1')
 print(smfiles)
@@ -63,7 +67,7 @@ print(smfiles)
 # files = get_files('./../../sse/', ['sm10z002/'], [])
 #'sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'
 # Read_SM_data_File.compart = ''
-cl1 = ClassPlots('../data/opal/table8.data', smfiles, ['../data/obs/gal_wn.data'], plotfls, 1000, True, '../data/output/', '../data/plots/')
+cl1 = ClassPlots('../data/opal/table8.data', smfiles, ['../data/obs/gal_wn.data'], [], 1000, True, '../data/output/', '../data/plots/')
 
 
 
@@ -71,21 +75,21 @@ t1 = 4.6
 t2 = 5.5
 r_s = 1.
 
-Treat_Observables.cluming_required = 10
+Treat_Observables.cluming_required = 4
 
-# cl1.xy_profile('He4','r', 'Y_c', 'lm', 0)
+cl1.xy_profile('r','u', 'mdot', 'l', 0)
 # cl1.xyy_profile('r','rho','kappa', 'mdot', 'l', 'r')
-# cl1.()
+
 # cl1.opacity_check(1, None, None, None)
 # cl1.opacity_check(1, 4.75, None, 0.068)
 # cl1.plot_t_rho_kappa(4.5, 5.5, -9.5, -7.5, 1000, True)
 # cl1.plot_t_mdot_lm(  t1, t2, 'Y_c',-5.5, -3, r_s)
-cl1.plot_t_l_mdot('l', t1, t2, 4.8, None, [0.8], 500, 500, 'Y_c', 5.2, None)
+# cl1.plot_t_l_mdot('l', t1, t2, 4.8, None, [0.8], 500, 500, 'xm','mdot', 5.2, None)
 
 # cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, True)
 
-# 'e10z002/', 'e15z002/','e20z002/' # 'e20z002ml/', 'e20z002ml_2/', 'test/', 'e20z002ml_test2/' # 'plots_ml/'
-# files = get_files('../../sse/', ['e20z002ml_test2/'], [], '.plot1')
+# # 'e10z002/', 'e15z002/','e20z002/' # 'e20z002ml/', 'e20z002ml_2/', 'test/', 'e20z002ml_test2/' # 'plots_ml/'
+# files = get_files('../../sse/', ['plots_ml/'], [], '.plot1')
 # # print(files)
 # cl1.hrd(4.5, 5.2,'gal_wn', files)
 
@@ -210,7 +214,33 @@ var_names = ['nan', 'u', 'r', 'rho', 't', 'l', 'vu', 'vr',
 # a = np.array([1,2,3,4,])
 # print(np.insert(a,0,0))
 
-def a(list=list()):
-    print(list)
+# def a(list=list()):
+#     print(list)
+#
+# a()
 
-a()
+# c=2
+# def b(v):
+#     global c
+#     c = 2*v
+#
+#
+# b(c)
+# print(c)
+#
+# a = np.array([2])
+# def b(v):
+#     global a
+#     a = np.zeros(2)
+#
+# b(a)
+# print(a, a.max())
+
+from Plots_Obs_treat import Tables
+
+clll = Tables('../data/opal/table8.data', t1, t2)
+# clll.save_interp_opals()
+# clll.save_t_k_rho(3.8,None)
+file_table = np.zeros(1)
+clll.read_table('t_k_rho', 't', 'k', 'rho', '../data/opal/table8.data')
+print(file_table)

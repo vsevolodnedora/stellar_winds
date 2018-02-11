@@ -23,6 +23,7 @@ from Plots_Obs_treat import Read_Observables
 from Plots_Obs_treat import New_Table
 from Plots_Obs_treat import Read_Plot_file
 from Plots_Obs_treat import Treat_Observables
+from main_methods import Combine
 #--------------------------------------------
 #
 # Here, the actual work proceeds,
@@ -32,6 +33,8 @@ from Plots_Obs_treat import Treat_Observables
 from os import listdir
 output_dir = '../data/output'
 plot_dir = '../data/plots'
+opal_fl = '../data/opal/table8.data'
+obs_fl = '../data/obs/gal_wn.data'
 
 def get_files(compath, req_dirs, requir_files, extension):
     comb = []
@@ -56,46 +59,96 @@ def get_files(compath, req_dirs, requir_files, extension):
     return comb
 
 # smfiles = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
-smfiles = get_files('../../sse/sp_z002new/', ['13/'], [], 'sm.data')
+# smfiles = get_files('../../sse/sp_z002new/', ['10/u/', '11/u/', '12/u/', '13/u/', '14/u/', '15/u/', '16/u/', '17/u/', '18/u/', '19/u/', '20/u/', '21/u/'], [], 'sm.data')
+smfiles = get_files('../../sse/sp_z002new/', ['10e5/u/', '11e5/u/', '12e5/u/', '13e5/u/', '14e5/u/', '15e5/u/','16e5/u/','17e5/u/'], [], 'sm.data')
+
+# smfiles = get_files('../../sse/sp_z002new/', ['21/'], [], 'sm.data')
 # smfiles = get_files('../../sse/sp_z002/', ['16/','17/','18/'], [], 'sm.data')
 
 
 # files = get_files('../../sse/', ['e10z002ml/7/test/', 'test_ml_sp/7/test/'], [], 'sm.data')
-plotfls = get_files('../../sse/', ['plots_ml/'], [], '.plot1')
-print(smfiles)
-# files = get_files('../../sse/sm_e10z002ml/', ['sm0/', 'sm1/', 'sm2/', 'sm3/', 'sm4/', 'sm5/', 'sm6/', 'sm7/', 'sm8/', 'sm9/'], ['1d-5'])
-# files = get_files('./../../sse/', ['sm10z002/'], [])
+plotfls = get_files('../../sse/sp_z002new/', ['16e5/'], [], '.plot1')
+# print(smfiles)
+# smfiles = get_files('../../sse/sm_e10z002ml/', ['sm0/', 'sm1/', 'sm2/', 'sm3/', 'sm4/', 'sm5/', 'sm6/', 'sm7/', 'sm8/', 'sm9/'], ['1d-5'], 'sm.data')
+# smfiles = get_files('./../../sse/comp15DYNFAK/', ['on/', 'off/'], [], 'sm.data')
+# plotfls = get_files('./../../sse/comp15DYNFAK/', ['on/', 'off/'], [], '.plot1')
 #'sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'
 # Read_SM_data_File.compart = ''
-cl1 = ClassPlots('../data/opal/table8.data', smfiles, ['../data/obs/gal_wn.data'], [], 1000, True, '../data/output/', '../data/plots/')
+
+'''-------------------------------------------------------------'''
+from main_methods import Creation
+
+# make = Creation(opal_fl, 4.6, 5.5, 500)
+# make.save_t_rho_k()
+# make.save_t_k_rho(None, None, 500)
+# # file_table = np.zeros(1)
+# # make.read_table('t_k_rho', 't', 'k', 'rho', '../data/opal/table8.data')
+# make.save_t_llm_vrho('l')
+# # print(file_table)
+# make.save_t_llm_mdot(1.,'l','',1.34)
+#
+# a = np.array(([1,1,1,1], [5,5,5,5], [7,7,7,7], [9,9,9,9]))
+# a = np.flip(a, 0)
+# print(a)
+
+'''-------------------------------------------------------------'''
+
+comb = Combine(smfiles, plotfls, obs_fl, opal_fl)
+# comb.xy_profile('r','u','mdot','xm')
+# comb.xyy_profile('r','rho','kappa','mdot','xm','t')
+comb.xy_last_points('r','l','mdot',True)
+# comb.hrd(plotfls)
+# comb.plot_t_rho_kappa('mdot','xm')
+# comb.plot_t_mdot_lm()
+comb.plot_t_l_mdot('l',1.,'xm',None,5.2)
 
 
 
-t1 = 4.6
-t2 = 5.5
-r_s = 1.
 
-Treat_Observables.cluming_required = 4
 
-cl1.xy_profile('r','u', 'mdot', 'l', 0)
+
+
+
+
+
+
+
+
+
+
+
+
+'''---------------------------------------------------------------'''
+
+
+
+# cl1 = ClassPlots('../data/opal/table8.data', smfiles, ['../data/obs/gal_wn.data'], [], 1000, True, '../data/output/', '../data/plots/')
+
+
+
+# t1 = 4.6
+# t2 = 5.5
+# r_s = 1.
+#
+# Treat_Observables.cluming_required = 4
+
+# cl1.xy_profile('r','u', 'mdot', 'l', 0)
 # cl1.xyy_profile('r','rho','kappa', 'mdot', 'l', 'r')
 
 # cl1.opacity_check(1, None, None, None)
 # cl1.opacity_check(1, 4.75, None, 0.068)
-# cl1.plot_t_rho_kappa(4.5, 5.5, -9.5, -7.5, 1000, True)
-# cl1.plot_t_mdot_lm(  t1, t2, 'Y_c',-5.5, -3, r_s)
+# cl1.plot_t_rho_kappa(5.25, 5.3, -9.5, -7.5, 1000, True)
+# cl1.plot_t_mdot_lm( t1, t2, 'xm',-6, -4.5, r_s )
 # cl1.plot_t_l_mdot('l', t1, t2, 4.8, None, [0.8], 500, 500, 'xm','mdot', 5.2, None)
 
-# cl1.plot_rs_l_mdot_min('l', t1, t2, 4.8, None, 0.1, 20.0, 200, 200, 50, True)
+# cl1.plot_rs_l_mdot_min('l', t1, t2, 4.1, 4.5, 0.5, 2.0, 200, 200, 50, False)
 
 # # 'e10z002/', 'e15z002/','e20z002/' # 'e20z002ml/', 'e20z002ml_2/', 'test/', 'e20z002ml_test2/' # 'plots_ml/'
 # files = get_files('../../sse/', ['plots_ml/'], [], '.plot1')
 # # print(files)
 # cl1.hrd(4.5, 5.2,'gal_wn', files)
 
-# cl_plot= Read_Plot_file.from_file('../../sse/e20z002ml/ev.plot1')
-# plt.plot(cl_plot.time, cl_plot.t_eff)
-# plt.show()
+# cl1.rs_l_models()
 
 
 
@@ -182,17 +235,17 @@ cl1.xy_profile('r','u', 'mdot', 'l', 0)
 # print(int(np.where(a == 3)[0]))
 
 
-var_names = ['nan', 'u', 'r', 'rho', 't', 'l', 'vu', 'vr',
-             'vrho', 'vt', 'vsl','e', 'dm', 'xm', 'n', 'H',
-             'D', 'He3', 'He4', 'Li6', 'Li7', 'Be7', 'Be9', 'B8', 'B10',
-             'B11', 'C11', 'C12', 'C13', 'N12', 'Li7', 'N15', 'O16', 'O17', 'O18',
-             'Ne20', 'Ne21', 'Ne22', 'Na23', 'Mg24', 'Mg25', 'Mg26', 'Al27',
-             'Si28', 'Si29', 'Si30', 'Fe56', 'F19', 'Al26', 'w', 'j', 'diff',
-             'dg', 'd1', 'd2', 'd3', 'd4', 'd5', 'bvis', 'bdiff', 'br', 'bphi',
-             'bfq', 'bfq0', 'bfq1', 'ibflag', 'Pg', 'Pr', 'HP', 'Grav', 'kappa',
-             'ediss', 'tau', 'nabla_rad', 'L/Ledd', 'nabla', 'P_total', 'mu',
-             'psi', 'dPg_dPr|rho', 'Pturb', 'beta', 'vel_conv', 'mdot', 'tau_ph',
-             ]
+# var_names = ['nan', 'u', 'r', 'rho', 't', 'l', 'vu', 'vr',
+#              'vrho', 'vt', 'vsl','e', 'dm', 'xm', 'n', 'H',
+#              'D', 'He3', 'He4', 'Li6', 'Li7', 'Be7', 'Be9', 'B8', 'B10',
+#              'B11', 'C11', 'C12', 'C13', 'N12', 'Li7', 'N15', 'O16', 'O17', 'O18',
+#              'Ne20', 'Ne21', 'Ne22', 'Na23', 'Mg24', 'Mg25', 'Mg26', 'Al27',
+#              'Si28', 'Si29', 'Si30', 'Fe56', 'F19', 'Al26', 'w', 'j', 'diff',
+#              'dg', 'd1', 'd2', 'd3', 'd4', 'd5', 'bvis', 'bdiff', 'br', 'bphi',
+#              'bfq', 'bfq0', 'bfq1', 'ibflag', 'Pg', 'Pr', 'HP', 'Grav', 'kappa',
+#              'ediss', 'tau', 'nabla_rad', 'L/Ledd', 'nabla', 'P_total', 'mu',
+#              'psi', 'dPg_dPr|rho', 'Pturb', 'beta', 'vel_conv', 'mdot', 'tau_ph',
+#              ]
 
 # print('T=5.2'.split('='))
 
@@ -236,11 +289,4 @@ var_names = ['nan', 'u', 'r', 'rho', 't', 'l', 'vu', 'vr',
 # b(a)
 # print(a, a.max())
 
-from Plots_Obs_treat import Tables
 
-clll = Tables('../data/opal/table8.data', t1, t2)
-# clll.save_interp_opals()
-# clll.save_t_k_rho(3.8,None)
-file_table = np.zeros(1)
-clll.read_table('t_k_rho', 't', 'k', 'rho', '../data/opal/table8.data')
-print(file_table)

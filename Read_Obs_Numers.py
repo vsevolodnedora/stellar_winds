@@ -35,6 +35,7 @@ from OPAL import New_Table
 class Read_Observables:
 
     def __init__(self, observ_name, clump_used=4, clump_req=4):
+        self.file_name = observ_name
 
         self.clump = clump_used
         self.new_clump = clump_req
@@ -55,7 +56,71 @@ class Read_Observables:
 
         self.table.remove(self.table[0])  # removing the var_names line from the array. (only actual values left)
 
-    def obs_par(self, v_n, dtype):
+
+        # -----------------DISTRIBUTING READ COLUMNS-------------
+        self.num_v_n = ['N', 't', 'm', 'l', 'mdot']  # list of used v_n's; can be extended upon need ! 'N' should be first
+        cls = 'class'
+
+        self.numers = np.zeros((self.num_stars, len(self.num_v_n)))
+        self.clses= []
+
+        for i in range(len(self.table)):
+            n = self.names.index(cls)
+            if cls in self.names:
+                self.clses.append(self.table[i].split()[n])
+
+        for i in range(len(self.table)):
+            for j in range(len(self.num_v_n)):
+                n = self.names.index(self.num_v_n[j])
+                if self.num_v_n[j] in self.names:
+                    self.numers[i, j] =  np.float(self.table[i].split()[n])
+
+        if len(self.numers[:,0])!= len(self.clses):
+            raise ValueError('Size of str. vars ({}) != size of num.var ({})'.format( len(self.numers[:,0]) ,len(self.clses) ))
+
+        # print(self.numers, self.clses)
+        print('\n\t__Note. In file: {} total {} stars are loaded. \n\t  Available numerical parameters: {} '
+              .format(self.file_name, len(self.numers), self.num_v_n))
+
+        print(self.get_star_class(75.))
+
+    def get_star_class(self, n):
+        for i in range(len(self.numers[:, 0])):
+            if n == self.numers[i, 0]:
+                return self.clses[i]
+
+        # for v_n in self.num_vars:
+        #     if v_n in self.names:
+        #         n = self.names.index(v_n)
+        #         for i in range(len(self.table)):
+        #             # print(self.table[i].split()[n])
+        #             self.stars = np.append(self.stars, np.float(self.table[i].split()[n]) )
+
+        # print(self.stars)
+
+        # for v_n in self.exp_v_n:
+        #     if v_n in self.names:
+        #         print('\t__Note: column: < {} > is found in {}'.format(v_n, observ_name))
+        #
+        #
+        # self.stars = np.zeros((len(self.num_stars), self.num_vars ))
+        #
+        # self.m_ = []
+        # n = self.names.index('m')
+        # for i in range(len(self.table)):
+        #     self.m_.append(self.table[i].split()[n])
+        #
+        # print(self.m_)
+
+
+    def get_obs_par(self, v_n, dtype):
+
+        if v_n == 'lm':
+            return
+
+
+
+
         if v_n not in self.names:
             sys.exit('\t__Error. Name: {} is not is a list of par.names: \n\t{}'.format(v_n, self.names))
 
@@ -87,9 +152,112 @@ class Read_Observables:
     def obs_par_row(self, i, dtype):
         return np.array(self.table[i].split(), dtype=dtype)
 
-    def par_table(self):
+    def get_x_y_of_all_observables(self, x_name, y_name, var_for_label,
+                                   ts_arr = np.empty(1,), l_lm_arr= np.empty(1,), m_dot= np.empty(1,),
+                                   lim_t1_obs = None, lim_t2_obs = None):
+        '''
+        RETURN:  np.array( [plotted_stars, plotted_labels] )  [0][:,0] - nums of all plotted stars
+                                                              [0][:,1] - x - coord.
+                                                              [0][:,2] - y - coord
+                                                              [0][:,3] - ints from 0 to 9, uniqe for uniqe 'var_for_label'
+                                                              [1][:,0] - nums of selected stars for labels
+                                                              [1][:,1] - x - coord
+                                                              [1][:,2] - y - coord
+                                                              [1][:,3] - ints from 0 to 9
+        To get index in the [0] arr of the element in [1] Use: int( np.where( res[0][:, 0]==res[1][j, 0] )[0] )
 
-        print(self.table)
+        Warning! If there are more unique str(var_for_label), PROGRAM BRAKES
+        :param x_name:
+        :param y_name:
+        :param var_for_label:
+        :param ts_arr:
+        :param l_lm_arr:
+        :param m_dot:
+        :param lim_t1_obs:
+        :param lim_t2_obs:
+        :return:
+        '''
+        self.check_if_var_name_in_list(x_name)
+        self.check_if_var_name_in_list(y_name)
+        self.check_if_var_name_in_list(var_for_label)
+
+        s = 0
+
+        leble = []
+        plotted_stars = np.array([0., 0., 0., 0.])
+        plotted_labels= np.array([0., 0., 0., 0. ])
+
+        # if self.obs != None:  # plot observed stars
+        ''' Read the observables file and get the necessary values'''
+        ts_ = []
+        y_coord_ = []
+
+        import re  # for searching the number in 'WN7-e' string, to plot them different colour
+        for i in range(self.num_stars):
+            star_x_coord = []
+            star_y_coord = []
+
+            # ---------------------------------------Y-------------------------
+            if y_name == 'lm':
+                star_y_coord = [ Physics.loglm(self.obs_par('l', float)[i],
+                                             self.obs_par('m', float)[i]) ]
+            else:
+                star_y_coord = [ self.obs[s].obs_par(y_name, float)[i] ]
+
+
+            # ---------------------------------------X-------------------------
+            if x_name == 'ts' or x_name == 'rs':
+                if not ts_arr.any() or not l_lm_arr.any() or not m_dot.any():
+                    print('\t__Error. For ts to be evaluated for a star : *ts_arr, l_lm_arr, m_dot* to be provided')
+                    raise ValueError
+
+                x_y_coord = Physics.lm_mdot_obs_to_ts_lm(ts_arr, l_lm_arr, m_dot, star_y_coord[0],
+                                                         self.obs[s].obs_par('mdot', float)[i],
+                                                         i, lim_t1_obs, lim_t2_obs)
+                if x_y_coord.any():
+                    ts_ = np.append(ts_, x_y_coord[1, :])  # FOR linear fit
+                    y_coord_ = np.append(y_coord_, x_y_coord[0, :])
+                    star_x_coord =  x_y_coord[1, :]
+                    star_y_coord =  x_y_coord[0, :]  # If the X coord is Ts the Y coord is overritten.
+
+            else:
+                star_x_coord = [ self.obs[s].obs_par(x_name, float)[i] ]
+
+            if x_name == 'lm':
+                star_x_coord = [ Physics.loglm(self.obs[s].obs_par('l', float)[i],
+                                             self.obs[s].obs_par('m', float)[i]) ]
+
+
+
+
+
+            star_x_coord = np.array(star_x_coord)
+            star_y_coord = np.array(star_y_coord)
+            if len(star_x_coord) == len(star_y_coord) and star_x_coord.any() :
+
+                se = re.search(r"\d+(\.\d+)?", self.obs[s].obs_par('type', str)[i])  # this is searching for the niumber
+                #             color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
+
+                for j in range(len(star_x_coord)):  # plot every solution in the degenerate set of solutions
+
+                    row = self.obs[s].table[i]  # to get the 0th element, which is alwas the star index
+
+                    cur_type = int(se.group(0))
+                    if cur_type not in leble:  # plotting the label for unique class of stars
+                        leble.append( cur_type )
+
+                        plotted_labels = np.vstack((plotted_labels, np.array((int(row[0:3]),
+                                                                              star_x_coord[j],
+                                                                              star_y_coord[j],
+                                                                              cur_type ))))
+
+                    plotted_stars = np.vstack((plotted_stars, np.array((int(row[0:3]),
+                                                                        star_x_coord[j],
+                                                                        star_y_coord[j],
+                                                                        cur_type ))))  # for further printing
+
+
+
 
     # def __init__(self, observ_name = './data/gal_wn.data'):
     #
@@ -491,6 +659,64 @@ class Read_SM_data_File:
         # attached an empty raw to match the index of array
         return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T)
 
+
+    def get_xyz_from_yz(self,model_i, condition, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
+        i_req = self.ind_from_condition(condition)
+
+        star_y = None
+        star_z = None
+
+
+        if y_name == z_name:
+            raise NameError('y_name and z_name are the same : {}'.format(z_name))
+
+        if y_name == 'l':
+            star_y = self.l_[i_req]
+        if y_name == 'lm':
+            star_y = Physics.loglm(self.l_[i_req], self.xm_[i_req])
+        if y_name == 'mdot':
+            star_y = self.mdot_[i_req]
+
+        if z_name == 'mdot':
+            star_z = self.mdot_[i_req]
+        if z_name == 'lm':
+            star_z = Physics.loglm(self.l_[i_req], self.xm_[i_req])
+
+        if star_z == None or star_y == None:
+            raise ValueError('star_y:{} or star_z:{} not defined'.format(star_y,star_z))
+
+        xyz = Physics.model_yz_to_xyz(x_1d_arr, y_1d_arr, z_2d_arr,  star_y, star_z, model_i, lx1, lx2)
+
+        return xyz
+
+    def get_ts_llm_mdot(self, model_i, condition, l_or_lm,
+                        ts_arr, l_lm_arr, mdot2d_arr, lim_t1_obs = None, lim_t2_obs = None):
+        '''
+        RETURN: [0,:] - ts , [1,:] - llm , [2,:] - mdot (if there are more than one coordinates for given ts)
+        :param i_req:
+        :param l_or_lm: 'l' or 'lm'
+        :param ts_arr:     1d_array of ts       \
+        :param l_lm_arr:   1d_array of l or lm   |- From interp. tables
+        :param mdot2d_arr: 2d array of mdots    /
+        :model_i: is for printing which stars can or cannot be interpolated
+        :param lim_t1_obs:
+        :param lim_t2_obs:
+        :return:
+        '''
+        i_req = self.ind_from_condition(condition)
+        p_mdot = self.mdot_[i_req]
+
+        if l_or_lm == 'l':
+            y_coord = self.l_[i_req]
+        else:
+            y_coord = Physics.loglm(self.l_[i_req],self.xm_[i_req])
+
+        # print(y_coord)
+        ts_llm_mdot_coord= Physics.lm_mdot_obs_to_ts_lm(ts_arr, l_lm_arr, mdot2d_arr,
+                                                        y_coord, p_mdot, model_i, lim_t1_obs, lim_t2_obs)
+
+        return ts_llm_mdot_coord
+
     def get_col(self, v_n):
         '''
             The following data are available in file sm.data
@@ -528,6 +754,8 @@ class Read_SM_data_File:
                          83                 84
             '''
 
+        if v_n == 'lm':
+            return self.l_/self.xm_
 
         if v_n == 1 or v_n == self.var_names[1]: #'u' or v_n == 'v': #1
             return self.u_   # in km/s
@@ -788,18 +1016,6 @@ class Read_SM_data_File:
         raise NameError('\t__Error. Variable < {} > is not found |get_col|. Available name list:\n\t {}'
                  .format(v_n,self.var_names))
 
-    # def get_val(self, v_n, i = -1):
-    #     if i > len(self.get_col(v_n)):
-    #         sys.exit('\t__Error i {} > len(arr of v_n) {}'.format(i, v_n))
-    #     return self.get_col(v_n)[i]
-
-
-    # def get_lval_arr(self, i = -1):
-    #     values = np.zeros((84,), dtype=float)
-    #     for v_n in range(1, 84):
-    #         values[v_n] = self.get_val(v_n, i)
-    #
-    #     return values
     def sp_i(self):
         # u = self.get_col('u')
         # t = self.get_col('t')
@@ -813,6 +1029,61 @@ class Read_SM_data_File:
             raise ValueError('\t__Error. Sound speed is not found in data. |get_sp|')
 
         return i
+
+    def get_sonic_u(self):
+        return Physics.sound_speed(self.t_, self.mu_, True)
+
+    def ind_from_condition(self, condition):
+        '''
+
+        :param cur_model: index of a model out of list of class instances that is now in the MAIN LOOP
+        :param condition: 'sp' - for sonic point, 'last' for -1, or like 't=5.2' for point where temp = 5.2
+        :return: index of that point
+        '''
+        if condition == 'last' or condition == '':
+            return -1
+
+        if condition == 'sp':  # Returns the i of the velocity that is >= sonic one. (INTERPOLATION would be better)
+            return self.sp_i()
+
+        var_name = condition.split('=')[0]  # for condition like 't = 5.2' separates t as a var in sm.file and
+        var_value = condition.split('=')[-1]
+
+        if var_name not in self.var_names:  # Checking if var_name is in list of names for SM files
+            raise NameError('Var_name: {} is not in var_name list: \n\t {}'
+                            .format(var_name, self.var_names))
+
+        var_arr = np.array(self.get_col(var_name))  # checking if var_value is in the column of var_name
+        # print(var_value, var_arr.min(), var_arr.max())
+
+        if var_value < var_arr.min() or var_value > var_arr.max():
+            raise ValueError('Given var_value={} is beyond {} range: ({}, {})'
+                             .format(var_value, var_name, var_arr.min(), var_arr.max()))
+
+        ind = -1
+        for i in range(len(var_arr)):  # searching for the next element, >= var_value. [INTERPOLATION would be better]
+            if var_value >= var_arr[i]:
+                ind = i
+                break
+        if ind == -1:
+            raise ValueError('ind = -1 -> var_value is not found in the var_arr. | var_value={}, array range: ({}, {})'
+                             .format(var_value, var_name, var_arr.min(), var_arr.max()))
+
+        return ind
+
+    def get_lm_col(self):
+        return Physics.loglm(self.l_, self.xm_, True)
+
+    def get_cond_value(self, v_n, condition):
+        '''
+        CONDITIONS: 'sp'(v==v_s); 't=5.2' or any v_n=number
+        :param v_n:
+        :param condition:
+        :return:
+        '''
+        ind = self.ind_from_condition(condition)
+        return np.float(self.get_col(v_n)[ind])
+
 
     def get_par_table(self, model, y_name = 'l', i = -1):
 
@@ -887,19 +1158,3 @@ class Read_SM_data_File:
         print('\t__Note: vars:[', v_n_arr, '] returned arr:', res.shape)
         return res
 
-    def get_spec_val(self, v_n, i = -1):
-        '''
-        Available specific v_n:  'lm', 'Y_c'
-        :param v_n:
-        :return:
-        '''
-        if v_n == 'lm':
-            return Physics.loglm(self.l_[i], self.xm_[i], False)
-
-        if v_n == 'Y_c':
-            return self.He4_[0]
-
-        if v_n == '-': # mask value, if not nedeeded
-            return 0
-
-        return None

@@ -656,13 +656,16 @@ class Table_Analyze(Read_Table):
     # @staticmethod
     def check_t_lim(self, t1, t2):
         if t1 > t2:
-            sys.exit('\t__Error. t1 ({}) > t2 ({}) in |check_t_lim| in |Table_Analyze|')
+            raise ValueError('t1 ({}) > t2 ({})'.format(t1,t2))
+            # sys.exit('\t__Error. t1 ({}) > t2 ({}) in |check_t_lim| in |Table_Analyze|')
         # a = Errors.is_a_bigger_b(t1, t2,    '|check_t_lim|', True, ' wrong temp. limits')
         if t2 > self.t[-1]:
-            sys.exit('\t__Error. |check_t_lim|, t2 {} > t[-1] {} '.format(t2, self.t[-1]))
+            raise ValueError('t2 {} > t[-1] {} '.format(t2, self.t[-1]))
+            # sys.exit('\t__Error. |check_t_lim|, t2 {} > t[-1] {} '.format(t2, self.t[-1]))
         if t1 < self.t[0]:
             print('\t: t_array is: ({} , {}) consisting of {} elements' .format(self.t[0], self.t[-1], len(self.t)))
-            sys.exit('t__Error. |check_t_lim| t1 {} < t[0] {}'.format(t1, self.t[0]))
+            raise ValueError('t1 {} < t[0] {}'.format(t1, self.t[0]))
+            # sys.exit('t__Error. |check_t_lim| t1 {} < t[0] {}'.format(t1, self.t[0]))
 
     def get_it_lim(self, t1, t2, k1, k2):
         indx_1 =  [i for i in range(len(self.t)) if self.t[i] == t1][0]  #GGGGGGenerator

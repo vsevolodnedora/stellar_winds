@@ -440,6 +440,143 @@ class Physics:
             return (np.sqrt(Constants.k_b*(10**t) / (mu * Constants.m_H))) / 100000# t is given in log
 
     @staticmethod
+    def get_k1_k2_from_llm1_llm2(t1, t2, l1, l2):
+        lm1 = None
+        if l1 != None:
+            lm1 = Physics.l_to_lm(l1)
+        lm2 = None
+        if l2 != None:
+            lm2 = Physics.l_to_lm(l2)
+
+        if lm1 != None:
+            k2 = Physics.loglm_logk(lm1)
+        else:
+            k2 = None
+        if lm2 != None:
+            k1 = Physics.loglm_logk(lm2)
+        else:
+            k1 = None
+
+        print('\t__Provided LM limits ({}, {}), translated to L limits: ({}, {})'.format(lm1, lm2, l1, l2))
+        print('\t__Provided T limits ({},{}), and kappa limits ({}, {})'.format(t1, t2, k1, k2))
+        return [k1, k2]
+
+    @staticmethod
+    def vrho_formula(t,rho,mu):
+        # assuming that mu is a constant!
+
+        # c = np.log10(4 * 3.14 * ((Constants.solar_r) ** 2) / Constants.smperyear)
+        # c2 = c + np.log10(r_s ** 2)
+        c2 = 0
+        return (rho + c2 + np.log10(Physics.sound_speed(t, mu, False) * 100000))
+
+    @staticmethod
+    def get_vrho(t, rho, dimensions  = 1, mu = np.array([1.34])):
+        '''
+        :param t:
+        :param rho:
+        :param dimensions:
+        :param r_s:
+        :param mu:
+        :return:             THIS FUNCTION
+
+                     |           rho*v                          |           Mdot
+               L/M   |                                     L/M  |
+             .*      |                              ->          |
+        kappa        |                              ->      or  |
+             *-.     |                                          |
+                L    |                                      L   |
+                     |____________________________              |________________________
+                                                ts                                      ts
+        '''
+
+        if int(dimensions) == 0:
+            return Physics.vrho_formula(t,rho,mu)
+
+        if int(dimensions) == 1:
+            res = np.zeros(len(t))
+            for i in range(len(t)):
+                res[i] = Physics.vrho_formula(t[i],rho[i],mu) # pissibility to add mu[i] if needed
+            return res
+
+
+        if int(dimensions) == 2:
+
+            cols = len(rho[0, :])
+            rows = len(rho[:, 0])
+            m_dot = np.zeros((rows, cols))
+
+            for i in range(rows):
+                for j in range(cols):
+                    m_dot[i,j] = Physics.vrho_formula(t[j], rho[i, j], mu)# + c + np.log10(Physics.sound_speed(t[j], mu, False)*100000))
+            return m_dot
+        else:
+            raise ValueError(' Wrong number of dimensions. Use 0,1,2. Given: {} '.format(dimensions))
+
+    @staticmethod
+    def vrho_mdot(vrho, r_s, r_s_for_t_l_vrho):
+        # if vrho is a float and r_s is a float - r_s_for_t_l_vrho = ''
+        # if vrho is 1darray and r_s is a float - r_s_for_t_l_vrho = ''
+        # if vrho is 2darray and r_s is a float - r_s_for_t_l_vrho = ''
+
+        # if vrho is 1darray and r_s is a 1d array - r_s_for_t_l_vrho = '-'
+
+        # if vrho is 2darray and r_s is a 1d array - r_s_for_t_l_vrho = 't' or 'l' to change columns or rows of vrho
+
+        # if vrho is 2darray and r_s is a 2d array - r_s_for_t_l_vrho = 'vrho' to change columns and rows of vrho
+
+        # r_s_for_t_l_vrho = '', 't', 'l', 'lm', 'vrho'
+
+        # -------------------- --------------------- ----------------------------
+        c = np.log10(4 * 3.14 * ((Constants.solar_r) ** 2) / Constants.smperyear)
+
+        if r_s_for_t_l_vrho == '':            # vrho is a constant
+            mdot = None
+        else:
+            if r_s_for_t_l_vrho == '-':       # vrho is a 1d array
+                mdot = np.zeros(vrho.shape)
+            else:
+                mdot = np.zeros((vrho.shape)) #vrho is a 2d array
+
+
+        if r_s_for_t_l_vrho == '':  # ------------------------REQUIRED r_s = float
+            c2 = c + np.log10(r_s ** 2)
+            mdot = vrho + c2
+
+        if r_s_for_t_l_vrho == '-':
+            if len(r_s)!=len(vrho): raise ValueError('len(r_s)={}!=len(vrho)={}'.format(len(r_s), len(vrho)))
+            for i in range(vrho):
+                mdot[i] = vrho[i] + c + np.log10(r_s[i] ** 2)
+
+        if r_s_for_t_l_vrho == 't' or r_s_for_t_l_vrho == 'ts':  # ---r_s = 1darray
+            if len(r_s) != len(vrho[:, 0]): raise ValueError('len(r_s)={}!=len(vrho[:, 0])={}'.format(len(r_s), len(vrho[:, 0])))
+            for i in range(vrho[:, 0]):
+                mdot[i, :] = vrho[i, :] + c + np.log10(r_s[i] ** 2)
+
+        if r_s_for_t_l_vrho == 'l' or r_s_for_t_l_vrho == 'lm':  # ---r_s = 1darray
+            if len(r_s) != len(vrho[0, :]): raise ValueError('len(r_s)={}!=len(vrho[0, :])={}'.format(len(r_s), len(vrho[0, :])))
+            for i in range(vrho[0, :]):
+                mdot[:, i] = vrho[:, i] + c + np.log10(r_s[i] ** 2)
+
+        if r_s_for_t_l_vrho == 'vrho':  # ---------------------REQUIRED r_s = 2darray
+            if r_s.shape != vrho.shape: raise ValueError('r_s.shape {} != vrho.shape {}'.format(r_s.shape, vrho.shape))
+            cols = len(vrho[0, :])
+            rows = len(vrho[:, 0])
+            m_dot = np.zeros((rows, cols))
+
+            for i in range(rows):
+                for j in range(cols):
+                    m_dot[i, j] = vrho[i, j] + c + np.log10(r_s[i, j] ** 2)
+
+        return mdot
+
+
+    # @staticmethod
+    # def get_mdot(vrho, r_s, dimensions, mu = 1.34):
+    #     for i in range(len(vrho[]))
+
+
+    @staticmethod
     def rho_mdot(t, rho, dimensions = 1, r_s = 1., mu = 1.34):
         '''
         NOTE! Rho2d should be .T as in all outouts it is not .T in Table Analyze
@@ -450,7 +587,8 @@ class Physics:
         :return:
         '''
 
-        c = np.log10(4*3.14*((r_s * Constants.solar_r)**2) / Constants.smperyear)
+        # c = np.log10(4*3.14*((r_s * Constants.solar_r)**2) / Constants.smperyear)
+        c = np.log10(4 * 3.14 * ((Constants.solar_r) ** 2) / Constants.smperyear) + np.log10(r_s ** 2)
 
         if int(dimensions) == 0:
             return (rho + c + np.log10(Physics.sound_speed(t, mu, False)*100000))
@@ -572,115 +710,129 @@ class Physics:
         return (v_s / mfp) / dvdr #( km/s / r_sol) / (km/s / r_sol) - No units.
 
     @staticmethod
-    def lm_mdot_obs_to_ts_lm(t_s_arr, l_lm_arr, mdot_2darr, star_l_lm, star_mdot, number, lim_t1 = None, lim_t2 = None):
+    def model_yz_to_xyz(x_1d_arr, y_1d_arr, z_2d_arr, star_y_coord, star_z_coord, num_of_model, lim_x1 = None, lim_x2 = None):
         '''
-        Return: np.vstack(( lm_fill, t_sol ))
+        Return: np.vstack(( int_star_x_coord, y_fill, mdot)) | [0,:] - ts
+                                                   | [1,:] - llm | [2,:] - mdot  CONSTANTS FOR ALL ts
 
-        :param t_s_arr:
-        :param l_lm_arr:
-        :param mdot_2darr:
-        :param star_l_lm:
-        :param star_mdot:
-        :param number:
-        :param lim_t1:
-        :param lim_t2:
+        :param x_1d_arr:
+        :param y_1d_arr:
+        :param z_2d_arr:
+        :param star_y_coord:
+        :param star_z_coord:
+        :param num_of_model:
+        :param lim_x1:
+        :param lim_x2:
         :return:
 
         Uses interpolation, for find the ts coordinate of a star, if the mdot is provided (inverting Mdot = 4pi rs vs
             formula.
             In the Row of Mdot for a given L/M it finds the Mdot of the star and returns the ts of this point
 
-            Given L/M
-            Mdot|      |This is degeneracy, -> you have to restrict the ts - That are why lim_t1 = None, lim_t2 = None
+            Given y_coord
+            y   |      |    This is degeneracy, -> you have to restrict the ts - That are why lim_x1 = None, lim_x2 = None
                 |      .                        Should be speciefied. Otherwise all possible solutions will be returned.
                 |   .   .
-                |.     | .
+                |.       .
                 |         .
-        Req.Mdot-----------.------    -->  Finds a ts at which Mdot == req.Mdot for every
-                |           .    ts
-                |      |     .
+        y_star -|----------.------    -->  Finds a ts at which y == req.y for every
+                |           .    x
+                |            .
         '''
 
         #--------------------------------------------------CHECKING IF L or LM of the STAR is WITHIN L or LM limit------
-        if l_lm_arr[0] < l_lm_arr[-1] and (star_l_lm < l_lm_arr[0] or star_l_lm > l_lm_arr[-1]):
+        if y_1d_arr[0] < y_1d_arr[-1] and (star_y_coord < y_1d_arr[0] or star_y_coord > y_1d_arr[-1]):
             print('\t__Warning! Star: {} (lm: {}) '
-                  'is beyond the lm range ({}, {})'.format(number, "%.2f" % star_l_lm,
-                                                           "%.2f" % l_lm_arr[0], "%.2f" % l_lm_arr[-1]))
+                  'is beyond the lm range ({}, {})'.format(num_of_model, "%.2f" % star_y_coord,
+                                                           "%.2f" % y_1d_arr[0], "%.2f" % y_1d_arr[-1]))
             return np.empty(0, )
 
-        if l_lm_arr[0] > l_lm_arr[-1] and (star_l_lm > l_lm_arr[0] or star_l_lm < l_lm_arr[-1]):
+        if y_1d_arr[0] > y_1d_arr[-1] and (star_y_coord > y_1d_arr[0] or star_y_coord < y_1d_arr[-1]):
             print('\t__Warning! Star: {} (lm: {}) '
-                  'is beyond the lm range ({}, {})'.format(number, "%.2f" % star_l_lm,
-                                                           "%.2f" % l_lm_arr[0], "%.2f" % l_lm_arr[-1]))
+                  'is beyond the lm range ({}, {})'.format(num_of_model, "%.2f" % star_y_coord,
+                                                           "%.2f" % y_1d_arr[0], "%.2f" % y_1d_arr[-1]))
             return np.empty(0, )
 
-        i_lm = Math.find_nearest_index(l_lm_arr, star_l_lm)
-        mdot_arr = np.array(mdot_2darr[i_lm, :])   # 1d Array of Mdot at a constant LM (this is y, while ts array is x)
+        i_star_y_coord = Math.find_nearest_index(y_1d_arr, star_y_coord)
+        z_row_for_star_z = np.array(z_2d_arr[i_star_y_coord, :])   # 1d Array of Mdot at a constant LM (this is y, while ts array is x)
+
 
         #--------------------------------------------------CHECKING IF Mdot of the STAR is WITHIN Mdot limit------------
-        if star_mdot > mdot_arr.max() or star_mdot < mdot_arr.min(): # if true, you cannot solve the eq. for req. Mdot
+        if star_z_coord > z_row_for_star_z.max() or star_z_coord < z_row_for_star_z.min(): # if true, you cannot solve the eq. for req. Mdot
             print('\t__Warning! Star: {} (lm: {}, mdot: {}) '
-                  'is beyond the mdot range ({}, {})'.format(number, "%.2f" % star_l_lm, "%.2f" % star_mdot,
-                                                             "%.3f" % mdot_arr.max(), "%.2f" % mdot_arr.min()))
+                  'is beyond the mdot range ({}, {})'.format(num_of_model, "%.2f" % star_y_coord, "%.2f" % star_z_coord,
+                                                             "%.3f" % z_row_for_star_z.max(), "%.2f" % z_row_for_star_z.min()))
             return np.empty(0, )  # returns empty - no sloution possoble for that star withing given mdot array.
 
+
         # --------------------------------------------------SOLVING for REQ.Mdot. & GETTING THE Ts COORDINATE-----------
-        t_sol = Math.solv_inter_row(t_s_arr, mdot_arr, star_mdot)
-        # print('m_dot: {} in ({}), t sols: {}'.format("%.3f" % star_mdot, mdot_arr, t_sol))
-        if not t_sol.any():
-            sys.exit(
-                '\t__Error: No solutions in |lm_mdot_obs_to_ts_lm| Given mdot: {} is in mdot range ({}, {})'.format(
-                    "%.2f" % star_mdot, "%.2f" % mdot_arr.max(), "%.2f" % mdot_arr.min()))
+        int_star_x_coord = Math.solv_inter_row(x_1d_arr, z_row_for_star_z, star_z_coord)
+
+        # z_row_for_star_z = z_row_for_star_z.fill(star_mdot)
+        # print('m_dot: {} in ({}), t sols: {}'.format("%.3f" % star_mdot, z_row_for_star_z, int_star_x_coord))
+        if not int_star_x_coord.any():
+            raise ValueError('No solutions in |lm_mdot_obs_to_ts_lm| Given mdot: {} is in mdot range ({}, {})'.format(
+                    "%.2f" % star_z_coord, "%.2f" % z_row_for_star_z.max(), "%.2f" % z_row_for_star_z.min()))
+
 
         # --------------------------------------------------CHECKING IF LIMITS FOR T ARE WITHING Ts ARRAY---------------
 
-        if lim_t1 != None and lim_t1 < t_s_arr[0] and lim_t2 == None:
-            print('\t__Error. lim_ts1({}) < t_s_arr[0]({}) '.format(lim_t1, t_s_arr[0]))
-            raise ValueError
+        if lim_x1 != None and lim_x1 < x_1d_arr[0] and lim_x2 == None:
+            raise ValueError('lim_ts1({}) < t_s_arr[0]({}) '.format(lim_x1, x_1d_arr[0]))
 
-        if lim_t2 != None and lim_t2 > t_s_arr[-1] and lim_t1 == None:
-            print('\t__Error. lim_ts2({}) > t_s_arr[-1]({}) '.format(lim_t2, t_s_arr[-1]))
-            raise ValueError
+        if lim_x2 != None and lim_x2 > x_1d_arr[-1] and lim_x1 == None:
+            raise ValueError('lim_ts2({}) > t_s_arr[-1]({}) '.format(lim_x2, x_1d_arr[-1]))
 
-        if lim_t1 != None and lim_t2 != None and lim_t1 > lim_t2:
-            print('\t__Error. lim_t1({}) > lim_t2({}) '.format(lim_t1, lim_t2))
-            raise ValueError
+        if lim_x1 != None and lim_x2 != None and lim_x1 > lim_x2:
+            raise ValueError('lim_t1({}) > lim_t2({}) '.format(lim_x1, lim_x2))
 
         #-----------------------------------------------------CROPPING THE Ts SOLUTIONS TO ONLY THOSE WITHIN LIMITS-----
-        if lim_t1 != None and lim_t2 == None:
-            t_sol_crop = []
-            for i in range(len(t_sol)):
-                if t_sol[i] >= lim_t1:
-                    t_sol_crop = np.append(t_sol_crop, t_sol[i]) # Contatins X  That satisfies the lim_t1 and lim_t2
+        if lim_x1 != None and lim_x2 == None:
+            x_sol_crop = []
+            for i in range(len(int_star_x_coord)):
+                if int_star_x_coord[i] >= lim_x1:
+                    x_sol_crop = np.append(x_sol_crop, int_star_x_coord[i]) # Contatins X  That satisfies the lim_t1 and lim_t2
 
-            lm_fill = np.zeros(len(t_sol_crop))
-            lm_fill.fill(star_l_lm)     # !! FIls the array with same L/M values (as L or LM is UNIQUE for a Given Star)
-            return np.vstack(( lm_fill, np.array(t_sol_crop) ))
+            z_fill = np.zeros(len(x_sol_crop))
+            z_fill.fill(star_z_coord)
+            y_fill = np.zeros(len(x_sol_crop))
+            y_fill.fill(star_y_coord)       # !! FIls the array with same L/M values (as L or LM is UNIQUE for a Given Star)
+            return np.vstack(( np.array(x_sol_crop), y_fill,  z_fill))
 
-        if lim_t1 == None and lim_t2 != None:
-            t_sol_crop = []
-            for i in range(len(t_sol)):
-                if t_sol[i] <= lim_t2:
-                    t_sol_crop = np.append(t_sol_crop, t_sol[i])
+        if lim_x1 == None and lim_x2 != None:
+            x_sol_crop = []
+            for i in range(len(int_star_x_coord)):
+                if int_star_x_coord[i] <= lim_x2:
+                    x_sol_crop = np.append(x_sol_crop, int_star_x_coord[i])
 
-            lm_fill = np.zeros(len(t_sol_crop))
-            lm_fill.fill(star_l_lm)
-            return np.vstack(( lm_fill, np.array(t_sol_crop) ))
+            z_fill = np.zeros(len(x_sol_crop))
+            z_fill.fill(star_z_coord)
+            y_fill = np.zeros(len(x_sol_crop))
+            y_fill.fill(star_y_coord)       # !! FIls the array with same L/M values (as L or LM is UNIQUE for a Given Star)
+            # y_fill.fill(star_l_lm)
+            return np.vstack(( np.array(x_sol_crop), y_fill , z_fill))
 
-        if lim_t1 != None and lim_t2 != None:
-            t_sol_crop = []
-            for i in range(len(t_sol)):
-                if t_sol[i] >= lim_t1 and t_sol[i] <= lim_t2:
-                    t_sol_crop = np.append(t_sol_crop, t_sol[i])
+        if lim_x1 != None and lim_x2 != None:
+            x_sol_crop = []
+            for i in range(len(int_star_x_coord)):
+                if int_star_x_coord[i] >= lim_x1 and int_star_x_coord[i] <= lim_x2:
+                    x_sol_crop = np.append(x_sol_crop, int_star_x_coord[i])
 
-            lm_fill = np.zeros(len(t_sol_crop))
-            lm_fill.fill(star_l_lm)
-            return np.vstack(( lm_fill, np.array(t_sol_crop) ))
+            z_fill = np.zeros(len(x_sol_crop))
+            z_fill.fill(star_z_coord)
+            y_fill = np.zeros(len(x_sol_crop))
+            y_fill.fill(star_y_coord)       # !! FIls the array with same L/M values (as L or LM is UNIQUE for a Given Star)
 
-        lm_fill = np.zeros(len(t_sol))
-        lm_fill.fill(star_l_lm)
+            return np.vstack(( np.array(x_sol_crop), y_fill, z_fill))
 
-        return np.vstack((lm_fill, np.array(t_sol)))
+        z_fill = np.zeros(len(int_star_x_coord))
+        z_fill.fill(star_z_coord)
+        y_fill = np.zeros(len(int_star_x_coord))
+        y_fill.fill(star_y_coord)
+
+        # print(np.array(int_star_x_coord).shape, y_fill.shape, z_fill.shape)
+
+        return np.vstack(( np.array(int_star_x_coord), y_fill, z_fill))
 
     @staticmethod
     def lm_to_l(log_lm):

@@ -14,6 +14,8 @@ import numpy as np
 # from ply.ctokens import t_COMMENT
 from scipy import interpolate
 from sklearn.linear_model import LinearRegression
+from scipy.optimize import fmin
+
 # import scipy.ndimage
 # from scipy.interpolate import interp1d
 # import matplotlib.pyplot as plt
@@ -356,6 +358,35 @@ class Math:
                            ((x[idx + 1], y2[idx + 1])))
         return xc, yc
 
+    @staticmethod
+    def get_max_by_interpolating(x,y):
+
+        x = np.array(x, dtype=float)
+        y = np.array(y, dtype=float)
+
+        # create the interpolating function
+        f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
+
+        # to find the maximum, we minimize the negative of the function. We
+        # cannot just multiply f by -1, so we create a new function here.
+        f2 = interpolate.interp1d(x, -1.*y, kind='cubic', bounds_error=False)
+
+        # x_new = np.mgrid[x[0]:x[-1]:1000j]
+        # y_new = f2(x_new)
+        # print(y_new)
+
+        # print(x.min(), x.max())
+        guess = x[np.where(y == y.max())]
+        # print(guess)
+
+        x_max = fmin(f2, guess)
+
+        return x_max, f(x_max)
+
+        # xfit = np.linspace(0, 4)
+
+
+
 class Physics:
     def __init__(self):
         pass
@@ -613,12 +644,6 @@ class Physics:
 
         return mdot
 
-
-    # @staticmethod
-    # def get_mdot(vrho, r_s, dimensions, mu = 1.34):
-    #     for i in range(len(vrho[]))
-
-
     @staticmethod
     def rho_mdot(t, rho, dimensions = 1, r_s = 1., mu = 1.34):
         '''
@@ -653,9 +678,6 @@ class Physics:
             return m_dot
         else:
             sys.exit('\t__Error. Wrong number of dimensions. Use 0,1,2. Given: {} | m_dot |'.format(dimensions))
-
-
-
 
     @staticmethod
     def mdot_rho(t, mdot, dimensions = 1, r_s = 1., mu = 1.34):
@@ -944,3 +966,32 @@ class Physics:
         b2 = -0.053868
         c2 = 0.055467
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
+
+class Labels:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def lbls(v_n):
+        #solar
+        if v_n == 'l':
+            return '$\log(L)$'#(L_{\odot})
+        if v_n == 'r':
+            return '$R(R_{\odot})$'
+
+        #sonic and general
+        if v_n == 'v' or v_n == 'u':
+            return 'v (km/s)'
+        if v_n == 'rho':
+            return '$\log(\rho)$'
+        if v_n == 'k' or v_n == 'kappa':
+            return '$\kappa$'
+        if v_n == 't':
+            return 'log(T)'
+        if v_n == 'ts':
+            return '$\log(T_{s})$'
+        if v_n == 'lm':
+            return '$\log(L/M)$'
+        if v_n == 'mdot':
+            return '$\log(\dot{M}$)'
+

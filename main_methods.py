@@ -29,6 +29,7 @@ from Err_Const_Math_Phys import Errors
 from Err_Const_Math_Phys import Math
 from Err_Const_Math_Phys import Physics
 from Err_Const_Math_Phys import Constants
+from Err_Const_Math_Phys import Labels
 
 from OPAL import Read_Table
 from OPAL import Row_Analyze
@@ -141,7 +142,6 @@ class Save_Load_tables:
         file_table = np.loadtxt(full_name, dtype=float)
 
         return file_table #[x1, x2, y1, y2, n1, n2]
-
 
 class Creation:
 
@@ -259,331 +259,6 @@ class Creation:
         global t_llm_mdot
         t_llm_mdot = Math.combine(t_llm_vrho[0,1:], t_llm_vrho[1:,0], mdot)
         Save_Load_tables.save_table(t_llm_mdot, self.op_name, 't_'+l_or_lm+'_mdot','t', l_or_lm, 'mdot', self.out_dir)
-
-
-
-# class Num_Models:
-#
-#     def __init__(self, smfls = list(), plotfls = list()):
-#         self.files = smfls
-#         self.n_of_smfiles = len(smfls)
-#         self.n_of_plotfls = len(plotfls)
-#
-#
-#         self.mdl = []
-#         for i in range(self.n_of_smfiles):
-#             self.mdl.append( Read_SM_data_File.from_sm_data_file(self.files[i]) )
-#             # print(self.mdl[i].mdot_[-1])
-#
-#         # self.nmdls = len(self.mdl)
-#         print('\t__Note: {} sm.data files has been uploaded.'.format(self.n_of_smfiles))
-#
-#         self.plts = []
-#         for i in range(self.n_of_plotfls):
-#             self.plts.append( Read_Plot_file.from_file(plotfls[i]) )
-#
-#         print('\t__Note: {} .plot1 files has been uploaded.'.format(self.n_of_plotfls))
-#
-#     def ind_from_condition(self, cur_model, condition):
-#         '''
-#
-#         :param cur_model: index of a model out of list of class instances that is now in the MAIN LOOP
-#         :param condition: 'sp' - for sonic point, 'last' for -1, or like 't=5.2' for point where temp = 5.2
-#         :return: index of that point
-#         '''
-#         if condition == 'last' or condition == '' :
-#             return -1
-#
-#         if condition == 'sp': # Returns the i of the velocity that is >= sonic one. (INTERPOLATION would be better)
-#             return self.mdl[cur_model].sp_i()
-#
-#         var_name = condition.split('=')[ 0] # for condition like 't = 5.2' separates t as a var in sm.file and
-#         var_value= condition.split('=')[-1]
-#
-#         if var_name not in self.mdl[cur_model].var_names:                   # Checking if var_name is in list of names for SM files
-#             raise NameError('Var_name: {} is not in var_name list: \n\t {}'
-#                             .format(var_name, self.mdl[cur_model].var_names))
-#
-#         arr = np.array( self.mdl[cur_model].get_col(var_name) ) # checking if var_value is in the column of var_name
-#         print(var_value, arr.min(), arr.max())
-#         if var_value < arr.min() or var_value > arr.max() :
-#             raise ValueError('Given var_value={} is beyond {} range: ({}, {})'
-#                              .format(var_value,var_name,arr.min(),arr.max()))
-#
-#         ind = -1
-#         for i in range(len(arr)): # searching for the next element, >= var_value. [INTERPOLATION would be better]
-#             if var_value >= arr[i]:
-#                 ind = i
-#                 break
-#         if ind == -1:
-#             raise ValueError('ind = -1 -> var_value is not found in the arr. | var_value={}, array range: ({}, {})'
-#                              .format(var_value, var_name,arr.min(), arr.max()))
-#
-#         return ind
-#
-#     def get_x_y_of_all_numericals(self, condition, x_name, y_name, var_for_label1, var_for_label2,
-#                                   ts_arr = np.empty(0,), l_lm_arr = np.empty(0,), mdot2d_arr = np.empty(0,),
-#                                   lim_t1_obs = None, lim_t2_obs = None):
-#         '''
-#
-#         :param condition: 'sp' - for sonic point, 'last' for -1, or like 't=5.2' for point where temp = 5.2
-#         :param x_name: can be the sm.file car name (eg from the bec output list)
-#         :param y_name: can be the sm.file car name (eg from the bec output list)
-#         :param var_for_label1:
-#                var_for_label2: Same, but can me 'color' - ro return unique value from 1 to 9
-#         :return: np.array([ i , x , y , var_lbl1 , var_lbl2 ]) - set of coluns for each sm.file - one row
-#         '''
-#         model_stars1 = np.array([0., 0., 0., 0., 0.]) # for output i
-#
-#         for i in range(self.n_of_smfiles):
-#             x_coord = None
-#             y_coord = None
-#
-#             i_req = self.ind_from_condition(i, condition)
-#
-#             '''---------------------MAIN CYCLE-------------------'''
-#             #-------------------SETTING-COORDINATES------------------------
-#             if x_name in  self.mdl[i].var_names:
-#                 x_coord = self.mdl[i].get_col(x_name)[i_req]
-#             if y_name in  self.mdl[i].var_names:
-#                 y_coord = self.mdl[i].get_col(y_name)[i_req]
-#
-#             if y_name == 'lm':
-#                 y_coord = self.mdl[i].get_spec_val('lm', i_req)
-#
-#             if var_for_label1 == 'Y_c':
-#                 add_data1 = self.mdl[i].get_col('He4')[0]
-#             else:
-#                 add_data1 = self.mdl[i].get_col(var_for_label1)[i_req]
-#
-#             if var_for_label2 == 'color':
-#                 add_data2 = int(Math.get_0_to_max([i],9)[i]) # from 1 to 9 for plotting C+[1-9]
-#             else:
-#                 add_data2 = self.mdl[i].get_col(var_for_label2)[i_req]
-#
-#             #-------------------------_CASE TO INTERPOLATE MDOT -> ts InterpolateioN----------------
-#             if x_name == 'ts':
-#                 if not ts_arr.any() or not l_lm_arr.any() or not mdot2d_arr.any():
-#                     raise ValueError('x_coord {} requires ts, l_lm_arr and mdot2arr to be interpolated'.format(x_name))
-#
-#
-#             if x_name == 'ts' and (y_name == 'l' or y_name == 'lm') and ts_arr.any() and l_lm_arr.any() and mdot2d_arr.any():
-#                 p_mdot = self.mdl[i].mdot_[i_req]
-#                 x_y_coord = Physics.lm_mdot_obs_to_ts_lm(ts_arr, l_lm_arr, mdot2d_arr, y_coord, p_mdot, i, lim_t1_obs, lim_t2_obs)
-#
-#                 if x_y_coord.any():
-#                     for j in range(len(x_y_coord[0, :])):
-#
-#                             # plt.plot(x_y_coord[1, j], x_y_coord[0, j], marker='.', markersize=9, color=color)
-#                             # ax.annotate('m' + str(i), xy=(x_y_coord[1, j], x_y_coord[0, j]), textcoords='data')
-#
-#                         model_stars1 = np.vstack(( model_stars1, np.array(( i, x_y_coord[1, j],
-#                                                                                x_y_coord[0, j],
-#                                                                                add_data1,
-#                                                                                add_data2  ))))
-#             else:
-#                 if x_coord == None or y_coord == None:
-#                     raise ValueError('x_coord={} or y_coord={} is not obtained.'.format(x_coord,y_coord))
-#
-#                 model_stars1 = np.vstack((model_stars1, np.array((i, x_coord,
-#                                                                      y_coord,
-#                                                                      add_data1,
-#                                                                      add_data2  ))))
-#
-#
-#             # color = 'C' + str(int(i * 10 / self.n_of_files))
-#             # plt.plot(x_coord, y_coord, marker='.', markersize=9, color=color)
-#             # # label='Model {}: T_s {} , L/M {} , Mdot {}'.format(i, "%.2f" % p_t, "%.2f" % p_lm, "%.2f" % p_mdot))
-#             # ax.annotate(str(i), xy=(x_coord, y_coord), textcoords='data')
-#
-#             # --------------------------SAME BUT USING Mdot TO GET SONIC TEMPERATURE (X-Coordinate)------------------------
-#             # p_mdot = self.mdl[i].mdot_[i_req]
-#             # x_y_coord = Physics.lm_mdot_obs_to_ts_lm(t, y_coord, m_dot, y_coord, p_mdot, i, lim_t1_obs, lim_t2_obs)
-#             # if x_y_coord.any():
-#             #     for j in range(len(x_y_coord[0, :])):
-#             #         plt.plot(x_y_coord[1, j], x_y_coord[0, j], marker='.', markersize=9, color=color)
-#             #         ax.annotate('m' + str(i), xy=(x_y_coord[1, j], x_y_coord[0, j]), textcoords='data')
-#             #         model_stars1 = np.vstack(
-#             #             (model_stars1, np.array((i, x_y_coord[1, j], x_y_coord[0, j], p_mdot, self.mdl[i].He4_[0]))))
-#             #
-#             #     model_stars2 = np.vstack((model_stars2, np.array(
-#             #         (i, x_coord, y_coord, p_mdot, self.mdl[i].He4_[0]))))  # for further printing
-#
-#         # -------------------------PLOT FIT FOR THE NUMERICAL MODELS AND TABLES WITH DATA --------------------------------
-#
-#         model_stars1  = np.delete(model_stars1, 0, 0) # removing [0,0,0,] row
-#
-#         if model_stars1.any():
-#             print('\n| Models plotted by ts & lm |')
-#             print('\t| Conditon: {} |'.format(condition))
-#             print('|  i  | {} | {} | {} | {}  |'.format(x_name, y_name, var_for_label1, var_for_label2))
-#             print('|-----|------|------|-------|------|')
-#             # print(model_stars1.shape)
-#             for i in range(1, len(model_stars1[:, 0])):
-#                 print('| {} | {} | {} | {} | {} |'.format("%3.f" % model_stars1[i, 0], "%.2f" % model_stars1[i, 1],
-#                                                           "%.2f" % model_stars1[i, 2], "%.2f" % model_stars1[i, 3],
-#                                                           "%.2f" % model_stars1[i, 4]))
-#         else:
-#             print('\t__Warning: No stars to Print. Coordinates are not obtained')
-#
-#
-#         self.table(y_name, -1)
-#
-#         return model_stars1
-#
-#             # fit = np.polyfit(model_stars1[:, 1], model_stars1[:, 2], 3)  # fit = set of coeddicients (highest first)
-#             # f = np.poly1d(fit)
-#             # fit_x_coord = np.mgrid[(model_stars1[1:, 1].min() - 0.02):(model_stars1[1:, 1].max() + 0.02):100j]
-#             # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
-#
-#
-#
-#         # if model_stars2.any():
-#         #     print('\n| Models plotted: lm & mdot |')
-#         #     print('|  i  | in_t |  {}  | m_dot | Y_c  |'.format(y_mode))
-#         #     print('|-----|------|------|-------|------|')
-#         #     for i in range(1, len(model_stars2[:, 0])):
-#         #         print('| {} | {} | {} | {} | {} |'.format("%3.f" % model_stars2[i, 0], "%.2f" % model_stars2[i, 1],
-#         #                                                   "%.2f" % model_stars2[i, 2], "%.2f" % model_stars2[i, 3],
-#         #                                                   "%.2f" % model_stars2[i, 4]))
-#         #
-#         #     fit = np.polyfit(model_stars2[:, 1], model_stars2[:, 2], 3)  # fit = set of coeddicients (highest first)
-#         #     f = np.poly1d(fit)
-#         #     fit_x_coord = np.mgrid[(model_stars2[1:, 1].min() - 0.02):(model_stars2[1:, 1].max() + 0.02):100j]
-#         #     plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
-#
-#     def get_x_y_z_arrays(self, n_of_model, x_name, y_name, z_name, var_for_label1, var_for_label2, var_for_label3):
-#         '''
-#         Returns                     0: [ var_for_label1  , var_for_label2 , var_for_label3 ]
-#         :param x_name:              1: [ x_coord[:]      , y_coord[:]       z_coord[:]     ]
-#         :param y_name:              2  [         :       ,         :                :      ]
-#         :param var_for_label1:                      and off it goes
-#         :param var_for_label2:
-#         :return:
-#         '''
-#         x_coord = None
-#         y_coord = None
-#         z_coord = None
-#
-#         i_req = -1  # for the add_data, as a point
-#         '''---------------------MAIN CYCLE-------------------'''
-#         # -------------------SETTING-COORDINATES------------------------
-#         if x_name in self.mdl [n_of_model].var_names:
-#             x_coord = self.mdl[n_of_model].get_col(x_name)
-#         if y_name in self.mdl [n_of_model].var_names:
-#             y_coord = self.mdl[n_of_model].get_col(y_name)
-#         if z_name in self.mdl [n_of_model].var_names:
-#             z_coord = self.mdl[n_of_model].get_col(z_name)
-#
-#         add_data1 = self.mdl[n_of_model].get_spec_val(var_for_label1) # if v_n = Y_c or lm
-#         add_data2 = self.mdl[n_of_model].get_spec_val(var_for_label2)
-#         add_data3 = self.mdl[n_of_model].get_spec_val(var_for_label3)
-#
-#         if add_data1 == None:
-#             add_data1 = self.mdl[n_of_model].get_col(var_for_label1)[i_req] # noraml bec variables
-#         if add_data2 == None:
-#             add_data2 = self.mdl[n_of_model].get_col(var_for_label2)[i_req]
-#         if add_data3 == None:
-#             add_data3 = self.mdl[n_of_model].get_col(var_for_label3)[i_req]
-#
-#         if len(x_coord) != len(y_coord) or len(x_coord) != len(z_coord):
-#             raise ValueError('x_coord and y_coord: \n\t {} \t\n {} have different shape.'.format(x_coord, y_coord))
-#
-#         return np.vstack(( np.insert(x_coord, 0, add_data1), np.insert(y_coord, 0, add_data2),
-#                            np.insert(z_coord, 0, add_data3)  )).T
-#
-#
-#     def get_set_of_cols(self, v_n_arr, n_of_model):
-#         '''
-#         Returns v_n_arr * length of each column array, [:,0] - first var, and so on.
-#         :param v_n_arr:
-#         :param n_of_model:
-#         :return:
-#         '''
-#         return self.mdl[n_of_model].get_set_of_cols(v_n_arr)
-#
-#     def get_ts_llm_of_one_mdel(self, i, i_req, l_or_lm, ts_arr, l_lm_arr, mdot2d_arr, lim_t1_obs = None, lim_t2_obs = None):
-#
-#         return self.mdl[i].get_ts_llm_cols(self, i_req, l_or_lm, ts_arr, l_lm_arr, mdot2d_arr, lim_t1_obs, lim_t2_obs)
-#
-#
-#     def get_sonic_vel_array(self, n_of_model):
-#         mu = self.mdl[n_of_model].get_col('mu')
-#         t  = self.mdl[n_of_model].get_col('t')
-#         return Physics.sound_speed(t, mu, True)
-#
-#     def table(self, y_name = 'l', i_req = -1):
-#
-#         if y_name == 'l':
-#
-#             print(
-#                 '\n'
-#                 ' i'
-#                 ' |  Mdot '
-#                 '| Mass'
-#                 '|  R/Rs  '
-#                 '| L/Ls  '
-#                 '| kappa  '
-#                 '| l(Rho) '
-#                 '| Temp  '
-#                 '| mfp   '
-#                 '| vel   '
-#                 '| gamma  '
-#                 '| tpar  '
-#                 '|  HP   '
-#                 '| log(C)  ')
-#         if y_name == 'lm':
-#             print(
-#                 '\n'
-#                 ' i'
-#                 ' |  Mdot '
-#                 '| Mass'
-#                 '|  R/Rs  '
-#                 '| L/M   '
-#                 '| kappa  '
-#                 '| l(Rho) '
-#                 '| Temp  '
-#                 '| mfp   '
-#                 '| vel   '
-#                 '| gamma  '
-#                 '| tpar  '
-#                 '|  HP   '
-#                 '| log(C)  ')
-#
-#         print('---|-------|-----|--------|-------|--------|--------|-------|------'
-#               '-|-------|--------|-------|-------|-------')
-#
-#         for i in range(self.n_of_files):
-#             self.mdl[i].get_par_table(i, y_name, i_req)
-class Labels:
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def lbls(v_n):
-        #solar
-        if v_n == 'l':
-            return '$\log(L)$'#(L_{\odot})
-        if v_n == 'r':
-            return '$R(R_{\odot})$'
-
-        #sonic and general
-        if v_n == 'v' or v_n == 'u':
-            return 'v (km/s)'
-        if v_n == 'rho':
-            return '$\log(\rho)$'
-        if v_n == 'k' or v_n == 'kappa':
-            return '$\kappa$'
-        if v_n == 't':
-            return 'log(T)'
-        if v_n == 'ts':
-            return '$\log(T_{s})$'
-        if v_n == 'lm':
-            return '$\log(L/M)$'
-        if v_n == 'mdot':
-            return '$\log(\dot{M}$)'
-
-
 
 class Observables:
 
@@ -748,7 +423,6 @@ class Observables:
 
         return( np.array( [plotted_stars, plotted_labels] ) )
 
-
 class Combine:
     output_dir = '../data/output/'
     plot_dir = '../data/plots/'
@@ -786,7 +460,7 @@ class Combine:
             label2 = self.mdl[i].get_col(var_for_label2)[-1]
 
             lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
-            ax1.plot(x,  y,  '.',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
             ax1.plot(x[-1], y[-1], 'x',   color='C' + str(Math.get_0_to_max([i], 9)[i]))
 
             ax1.annotate(str('%.2e' % 10**self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')

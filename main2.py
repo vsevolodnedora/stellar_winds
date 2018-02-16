@@ -31,10 +31,10 @@ from main_methods import Combine
 #--------------------------------------------
 ''' --------------------evolved models -------------------'''
 from os import listdir
-output_dir = '../data/output'
-plot_dir = '../data/plots'
-opal_fl = '../data/opal/table8.data'
-obs_fl = '../data/obs/gal_wn.data'
+output_dir  = '../data/output'
+plot_dir    = '../data/plots'
+opal_fl     = '../data/opal/table8.data'
+obs_fl      = '../data/obs/gal_wn.data'
 
 def get_files(compath, req_dirs, requir_files, extension):
     comb = []
@@ -58,16 +58,23 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-# smfiles = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
-# smfiles = get_files('../../sse/sp_z002new/', ['10/u/', '11/u/', '12/u/', '13/u/', '14/u/', '15/u/', '16/u/', '17/u/', '18/u/', '19/u/', '20/u/', '21/u/'], [], 'sm.data')
-smfiles = get_files('../../sse/sp_z002new/', ['10e5/u/', '11e5/u/', '12e5/u/', '13e5/u/', '14e5/u/', '15e5/u/','16e5/u/','17e5/u/'], [], 'sm.data')
+smfiles  = get_files('../../sse/sm_e10z002ml/', ['sm9/', 'sm8/', 'sm7/', 'sm6/', 'sm5/', 'sm4/', 'sm3/', 'sm2/', 'sm1/', 'sm0/'], ['2d-5'], 'sm.data')
+smfiles1 = get_files('../../sse/sp_z002new/', ['10/u/', '11/u/', '12/u/', '13/u/', '14/u/', '15/u/', '16/u/', '17/u/', '18/u/', '19/u/', '20/u/', '21/u/'], [], 'sm.data')
+smfiles2 = get_files('../../sse/sp_z002new/', ['10e5/u/', '11e5/u/', '12e5/u/', '13e5/u/', '14e5/u/', '15e5/u/','16e5/u/','17e5/u/','18e5/u/','19e5/u/','20e5/u/'], [], 'sm.data')
+smfiles3 = get_files('../../sse/sp_z002new/15_full/', ['9/u/', '8/u/', '7/u/', '6/u/', '5/u/', '4/u/','3_5/u/','3/u/','2_5/u/', '2/u/','1_5/u/','1/u/','0_5/u/'], [], 'sm.data')
+smfiles4 = get_files('../../sse/sp_z002new/20_full/', ['9/u/', '8/u/', '7/u/', '6/u/', '5/u/', '4/u/','3_5/u/','3/u/','2_5/u/','2/u/','1_5/u/','1/u/','0_5/u/'], [], 'sm.data')
 
-# smfiles = get_files('../../sse/sp_z002new/', ['21/'], [], 'sm.data')
-# smfiles = get_files('../../sse/sp_z002/', ['16/','17/','18/'], [], 'sm.data')
+#,'2_5/u/', '2/u/','1_5/u/','1/u/','0_5/u/'
+
+# from main_methods import TEST
+# tst = TEST(output_dir)
+# tst.xy_last_points('l','r','He4', 'core', [smfiles1,smfiles2,smfiles3,smfiles4])
+# tst.d3_plotting_x_y_z('l','r','mdot','He4', 'core', [smfiles1,smfiles2,smfiles3,smfiles4])
+# tst.new_3d()
 
 
 # files = get_files('../../sse/', ['e10z002ml/7/test/', 'test_ml_sp/7/test/'], [], 'sm.data')
-plotfls = get_files('../../sse/sp_z002new/', ['16e5/'], [], '.plot1')
+plotfls = get_files('../../sse/sp_z002new/', ['20_full/'], [], '.plot1')
 # print(smfiles)
 # smfiles = get_files('../../sse/sm_e10z002ml/', ['sm0/', 'sm1/', 'sm2/', 'sm3/', 'sm4/', 'sm5/', 'sm6/', 'sm7/', 'sm8/', 'sm9/'], ['1d-5'], 'sm.data')
 # smfiles = get_files('./../../sse/comp15DYNFAK/', ['on/', 'off/'], [], 'sm.data')
@@ -78,9 +85,9 @@ plotfls = get_files('../../sse/sp_z002new/', ['16e5/'], [], '.plot1')
 '''-------------------------------------------------------------'''
 from main_methods import Creation
 
-# make = Creation(opal_fl, 4.6, 5.5, 500)
-# make.save_t_rho_k()
-# make.save_t_k_rho(None, None, 500)
+# make = Creation(opal_fl, 4.9, 5.5, 1000)
+# # make.save_t_rho_k()
+# make.save_t_k_rho(3.8, None, 1000)
 # # file_table = np.zeros(1)
 # # make.read_table('t_k_rho', 't', 'k', 'rho', '../data/opal/table8.data')
 # make.save_t_llm_vrho('l')
@@ -93,15 +100,17 @@ from main_methods import Creation
 
 '''-------------------------------------------------------------'''
 
-comb = Combine(smfiles, plotfls, obs_fl, opal_fl)
+# comb = Combine(smfiles4, plotfls, obs_fl, opal_fl)
 # comb.xy_profile('r','u','mdot','xm')
-# comb.xyy_profile('r','rho','kappa','mdot','xm','t')
-comb.xy_last_points('r','l','mdot',True)
+# comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
+# comb.xy_last_points('r','l','mdot',True)
 # comb.hrd(plotfls)
 # comb.plot_t_rho_kappa('mdot','xm')
 # comb.plot_t_mdot_lm()
-comb.plot_t_l_mdot('l',1.,'xm',None,5.2)
+# comb.plot_t_l_mdot('l',1.0,'xm',5.2)
+# comb.min_mdot('l',None,'xm',5.2)
 
+# print(np.arange(10**(-4),10**(-6),10))
 
 
 

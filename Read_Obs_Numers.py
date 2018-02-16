@@ -11,6 +11,7 @@ from matplotlib import cm
 import numpy as np
 from ply.ctokens import t_COMMENT
 from scipy import interpolate
+import re
 
 from sklearn.linear_model import LinearRegression
 # import scipy.ndimage
@@ -59,21 +60,35 @@ class Read_Observables:
 
         # -----------------DISTRIBUTING READ COLUMNS-------------
         self.num_v_n = ['N', 't', 'm', 'l', 'mdot']  # list of used v_n's; can be extended upon need ! 'N' should be first
-        cls = 'class'
+        self.cls = 'class'                           # special variable
+
+        self.str_v_n = []
+
+        # print(self.get_star_class(75.))
+        self.set_num_str_tables()
+        # print(self.get_table_num_par('l', 110))
+        # print(self.get_star_class(110))
+
+    def set_num_str_tables(self):
 
         self.numers = np.zeros((self.num_stars, len(self.num_v_n)))
         self.clses= []
 
+        #----------------------------------------SET THE LIST OF CLASSES------------------
         for i in range(len(self.table)):
-            n = self.names.index(cls)
-            if cls in self.names:
+            n = self.names.index(self.cls)
+            if self.cls in self.names:
                 self.clses.append(self.table[i].split()[n])
 
+        #-----------------------------------------SET 2D ARRAY OF NUM PARAMETERS---------
         for i in range(len(self.table)):
             for j in range(len(self.num_v_n)):
                 n = self.names.index(self.num_v_n[j])
                 if self.num_v_n[j] in self.names:
                     self.numers[i, j] =  np.float(self.table[i].split()[n])
+
+        #-----------------------------------------SETTING THE CATALOGUE NAMES------------
+        self.stars_n = self.numers[:,0]
 
         if len(self.numers[:,0])!= len(self.clses):
             raise ValueError('Size of str. vars ({}) != size of num.var ({})'.format( len(self.numers[:,0]) ,len(self.clses) ))
@@ -82,62 +97,16 @@ class Read_Observables:
         print('\n\t__Note. In file: {} total {} stars are loaded. \n\t  Available numerical parameters: {} '
               .format(self.file_name, len(self.numers), self.num_v_n))
 
-        print(self.get_star_class(75.))
+    def modify_value(self, v_n, value):
+        if v_n == 't':
+            return np.log10(value*1000)
 
-    def get_star_class(self, n):
-        for i in range(len(self.numers[:, 0])):
-            if n == self.numers[i, 0]:
-                return self.clses[i]
+        if v_n == 'mdot':
+            new_mdot = value
+            if self.clump != self.new_clump:
 
-        # for v_n in self.num_vars:
-        #     if v_n in self.names:
-        #         n = self.names.index(v_n)
-        #         for i in range(len(self.table)):
-        #             # print(self.table[i].split()[n])
-        #             self.stars = np.append(self.stars, np.float(self.table[i].split()[n]) )
-
-        # print(self.stars)
-
-        # for v_n in self.exp_v_n:
-        #     if v_n in self.names:
-        #         print('\t__Note: column: < {} > is found in {}'.format(v_n, observ_name))
-        #
-        #
-        # self.stars = np.zeros((len(self.num_stars), self.num_vars ))
-        #
-        # self.m_ = []
-        # n = self.names.index('m')
-        # for i in range(len(self.table)):
-        #     self.m_.append(self.table[i].split()[n])
-        #
-        # print(self.m_)
-
-
-    def get_obs_par(self, v_n, dtype):
-
-        if v_n == 'lm':
-            return
-
-
-
-
-        if v_n not in self.names:
-            sys.exit('\t__Error. Name: {} is not is a list of par.names: \n\t{}'.format(v_n, self.names))
-
-        n = self.names.index(v_n)
-
-        res = []
-        for i in range(len(self.table)):
-            res.append(self.table[i].split()[n])
-
-        if v_n == 't': # as t is given 112 Kk -> *1000 -> lob10()
-            # print(res)
-            res = np.log10(np.array(res, dtype=float)*1000) # accounting that effective temp
-
-        if self.clump != self.new_clump:
-            if v_n == 'mdot':
-                f_WR = 10**(0.5 * np.log10(self.clump / self.new_clump))
-                res2 = np.array(res, dtype=float) + ( np.log10(f_WR) )
+                f_WR = 10**(0.5 * np.log10(self.clump / self.new_clump))  # modify for a new clumping
+                new_mdot = value +  np.log10(f_WR)
                 print('\nClumping factor changed from {} to {}'.format(self.clump, self.new_clump))
                 print('new_mdot = old_mdot + ({}) (f_WR: {} )'
                       .format( "%.2f" % np.log10(f_WR), "%.2f" % f_WR ))
@@ -145,184 +114,103 @@ class Read_Observables:
                 # for i in range(len(res)):
                 #     f_wr = 10**np.float(res2[i]) / 10**np.float(res[i])
                 #     print('| {} | {} | {} | {} |'.format("%2.f" % i, "%.2f" % np.float(res[i]) ,"%.2f" % np.float(res2[i]), "%.2f" % f_wr ) )
-                res = res2
+            return new_mdot
 
-        return np.array(res, dtype=dtype)
+        return value
 
-    def obs_par_row(self, i, dtype):
-        return np.array(self.table[i].split(), dtype=dtype)
+    def get_num_par_from_table(self, v_n, star_n):
 
-    def get_x_y_of_all_observables(self, x_name, y_name, var_for_label,
-                                   ts_arr = np.empty(1,), l_lm_arr= np.empty(1,), m_dot= np.empty(1,),
-                                   lim_t1_obs = None, lim_t2_obs = None):
-        '''
-        RETURN:  np.array( [plotted_stars, plotted_labels] )  [0][:,0] - nums of all plotted stars
-                                                              [0][:,1] - x - coord.
-                                                              [0][:,2] - y - coord
-                                                              [0][:,3] - ints from 0 to 9, uniqe for uniqe 'var_for_label'
-                                                              [1][:,0] - nums of selected stars for labels
-                                                              [1][:,1] - x - coord
-                                                              [1][:,2] - y - coord
-                                                              [1][:,3] - ints from 0 to 9
-        To get index in the [0] arr of the element in [1] Use: int( np.where( res[0][:, 0]==res[1][j, 0] )[0] )
+        if v_n not in self.num_v_n:
+            raise NameError('v_n: {} is not in set of num. pars: {}'.format(v_n, self.num_v_n))
+        if star_n not in self.numers[: , 0]:
+            raise NameError('star_n: {} is not in the list of star numbers: {}'.format(star_n, self.numers[:,0]))
 
-        Warning! If there are more unique str(var_for_label), PROGRAM BRAKES
-        :param x_name:
-        :param y_name:
-        :param var_for_label:
-        :param ts_arr:
-        :param l_lm_arr:
-        :param m_dot:
-        :param lim_t1_obs:
-        :param lim_t2_obs:
-        :return:
-        '''
-        self.check_if_var_name_in_list(x_name)
-        self.check_if_var_name_in_list(y_name)
-        self.check_if_var_name_in_list(var_for_label)
-
-        s = 0
-
-        leble = []
-        plotted_stars = np.array([0., 0., 0., 0.])
-        plotted_labels= np.array([0., 0., 0., 0. ])
-
-        # if self.obs != None:  # plot observed stars
-        ''' Read the observables file and get the necessary values'''
-        ts_ = []
-        y_coord_ = []
-
-        import re  # for searching the number in 'WN7-e' string, to plot them different colour
-        for i in range(self.num_stars):
-            star_x_coord = []
-            star_y_coord = []
-
-            # ---------------------------------------Y-------------------------
-            if y_name == 'lm':
-                star_y_coord = [ Physics.loglm(self.obs_par('l', float)[i],
-                                             self.obs_par('m', float)[i]) ]
-            else:
-                star_y_coord = [ self.obs[s].obs_par(y_name, float)[i] ]
+        ind_star = np.where(self.numers[: , 0]==star_n)[0][0]
+        ind_v_n  = self.num_v_n.index(v_n)
+        value = self.numers[ind_star, ind_v_n]
 
 
-            # ---------------------------------------X-------------------------
-            if x_name == 'ts' or x_name == 'rs':
-                if not ts_arr.any() or not l_lm_arr.any() or not m_dot.any():
-                    print('\t__Error. For ts to be evaluated for a star : *ts_arr, l_lm_arr, m_dot* to be provided')
-                    raise ValueError
+        value = self.modify_value(v_n, value)
 
-                x_y_coord = Physics.lm_mdot_obs_to_ts_lm(ts_arr, l_lm_arr, m_dot, star_y_coord[0],
-                                                         self.obs[s].obs_par('mdot', float)[i],
-                                                         i, lim_t1_obs, lim_t2_obs)
-                if x_y_coord.any():
-                    ts_ = np.append(ts_, x_y_coord[1, :])  # FOR linear fit
-                    y_coord_ = np.append(y_coord_, x_y_coord[0, :])
-                    star_x_coord =  x_y_coord[1, :]
-                    star_y_coord =  x_y_coord[0, :]  # If the X coord is Ts the Y coord is overritten.
+        return value
 
-            else:
-                star_x_coord = [ self.obs[s].obs_par(x_name, float)[i] ]
+    #---------------------------------------------PUBLIC FUNCTIONS---------------------------------------
+    def get_num_par(self, v_n, star_n):
+        if v_n == 'lm':
 
-            if x_name == 'lm':
-                star_x_coord = [ Physics.loglm(self.obs[s].obs_par('l', float)[i],
-                                             self.obs[s].obs_par('m', float)[i]) ]
+            return np.log10( 10**self.get_num_par_from_table('l', star_n) / self.get_num_par_from_table('m', star_n) )
+
+
+        return self.get_num_par_from_table(v_n, star_n)
+
+    def get_xyz_from_yz(self,model_n, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
+
+        if y_name == z_name:
+            raise NameError('y_name and z_name are the same : {}'.format(z_name))
+
+        star_y = self.get_num_par(y_name, model_n)
+        star_z = self.get_num_par(z_name, model_n)
+
+        if star_z == None or star_y == None:
+            raise ValueError('star_y:{} or star_z:{} not defined'.format(star_y,star_z))
+
+        xyz = Physics.model_yz_to_xyz(x_1d_arr, y_1d_arr, z_2d_arr,  star_y, star_z, model_n, lx1, lx2)
+
+        return xyz
+
+
+    def get_star_class(self, n):
+        for i in range(len(self.numers[:, 0])):
+            if n == self.numers[i, 0]:
+                return self.clses[i]
+
+    def get_class_color(self, n):
+        # cls = self.get_star_class(n)
+        #
+        # if cls == 'WN2' or cls == 'WN3':
+        #     return 'v'
+        # if cls == 'WN4-s':
+        #     return 'o' # circle
+        # if cls == 'WN4-w':
+        #     return 's' # square
+        # if cls == 'WN5-w' or cls == 'WN6-w':
+        #     return '1' # tri down
+        # if cls == 'WN5-s' or cls == 'WN6-s':
+        #     return 'd' #diamond
+        # if cls == 'WN7':
+        #     return '^'
+        # if cls == 'WN8' or cls == 'WN9':
+        #     return 'P' #plus filled
 
 
 
+        # import re  # for searching the number in 'WN7-e' string, to plot them different colour
+        se = re.search(r"\d+(\.\d+)?", self.get_star_class(n))  # this is searching for the niumber
+        # cur_type = int(se.group(0))
+        color = 'C'+se.group(0)
+        return color
 
+    def get_clss_marker(self, n):
+        # se = re.search(r"\d+(\.\d+)?", self.get_star_class(n))
+        # n_class =  int(se.group(0))
+        # se = re.search(r"\d+(\.\d+)?", self.get_star_class(n))  # this is searching for the niumber
+        # cur_type = int(se.group(0))
+        cls = self.get_star_class(n)
 
-            star_x_coord = np.array(star_x_coord)
-            star_y_coord = np.array(star_y_coord)
-            if len(star_x_coord) == len(star_y_coord) and star_x_coord.any() :
-
-                se = re.search(r"\d+(\.\d+)?", self.obs[s].obs_par('type', str)[i])  # this is searching for the niumber
-                #             color = 'C' + str(int(s.group(0)))  # making a colour our of C1 - C9 range
-
-                for j in range(len(star_x_coord)):  # plot every solution in the degenerate set of solutions
-
-                    row = self.obs[s].table[i]  # to get the 0th element, which is alwas the star index
-
-                    cur_type = int(se.group(0))
-                    if cur_type not in leble:  # plotting the label for unique class of stars
-                        leble.append( cur_type )
-
-                        plotted_labels = np.vstack((plotted_labels, np.array((int(row[0:3]),
-                                                                              star_x_coord[j],
-                                                                              star_y_coord[j],
-                                                                              cur_type ))))
-
-                    plotted_stars = np.vstack((plotted_stars, np.array((int(row[0:3]),
-                                                                        star_x_coord[j],
-                                                                        star_y_coord[j],
-                                                                        cur_type ))))  # for further printing
-
-
-
-
-    # def __init__(self, observ_name = './data/gal_wn.data'):
-    #
-    #     self.numb = []
-    #     self.type = []
-    #     self.t_ef = []
-    #     self.r_t  = []
-    #     self. v_t = []
-    #     self.x_h  = []
-    #     self.e_bv = []
-    #     self.law_a= []
-    #     self.dmag = []
-    #     self.mag_v= []
-    #     self.r_ef = []
-    #     self.mdot_obs = []
-    #     self.l_obs = []
-    #     self.mdotv_inf_lc = []
-    #     self.m_obs = []
-    #
-    #
-    #
-    #     f = open(observ_name, 'r').readlines()
-    #     elements = len(np.array(f[3].split()))
-    #     raws = f.__len__()
-    #     table = []
-    #
-    #     # print(len(f[3].split()))
-    #     for i in range(3, raws):
-    #
-    #         row = f[i].split()
-    #         table.
-    #
-    #         self.numb.append(int(row[0]))
-    #         self.type.append(row[1])
-    #         self.t_ef.append(float(row[2]))
-    #         self.r_t.append(row[3])
-    #         self.v_t.append(float(row[4]))
-    #         self.x_h.append(float(row[5]))
-    #         self.e_bv.append(float(row[6]))
-    #         self.law_a.append(row[7])
-    #         self.dmag.append(float(row[8]))
-    #         self.mag_v.append(float(row[9]))
-    #         self.r_ef.append(float(row[10]))
-    #         self.mdot_obs.append(float(row[11]))
-    #         self.l_obs.append(float(row[12]))
-    #         self.mdotv_inf_lc.append(float(row[13]))
-    #         self.m_obs.append(float(row[14]))
-    #
-    #     f.clear()
-    #
-    #     # print('nums: ', self.numb)
-    #     # print('typs: ', self.type)
-    #     # print('t_ef: ', self.t_ef)
-    #     # print('r_t:  ', self.r_t)
-    #     # print('v_t:  ', self.v_t)
-    #     # print('x_h:  ', self.x_h)
-    #     # print('e_bv: ', self.e_bv)
-    #     # print('law_a:', self.law_a)
-    #     # print('dmag: ', self.dmag)
-    #     # print('mag_v:', self.mag_v)
-    #     # print('r_ef: ', self.r_ef)
-    #     # print('mdot: ', self.mdot_obs)
-    #     # print('l_obs:', self.l_obs)
-    #     # print('form: ', self.mdotv_inf_lc)
-    #     # print('m_obs:', self.m_obs)
+        if cls == 'WN2-w' or cls == 'WN3-w':
+            return 'v'
+        if cls == 'WN4-s':
+            return 'o' # circle
+        if cls == 'WN4-w':
+            return 's' # square
+        if cls == 'WN5-w' or cls == 'WN6-w':
+            return '1' # tri down
+        if cls == 'WN5-s' or cls == 'WN6-s':
+            return 'd' #diamond
+        if cls == 'WN7':
+            return '^'
+        if cls == 'WN8' or cls == 'WN9':
+            return 'P' #plus filled
 
 class Read_Plot_file:
 
@@ -1042,6 +930,9 @@ class Read_SM_data_File:
         '''
         if condition == 'last' or condition == '':
             return -1
+
+        if condition == 'core':
+            return 0
 
         if condition == 'sp':  # Returns the i of the velocity that is >= sonic one. (INTERPOLATION would be better)
             return self.sp_i()

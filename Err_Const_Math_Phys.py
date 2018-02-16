@@ -313,6 +313,49 @@ class Math:
 
         return res
 
+    @staticmethod
+    def interpolated_intercept(x, y1, y2):
+        """Find the intercept of two curves, given by the same x data"""
+
+        def intercept(point1, point2, point3, point4):
+            """find the intersection between two lines
+            the first line is defined by the line between point1 and point2
+            the first line is defined by the line between point3 and point4
+            each point is an (x,y) tuple.
+
+            So, for example, you can find the intersection between
+            intercept((0,0), (1,1), (0,1), (1,0)) = (0.5, 0.5)
+
+            Returns: the intercept, in (x,y) format
+            """
+
+            def line(p1, p2):
+                A = (p1[1] - p2[1])
+                B = (p2[0] - p1[0])
+                C = (p1[0] * p2[1] - p2[0] * p1[1])
+                return A, B, -C
+
+            def intersection(L1, L2):
+                D = L1[0] * L2[1] - L1[1] * L2[0]
+                Dx = L1[2] * L2[1] - L1[1] * L2[2]
+                Dy = L1[0] * L2[2] - L1[2] * L2[0]
+
+                x = Dx / D
+                y = Dy / D
+                return x, y
+
+            L1 = line([point1[0], point1[1]], [point2[0], point2[1]])
+            L2 = line([point3[0], point3[1]], [point4[0], point4[1]])
+
+            R = intersection(L1, L2)
+
+            return R
+
+        idx = np.argwhere(np.diff(np.sign(y1 - y2)) != 0)
+        xc, yc = intercept((x[idx], y1[idx]), ((x[idx + 1], y1[idx + 1])), ((x[idx], y2[idx])),
+                           ((x[idx + 1], y2[idx + 1])))
+        return xc, yc
+
 class Physics:
     def __init__(self):
         pass
@@ -545,17 +588,17 @@ class Physics:
 
         if r_s_for_t_l_vrho == '-':
             if len(r_s)!=len(vrho): raise ValueError('len(r_s)={}!=len(vrho)={}'.format(len(r_s), len(vrho)))
-            for i in range(vrho):
+            for i in range(len(vrho)):
                 mdot[i] = vrho[i] + c + np.log10(r_s[i] ** 2)
 
         if r_s_for_t_l_vrho == 't' or r_s_for_t_l_vrho == 'ts':  # ---r_s = 1darray
             if len(r_s) != len(vrho[:, 0]): raise ValueError('len(r_s)={}!=len(vrho[:, 0])={}'.format(len(r_s), len(vrho[:, 0])))
-            for i in range(vrho[:, 0]):
+            for i in range(len(vrho[:, 0])):
                 mdot[i, :] = vrho[i, :] + c + np.log10(r_s[i] ** 2)
 
         if r_s_for_t_l_vrho == 'l' or r_s_for_t_l_vrho == 'lm':  # ---r_s = 1darray
             if len(r_s) != len(vrho[0, :]): raise ValueError('len(r_s)={}!=len(vrho[0, :])={}'.format(len(r_s), len(vrho[0, :])))
-            for i in range(vrho[0, :]):
+            for i in range(len(vrho[0, :])):
                 mdot[:, i] = vrho[:, i] + c + np.log10(r_s[i] ** 2)
 
         if r_s_for_t_l_vrho == 'vrho':  # ---------------------REQUIRED r_s = 2darray
@@ -767,6 +810,11 @@ class Physics:
 
         # --------------------------------------------------SOLVING for REQ.Mdot. & GETTING THE Ts COORDINATE-----------
         int_star_x_coord = Math.solv_inter_row(x_1d_arr, z_row_for_star_z, star_z_coord)
+
+        # print(int_star_x_coord)
+        if not int_star_x_coord.any():
+            print('\t__Warning. Star {} (l:{} , mdot:{}) no sol. found in region (l:[{}], mdot=[{}, {}])'
+                  .format(num_of_model, star_y_coord, star_z_coord, y_1d_arr[star_y_coord], z_row_for_star_z.min(), z_row_for_star_z.max()))
 
         # z_row_for_star_z = z_row_for_star_z.fill(star_mdot)
         # print('m_dot: {} in ({}), t sols: {}'.format("%.3f" % star_mdot, z_row_for_star_z, int_star_x_coord))

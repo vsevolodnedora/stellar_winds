@@ -39,7 +39,8 @@ from OPAL import New_Table
 
 from Read_Obs_Numers import Read_Observables
 from Read_Obs_Numers import Read_Plot_file
-from Read_Obs_Numers import Read_SM_data_File
+from Read_Obs_Numers import Read_SM_data_file
+from Read_Obs_Numers import Read_SP_data_file
 
 from PhysPlots import PhysPlots
 #-----------------------------------------------------------------------------------------------------------------------
@@ -427,19 +428,25 @@ class Combine:
     output_dir = '../data/output/'
     plot_dir = '../data/plots/'
 
-    def __init__(self, smfls = list(), plotfls = list(), obs_files = list(), opal_used = None):
+    def __init__(self, smfls = list(), spfls = list(), plotfls = list(), obs_files = list(), opal_used = None):
         self.num_files = smfls
         self.plt_pltfiles = plotfls
         self.obs_files = obs_files
+        self.sp_files = spfls
+
 
         self.mdl = []
         for file in smfls:
-            self.mdl.append(Read_SM_data_File.from_sm_data_file(file))
+            self.mdl.append( Read_SM_data_file.from_sm_data_file(file) )
 
+        self.spmdl=[]
+        for file in spfls:
+            # print(spfls)
+            # print(spfls[i])
+            self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
 
         # self.nums = Num_Models(smfls, plotfls)
         self.obs = Read_Observables(obs_files)
-
 
         self.opal_used = opal_used
 
@@ -629,12 +636,53 @@ class Combine:
 
         name = self.output_dir+'{}_{}_dependance.pdf'.format(v_n2,v_n1)
         plt.title('{} = f({}) plot'.format(v_n2,v_n1))
-        plt.xlabel(v_n1)
-        plt.ylabel(v_n2)
+        plt.xlabel(Labels.lbls(v_n1))
+        plt.ylabel(Labels.lbls(v_n2))
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plt.savefig(name)
 
         plt.show()
+
+    def sp_xy_last_points(self, v_n1, v_n2, v_lbl1, num_pol_fit = True):
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+
+        # nums = Treat_Numercials(self.num_files)  # Surface Temp as a x coordinate
+        # res = nums.get_x_y_of_all_numericals('sp', 'r', 'l', 'mdot', 'color')
+        x = []
+        y = []
+        for i in range(len(self.sp_files)):
+
+            x = np.append(x, self.spmdl[i].get_crit_value(v_n1) )
+            y = np.append(y, self.spmdl[i].get_crit_value(v_n2) )
+
+            lbl1 = self.spmdl[i].get_crit_value(v_lbl1)
+
+            print(x[i], y[i], lbl1)
+            # print(x, y, lbl1)
+
+            plt.plot(x[i], y[i], marker='.', color='black', ls='', label='{}:{} , {}:{} , {}:{}'
+                     .format(v_n1, "%.2f" % x[i], v_n2, "%.2f" % y[i], v_lbl1, "%.2f" % lbl1))  # plot color dots)))
+            ax.annotate(str("%.2f" % lbl1), xy=(x[i], y[i]), textcoords='data')
+
+        if num_pol_fit:
+            fit = np.polyfit(x, y, 3)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+
+            # print('Equation:', f.coefficients)
+            fit_x_coord = np.mgrid[(x.min()):(x.max()):100j]
+            plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
+
+
+        name = self.output_dir+'{}_{}_dependance.pdf'.format(v_n2,v_n1)
+        plt.title('{} = f({}) plot'.format(v_n2, v_n1))
+        plt.xlabel(Labels.lbls(v_n1))
+        plt.ylabel(Labels.lbls(v_n2))
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plt.savefig(name)
+
+        plt.show()
+
 
     #--METHODS THAT DO REQUIRE OPAL TABLES
     def plot_t_rho_kappa(self, var_for_label1, var_for_label2,  n_int_edd = 1000, plot_edd = True):
@@ -1008,7 +1056,7 @@ class TEST:
             x = []
             y = []
             for i in range(len(list_of_list_of_smfiles[j])):
-                sm1 = Read_SM_data_File.from_sm_data_file(list_of_list_of_smfiles[j][i])
+                sm1 = Read_SM_data_file.from_sm_data_file(list_of_list_of_smfiles[j][i])
                 x = np.append(x, sm1.get_cond_value(v_n1, 'sp') )
                 y = np.append(y, sm1.get_cond_value(v_n2, 'sp') )
 
@@ -1075,7 +1123,7 @@ class TEST:
             y = []
             z = []
             for i in range(len(list_of_list_of_smfiles[j])):
-                sm1 = Read_SM_data_File.from_sm_data_file(list_of_list_of_smfiles[j][i])
+                sm1 = Read_SM_data_file.from_sm_data_file(list_of_list_of_smfiles[j][i])
                 x = np.append(x, sm1.get_cond_value(v_n1, 'sp') )
                 y = np.append(y, sm1.get_cond_value(v_n2, 'sp') )
                 z = np.append(z, sm1.get_cond_value(v_n3, 'sp') )

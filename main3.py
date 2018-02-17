@@ -20,7 +20,7 @@ from Plots_Obs_treat import Physics
 from Plots_Obs_treat import PhysPlots
 from Plots_Obs_treat import OPAL_Interpol
 from Plots_Obs_treat import Constants
-from Plots_Obs_treat import Read_SM_data_File
+from Plots_Obs_treat import Read_SM_data_file
 from Plots_Obs_treat import ClassPlots
 from Plots_Obs_treat import Read_Observables
 from Plots_Obs_treat import New_Table
@@ -55,14 +55,19 @@ plot_dir    = '../data/plots/'
 opal_fl     = '../data/opal/table8.data'
 obs_fl      = '../data/obs/gal_wn.data'
 
-smfiles  = get_files('../../sse/ga_z002/', ['10sm/y9_5/'], [], 'sm.data')
+smfiles  = get_files('../../sse/ga_z002/', ['13sm/y10/'], [], 'sm.data')
 
-plotfls = get_files('../../sse/ga_z002/', [], [], '.plot1')
+plotfls = get_files('../../sse/ga_z002/', ['10sm/','11sm/','12sm/','13sm/','14sm/','15sm/'], [], '.plot1')
 
+spfiles = get_files('../data/output/', ['criticals/'], [], '.data')
 
-from analyze_r_crit import Critical_R
-cr = Critical_R(smfiles, output_dir+'criticals/', plot_dir, ['sse', 'ga_z002']) # [] is a listof folders not to be put in output name
-cr.velocity_profile()
+#
+# from analyze_r_crit import Critical_R
+# cr = Critical_R(smfiles, output_dir+'criticals/', plot_dir, ['sse', 'ga_z002']) # [] is a listof folders not to be put in output name
+# cr.velocity_profile()
+
+# from Read_Obs_Numers import Read_SP_data_file
+# x = Read_SP_data_file(spfiles, output_dir, plot_dir)
 
 '''======================================================TEST========================================================'''
 
@@ -89,7 +94,8 @@ cr.velocity_profile()
 
 '''====================================================MAIN=METHODS=================================================='''
 
-# comb = Combine(smfiles, plotfls, obs_fl, opal_fl)
+comb = Combine(smfiles, spfiles, plotfls, obs_fl, opal_fl)
+comb.sp_xy_last_points('r','l','mdot',True)
 # comb.xy_profile('r','u','mdot','xm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
 # comb.xy_last_points('r','l','mdot',True)

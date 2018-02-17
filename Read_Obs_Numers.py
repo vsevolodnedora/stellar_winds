@@ -296,7 +296,7 @@ class Read_Plot_file:
 
         return (min_l, max_l)
 
-class Read_SM_data_File:
+class Read_SM_data_file:
     '''
     The following data are available in file sm.data
     u  r  ro t  sl vu vr vro vt vsl e  dm xm
@@ -532,7 +532,7 @@ class Read_SM_data_File:
         :param name: name of the sm.data file (without sm.data part!)
         :return: class
         '''
-        full_name = name# + Read_SM_data_File.compart
+        full_name = name # + Read_SM_data_File.compart
 
         f = open(full_name, 'r').readlines()
         elements = len(np.array(f[0].replace("D", "E").split()))
@@ -1049,3 +1049,71 @@ class Read_SM_data_File:
         print('\t__Note: vars:[', v_n_arr, '] returned arr:', res.shape)
         return res
 
+class Read_SP_data_file:
+
+    def __init__(self, sp_data_file, out_dir, plot_dir):
+
+        self.files = sp_data_file
+        self.out_dir = out_dir
+        self.plot_dir = plot_dir
+
+        self.table = []
+
+        # --- Arrays of CRITICAL VALUSE ---
+        self.m_cr = []
+        self.l_cr = []
+        self.t_cr = []
+        self.r_cr = []
+        self.lmdot_cr = []
+        self.yc_cr = []
+
+        # --- 2D ARRAYS OF SONIC POINT VALUES ---
+        self.l = []
+        self.m = []
+        self.yc= []
+        self.lmdot=[]
+        self.ts = []
+        self.rs = []
+
+
+        # for file in self.files:
+
+
+        self.table.append(np.loadtxt(sp_data_file))
+        print('File: {} has been loaded successfully.'.format(sp_data_file))
+
+        # --- Critical values ---
+        self.l_cr = np.float(self.table[0][0, 0])  # mass array is 0 in the sp file
+        self.m_cr = np.float(self.table[0][0, 1])  # mass array is 1 in the sp file
+        self.yc_cr = np.float(self.table[0][0, 2])  # mass array is 2 in the sp file
+        self.lmdot_cr = np.float(self.table[0][0, 3])  # mass array is 3 in the sp file
+        self.r_cr = np.float(self.table[0][0, 4])  # mass array is 4 in the sp file
+        self.t_cr = np.float(self.table[0][0, 5])  # mass array is 4 in the sp file
+
+        # --- Sonic Point Values ---
+
+        # self.l = np.append()
+        # self.m = []
+        # self.yc = []
+        # self.lmdot = []
+        # self.ts = []
+        # self.rs = []
+
+
+    def get_crit_value(self, v_n):
+        if v_n == 'l':
+            return self.l_cr
+        if v_n =='m' or v_n == 'xm':
+            return self.m_cr
+        if v_n == 't':
+            return self.t_cr
+        if v_n == 'mdot':
+            return self.lmdot_cr
+        if v_n == 'r':
+            return self.r_cr
+        if v_n == 'Yc':
+            return self.yc_cr
+
+        raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, ['l', 'm', 't', 'mdot', 'r', 'Yc']))
+
+    # def get_sonic_cols(self, v_n):

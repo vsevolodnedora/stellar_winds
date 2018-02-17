@@ -39,7 +39,7 @@ from OPAL import New_Table
 
 from Read_Obs_Numers import Read_Observables
 from Read_Obs_Numers import Read_Plot_file
-from Read_Obs_Numers import Read_SM_data_File
+from Read_Obs_Numers import Read_SM_data_file
 
 
 class Critical_R:
@@ -55,7 +55,7 @@ class Critical_R:
         self.num_files = smfiles
         self.mdl = []
         for file in smfiles:
-            self.mdl.append(Read_SM_data_File.from_sm_data_file(file))
+            self.mdl.append(Read_SM_data_file.from_sm_data_file(file))
 
 
     def velocity_profile(self):
@@ -74,7 +74,7 @@ class Critical_R:
         long_r = np.zeros(1)
         long_i = -1
 
-        mdot_ts_rs = []
+        crit_sonic_values = []
         for i in range(len(self.num_files)):
 
             r = self.mdl[i].get_col('r')
@@ -115,9 +115,9 @@ class Critical_R:
             u_s_cr_int= self.mdl[i].get_col('He4')[0]
 
             if r_cr_int.any():
-                mdot_ts_rs = np.append(mdot_ts_rs, [l, m, u_s_cr_int, lmdot[i], np.float(r_cr_int[0]), ts])
+                crit_sonic_values = np.append(crit_sonic_values, [l, m, u_s_cr_int, lmdot[i], np.float(r_cr_int[0]), ts])
             else:
-                mdot_ts_rs = np.append(mdot_ts_rs, [l, m, u_s_cr_int, lmdot[i], 0., 0.])
+                crit_sonic_values = np.append(crit_sonic_values, [l, m, u_s_cr_int, lmdot[i], 0., 0.])
 
         # as it r coord first increasing than decreasing - you cannot use it for interpolation,
         # u - coord, which is velocity, is decreasing if mdot is decreasing (or vise versa), but it behaves monotonicall
@@ -166,32 +166,40 @@ class Critical_R:
         # --- Critical Radius ---
 
         r_cr_int, u_s_cr_int = Math.interpolated_intercept(r_max_grid, u_max_grid, int_y_for_us_grid)
-        i_of_u_near_yc       = Math.find_nearest_index(int_y_for_us_grid, u_s_cr_int) # for f
 
-        ax1.plot(r_cr_int, u_s_cr_int, 'X', color='blue', label='Rc:{}'.format('%.3f' %  r_cr_int)) # critical Radius
-        ax1.annotate('Rs:'+str('%.3f' % r_cr_int), xy=(r_cr_int[0], u_s_cr_int[0]), textcoords='data')
+        mdot_cr = None # for the case if critical point is not found
+        t_crit = None
 
-        # --- Critical Temperature ---
+        if len(r_cr_int) == len(u_s_cr_int) == 0:
+            pass
+            #raise ValueError('Critical Radius is not found')
+        else:
+            i_of_u_near_yc       = Math.find_nearest_index(int_y_for_us_grid, u_s_cr_int) # for f
 
-        t_crit = int_t_for_us_grid[i_of_u_near_yc]  # temperature at a critical radius
-        ax2.plot( r_cr_int, t_crit, 'X', color='red', label='Tc:{}'.format('%.3f' %  t_crit) )           # temp. at critical radius
-        ax1.axvline(x=r_cr_int, color='gray', linestyle='solid')
+            ax1.plot(r_cr_int, u_s_cr_int, 'X', color='blue', label='Rc:{}'.format('%.3f' %  r_cr_int)) # critical Radius
+            ax1.annotate('Rs:'+str('%.3f' % r_cr_int), xy=(r_cr_int[0], u_s_cr_int[0]), textcoords='data')
 
-        # --- Critical Mass Loss --- [SUBPLOT]
+            # --- Critical Temperature ---
 
-        ax3 = fig.add_axes([0.65, 0.65, 0.23, 0.23])
-        ax3.plot(new_mdot, new_u, '-', color='black')
-        ax3.plot(new_mdot, new_u, '.', color='black')
-        ax3.set_xlabel(Labels.lbls('mdot'))
-        ax3.set_ylabel(Labels.lbls('u'))
-        ax3.grid()
-        ax3.axhline(y=u_s_cr_int, color='gray', linestyle='--', label='Son_vel: {}'.format( '%.3f' % u_s_cr_int))
+            t_crit = int_t_for_us_grid[i_of_u_near_yc]  # temperature at a critical radius
+            ax2.plot( r_cr_int, t_crit, 'X', color='red', label='Tc:{}'.format('%.3f' %  t_crit) )           # temp. at critical radius
+            ax1.axvline(x=r_cr_int, color='gray', linestyle='solid')
 
-        mdot_cr = Math.solv_inter_row(new_mdot, new_u, u_s_cr_int)
+            # --- Critical Mass Loss --- [SUBPLOT]
 
-        ax3.plot(mdot_cr, u_s_cr_int, 'X', color='black', label='Mdot_cr: {}'.format('%.3f' % np.float(mdot_cr[0])))
-        ax3.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
-        # ax3.annotate('Mdot_cr:' + str('%.3f' % mdot_cr), xy=(mdot_cr, u_s_cr_int), textcoords='data')
+            ax3 = fig.add_axes([0.65, 0.65, 0.23, 0.23])
+            ax3.plot(new_mdot, new_u, '-', color='black')
+            ax3.plot(new_mdot, new_u, '.', color='black')
+            ax3.set_xlabel(Labels.lbls('mdot'))
+            ax3.set_ylabel(Labels.lbls('u'))
+            ax3.grid()
+            ax3.axhline(y=u_s_cr_int, color='gray', linestyle='--', label='Son_vel: {}'.format( '%.3f' % u_s_cr_int))
+
+            mdot_cr = Math.solv_inter_row(new_mdot, new_u, u_s_cr_int)
+
+            ax3.plot(mdot_cr, u_s_cr_int, 'X', color='black', label='Mdot_cr: {}'.format('%.3f' % np.float(mdot_cr[0])))
+            ax3.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+            # ax3.annotate('Mdot_cr:' + str('%.3f' % mdot_cr), xy=(mdot_cr, u_s_cr_int), textcoords='data')
 
 
 
@@ -212,32 +220,46 @@ class Critical_R:
         plt.savefig(plot_name)
         plt.show()
 
-        head = '\t {} \t {} \t {} \t\t {} \t {} \t {}'\
-            .format('log(L)', 'M(Msun)', 'Yc', 'log(Mdot)', 'Rs(Rsun)', 'log(Ts)')
+        # --- SORTING the array according to the mass loss (max -> min)
+        crit_sonic_values = np.sort(crit_sonic_values.view('i8, i8, i8, i8, i8, i8'), order=['f3'], axis=0).view(
+            np.float)
+
+
+        # head = '\t {} \t {} \t {} \t\t {} \t {} \t {}'\
+        #     .format('log(L)', 'M(Msun)', 'Yc', 'log(Mdot)', 'Rs(Rsun)', 'log(Ts)')
         tablehead = '{}  {}  {}  {}  {}  {}'\
             .format('log(L)', 'M(Msun)', 'Yc', 'l(Mdot)', 'Rs(Rsun)', 'log(Ts)')
 
         # --- Adding a first row of values for critical r, mdot, and t, and l, m, Yc for the model, whose sonic vel. was
         # used to interplate the temp amd mdot.
 
-        l = self.mdl[long_i].get_col('l')[-1]
+        l = self.mdl[long_i].get_col('l')[-1] # for the first row
         m = self.mdl[long_i].get_col('xm')[-1]
-        yc = self.mdl[long_i].get_col('He4')[0]                            # adding the first row of critical parameters
-        mdot_ts_rs = np.insert(mdot_ts_rs, 0, [l, m, yc, mdot_cr, r_cr_int, t_crit])
-        mdot_ts_rs = np.reshape(mdot_ts_rs, (len(self.num_files)+1, 6))
+        yc = self.mdl[long_i].get_col('He4')[0]
 
+        # --- Appending the ROW with critical values, if found
+        if len(r_cr_int) == len(u_s_cr_int) == 0:
+            crit_sonic_values = np.reshape(crit_sonic_values, (len(self.num_files), 6))
+            print('\t__Warning! Critical Values are not found. Ouptut tale contain {} rows instead of {}'
+                  .format(len(self.num_files), len(self.num_files) + 1))
+        else:
+            crit_sonic_values = np.insert(crit_sonic_values, 0, [l, m, yc, mdot_cr, r_cr_int, t_crit])
+            crit_sonic_values = np.reshape(crit_sonic_values, (len(self.num_files)+1, 6))
 
-        print('Critical values:')
-        print(head)
-        print(mdot_ts_rs[0,:])
+            print('\t__Note. Critical Values are found and written in the FIRST row (out of {}) in output file.'.
+                  format(len(self.num_files)+1))
 
-
-        print('\n')
-        print(head)
-        print(mdot_ts_rs[1:,:])
-
-        print('\t__Note: Value {} means that solution was not found (extended configutration)'.format(0.))
-        print('Critical Radii found: {}'.format(r_cr_int))
+        # print('Critical values:')
+        # print(head)
+        # print(crit_sonic_values[0,:])
+        #
+        #
+        # print('\n')
+        # print(head)
+        # print(crit_sonic_values[1:,:])
+        #
+        # print('\t__Note: Value {} means that solution was not found (extended configutration)'.format(0.))
+        # print('Critical Radii found: {}'.format(r_cr_int))
 
         out_name = 'SP_'
         for i in range(len(self.input_dirs)):
@@ -247,9 +269,8 @@ class Critical_R:
                     out_name = out_name + '_'
         out_name = out_name + '.data'
 
+
+
+
         print('Results are saved in: {}'.format(self.out_dir + out_name))
-        np.savetxt(self.out_dir + out_name,mdot_ts_rs, '%.4f','  ','\n',tablehead,'')
-
-        # 0.93050756
-        # 0.93046579
-
+        np.savetxt(self.out_dir + out_name, crit_sonic_values, '%.4f', '  ', '\n', tablehead, '')

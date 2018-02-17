@@ -38,7 +38,7 @@ from OPAL import New_Table
 
 from Read_Obs_Numers import Read_Observables
 from Read_Obs_Numers import Read_Plot_file
-from Read_Obs_Numers import Read_SM_data_File
+from Read_Obs_Numers import Read_SM_data_file
 
 from PhysPlots import PhysPlots
 #-----------------------------------------------------------------------------------------------------------------------
@@ -215,7 +215,7 @@ class Treat_Numercials:
 
         self.mdl = []
         for i in range(self.n_of_files):
-            self.mdl.append(Read_SM_data_File.from_sm_data_file(self.files[i]))
+            self.mdl.append(Read_SM_data_file.from_sm_data_file(self.files[i]))
             # print(self.mdl[i].mdot_[-1])
 
         # self.nmdls = len(self.mdl)

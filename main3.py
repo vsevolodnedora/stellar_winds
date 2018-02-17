@@ -50,18 +50,18 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-output_dir  = '../data/output'
-plot_dir    = '../data/plots'
+output_dir  = '../data/output/'
+plot_dir    = '../data/plots/'
 opal_fl     = '../data/opal/table8.data'
 obs_fl      = '../data/obs/gal_wn.data'
 
-smfiles  = get_files('../../sse/ga_z002/', ['10sm/9_5/'], [], 'sm.data')
+smfiles  = get_files('../../sse/ga_z002/', ['10sm/y9_5/'], [], 'sm.data')
 
 plotfls = get_files('../../sse/ga_z002/', [], [], '.plot1')
 
 
 from analyze_r_crit import Critical_R
-cr = Critical_R(smfiles, output_dir, plot_dir)
+cr = Critical_R(smfiles, output_dir+'criticals/', plot_dir, ['sse', 'ga_z002']) # [] is a listof folders not to be put in output name
 cr.velocity_profile()
 
 '''======================================================TEST========================================================'''

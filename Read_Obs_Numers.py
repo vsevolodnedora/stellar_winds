@@ -197,6 +197,8 @@ class Read_Observables:
         # cur_type = int(se.group(0))
         cls = self.get_star_class(n)
 
+
+        # --- FOR galactic stars ---
         if cls == 'WN2-w' or cls == 'WN3-w':
             return 'v'
         if cls == 'WN4-s':
@@ -211,6 +213,26 @@ class Read_Observables:
             return '^'
         if cls == 'WN8' or cls == 'WN9':
             return 'P' #plus filled
+
+        # --- FOR LMC ---
+
+        if cls == 'WN3b' or cls == 'WN3o':
+            return 'v'
+        if cls == 'WN2b(h)' or cls == 'WN2b':
+            return 'o'  # circle
+        if cls == 'WN4b/WCE' or cls == 'WN4b(h)':
+            return 's'  # square
+        if cls == 'WN2':
+            return '.'
+        if cls == 'WN3' or cls == 'WN3(h)':
+            return '*'
+        if cls == 'WN4b' or cls == 'WN4o':
+            return '^'
+        if cls == 'WN4':
+            return 'd'  # diamond
+
+        raise NameError('Class {} is not defined'.format(cls))
+
 
 class Read_Plot_file:
 
@@ -975,7 +997,6 @@ class Read_SM_data_file:
         ind = self.ind_from_condition(condition)
         return np.float(self.get_col(v_n)[ind])
 
-
     def get_par_table(self, model, y_name = 'l', i = -1):
 
 
@@ -1057,63 +1078,76 @@ class Read_SP_data_file:
         self.out_dir = out_dir
         self.plot_dir = plot_dir
 
-        self.table = []
-
-        # --- Arrays of CRITICAL VALUSE ---
-        self.m_cr = []
-        self.l_cr = []
-        self.t_cr = []
-        self.r_cr = []
-        self.lmdot_cr = []
-        self.yc_cr = []
-
-        # --- 2D ARRAYS OF SONIC POINT VALUES ---
-        self.l = []
-        self.m = []
-        self.yc= []
-        self.lmdot=[]
-        self.ts = []
-        self.rs = []
+        self.list_of_v_n = ['l', 'm', 't', 'mdot', 'r', 'Yc']
 
 
-        # for file in self.files:
+        self.table = np.loadtxt(sp_data_file)
 
-
-        self.table.append(np.loadtxt(sp_data_file))
         print('File: {} has been loaded successfully.'.format(sp_data_file))
 
         # --- Critical values ---
-        self.l_cr = np.float(self.table[0][0, 0])  # mass array is 0 in the sp file
-        self.m_cr = np.float(self.table[0][0, 1])  # mass array is 1 in the sp file
-        self.yc_cr = np.float(self.table[0][0, 2])  # mass array is 2 in the sp file
-        self.lmdot_cr = np.float(self.table[0][0, 3])  # mass array is 3 in the sp file
-        self.r_cr = np.float(self.table[0][0, 4])  # mass array is 4 in the sp file
-        self.t_cr = np.float(self.table[0][0, 5])  # mass array is 4 in the sp file
+
+        self.l_cr = np.float(self.table[0, 0])  # mass array is 0 in the sp file
+        self.m_cr = np.float(self.table[0, 1])  # mass array is 1 in the sp file
+        self.yc_cr = np.float(self.table[0, 2])  # mass array is 2 in the sp file
+        self.lmdot_cr = np.float(self.table[0, 3])  # mass array is 3 in the sp file
+        self.r_cr = np.float(self.table[0, 4])  # mass array is 4 in the sp file
+        self.t_cr = np.float(self.table[0, 5])  # mass array is 4 in the sp file
 
         # --- Sonic Point Values ---
 
-        # self.l = np.append()
-        # self.m = []
-        # self.yc = []
-        # self.lmdot = []
-        # self.ts = []
-        # self.rs = []
+        self.l = np.array(self.table[1:, 0])
+        self.m = np.array(self.table[1:, 1])
+        self.yc = np.array(self.table[1:, 2])
+        self.lmdot = np.array(self.table[1:, 3])
+        self.rs = np.array(self.table[1:, 4])
+        self.ts = np.array(self.table[1:, 5])
 
 
     def get_crit_value(self, v_n):
         if v_n == 'l':
             return self.l_cr
+
         if v_n =='m' or v_n == 'xm':
             return self.m_cr
+
         if v_n == 't':
             return self.t_cr
+
         if v_n == 'mdot':
             return self.lmdot_cr
+
         if v_n == 'r':
             return self.r_cr
+
         if v_n == 'Yc':
             return self.yc_cr
 
-        raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, ['l', 'm', 't', 'mdot', 'r', 'Yc']))
+        if v_n == 'lm':
+            return Physics.loglm(self.l_cr, self.m_cr, False)
 
-    # def get_sonic_cols(self, v_n):
+        raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, self.list_of_v_n))
+
+    def get_sonic_cols(self, v_n):
+        if v_n == 'l':
+            return self.l
+
+        if v_n =='m' or v_n == 'xm':
+            return self.m
+
+        if v_n == 't':
+            return self.ts
+
+        if v_n == 'mdot':
+            return self.lmdot
+
+        if v_n == 'r':
+            return self.rs
+
+        if v_n == 'Yc':
+            return self.yc
+
+        if v_n == 'lm':
+            return Physics.loglm(self.l, self.m, True)
+
+        raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, self.list_of_v_n))

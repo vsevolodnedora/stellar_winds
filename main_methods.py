@@ -457,7 +457,7 @@ class Combine:
         ax1 = fig.add_subplot(111)
 
         tlt = v_n2 + '(' + v_n1 + ') profile'
-        plt.title(tlt, loc='left')
+        plt.title(tlt)
 
         for i in range(len(self.num_files)):
 
@@ -465,6 +465,9 @@ class Combine:
             y      = self.mdl[i].get_col(v_n2)          # simpler syntaxis
             label1 = self.mdl[i].get_col(var_for_label1)[-1]
             label2 = self.mdl[i].get_col(var_for_label2)[-1]
+
+            print('\t __Core H: {} , core He: {} File: {}'.
+                  format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.num_files[i]))
 
             lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
             ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
@@ -589,6 +592,13 @@ class Combine:
                      label='{}, m:({}->{})'.format(fname, "%.1f" % plfl.m_[0], "%.1f" % plfl.m_[-1]) )
                      # str("%.2f" % plfl.m_[0]) + ' to ' + str("%.2f" % plfl.m_[-1]) + ' solar mass')
 
+
+            imx = Math.find_nearest_index( plfl.y_c, plfl.y_c.max() )
+            plt.plot(mod_x[imx], mod_y[imx], 'x')
+            ax.annotate("%.4f" % plfl.y_c.max(), xy=(mod_x[imx], mod_y[imx]), textcoords='data')
+
+            plt.plot()
+
             for i in range(10):
                 ind = Math.find_nearest_index(plfl.y_c, (i / 10))
                 # print(plfl.y_c[i], (i/10))
@@ -599,6 +609,8 @@ class Combine:
 
         ax.grid(which='both')
         ax.grid(which='minor', alpha=0.2)
+
+        plt.gca().invert_xaxis() # inverse x axis
 
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plot_name = self.output_dir + 'hrd.pdf'
@@ -651,27 +663,54 @@ class Combine:
         # res = nums.get_x_y_of_all_numericals('sp', 'r', 'l', 'mdot', 'color')
         x = []
         y = []
+        yc =[]
+        xm = []
         for i in range(len(self.sp_files)):
 
             x = np.append(x, self.spmdl[i].get_crit_value(v_n1) )
             y = np.append(y, self.spmdl[i].get_crit_value(v_n2) )
+            yc = np.append(yc, self.spmdl[i].get_crit_value('Yc'))
+            xm = np.append(xm, self.spmdl[i].get_crit_value('m'))
 
             lbl1 = self.spmdl[i].get_crit_value(v_lbl1)
 
-            print(x[i], y[i], lbl1)
+
             # print(x, y, lbl1)
 
-            plt.plot(x[i], y[i], marker='.', color='black', ls='', label='{}:{} , {}:{} , {}:{}'
-                     .format(v_n1, "%.2f" % x[i], v_n2, "%.2f" % y[i], v_lbl1, "%.2f" % lbl1))  # plot color dots)))
-            ax.annotate(str("%.2f" % lbl1), xy=(x[i], y[i]), textcoords='data')
+            plt.plot(x[i], y[i], marker='.', color='black', ls='', label='{} | {}:{} , {}:{} , {}:{}, Yc: {}'
+                     .format(i, v_n1, "%.2f" % x[i], v_n2, "%.2f" % y[i], v_lbl1, "%.2f" % lbl1, yc[i]))  # plot color dots)))
+            ax.annotate(str("%.2f" % xm[i]), xy=(x[i], y[i]), textcoords='data')
+
+            # "%.2f" % yc[i]
 
         if num_pol_fit:
-            fit = np.polyfit(x, y, 3)  # fit = set of coeddicients (highest first)
+            fit = np.polyfit(x, y, 2)  # fit = set of coeddicients (highest first)
             f = np.poly1d(fit)
 
-            # print('Equation:', f.coefficients)
+            # lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3)'.format(
+            #                                                     "%.3f" % f.coefficients[3],
+            #                                                     "%.3f" % f.coefficients[2],
+            #                                                     "%.3f" % f.coefficients[1],
+            #                                                     "%.3f" % f.coefficients[0]
+            #                                                     )
+            # print(lbl)
+
+            lbl = '({}) + ({}*x) + ({}*x**2)'.format(
+                                                                # "%.3f" % f.coefficients[3],
+                                                                "%.3f" % f.coefficients[2],
+                                                                "%.3f" % f.coefficients[1],
+                                                                "%.3f" % f.coefficients[0]
+                                                                )
+            print(lbl)
+            print('{} Limits: [{}, {}]'.format(v_n1, x.min(),x.max()))
+            print('{} Limits: [{}, {}]'.format(v_n2, y.min(), y.max()))
+
             fit_x_coord = np.mgrid[(x.min()):(x.max()):100j]
-            plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label='Model_fit')
+            plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black', label=lbl)
+
+
+
+        # plt.plot(x, y, '-', color='gray')
 
 
         name = self.output_dir+'{}_{}_dependance.pdf'.format(v_n2,v_n1)
@@ -680,8 +719,201 @@ class Combine:
         plt.ylabel(Labels.lbls(v_n2))
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plt.savefig(name)
+        plt.grid()
 
         plt.show()
+
+    def sp_get_r_lt_table(self, l_or_lm, depth = 1000, plot = False, t_llm_vrho = np.empty([])):
+        '''
+
+        :param l_or_lm:
+        :param t_grid:
+        :param l_lm:
+        :t_llm_vrho:
+        :return:
+        '''
+        '''===========================INTERPOLATING=EVERY=ROW=TO=HAVE=EQUAL=N=OF=ENTRIES============================='''
+
+        r = np.empty((len(self.sp_files), 100))
+        t = np.empty((len(self.sp_files), 100))
+        l_lm = np.empty(len(self.sp_files))
+
+        for i in range(len(self.sp_files)):
+            r_i =  self.spmdl[i].get_sonic_cols('r')
+            r_i = np.append(r_i, self.spmdl[i].get_crit_value('r'))
+
+            t_i = self.spmdl[i].get_sonic_cols('t')
+            t_i = np.append(t_i, self.spmdl[i].get_crit_value('t'))
+
+            r_i_grid = np.mgrid[r_i.min():r_i.max():100j]
+            f = interpolate.InterpolatedUnivariateSpline(r_i, t_i)
+            t_i_grid = f(r_i_grid)
+
+            r[i,:] = r_i_grid
+            t[i,:] = t_i_grid
+
+            if l_or_lm == 'l':
+                l_lm[i] = self.spmdl[i].get_crit_value('l')
+            else:
+                l_lm[i] = Physics.loglm(self.spmdl[i].get_crit_value('l'), self.spmdl[i].get_crit_value('m'), False)
+
+        '''====================================CREATING=OR=USING=L/T=GRID============================================'''
+
+        if t_llm_vrho.any():
+
+            t__ =  t_llm_vrho[0,1:]
+            l_lm_grid_ = t_llm_vrho[1:, 0]
+            vrho = t_llm_vrho[1:,1:]
+
+            if l_lm_grid_[0] > l_lm_grid_[-1]:
+                raise ValueError('Array l_lm_grid_ must be increasing, now it is from {} to {}'
+                                 .format(l_lm_grid_[0], l_lm_grid_[-1]))
+
+
+            l_lm_1 = l_lm.min()
+            i1 = Math.find_nearest_index(l_lm_grid_, l_lm_1)
+            l_lm_2 = l_lm.max()
+            i2 = Math.find_nearest_index(l_lm_grid_, l_lm_2)
+
+            l_lm_grid = l_lm_grid_[i1:i2]
+            vrho = vrho[i1:i2,:]
+
+            t_llm_vrho = Math.combine(t__, l_lm_grid, vrho)
+
+            print('\t__Note: provided l_lm_grid_{} is cropped to {}, with limits: ({}, {})'
+                  .format(l_lm_grid_.shape, l_lm_grid.shape, l_lm_grid.min(), l_lm_grid.max()))
+
+        else:
+            l_lm_grid = np.mgrid[l_lm.min():l_lm.max():depth*1j]
+
+        '''=======================================INTERPOLATE=2D=T=AND=R============================================='''
+
+        r2 = np.empty(( len(l_lm_grid), len(r[0,:]) ))
+        t2 = np.empty(( len(l_lm_grid), len(r[0,:]) ))
+
+        for i in range( len(r[0, :]) ):
+
+            r_l = [] # DICTIONARY
+            for j in range(len(r[:,i])): # this wierd thing allows you to create a dictionary that you can sort
+               r_l = np.append(r_l, [ r[j,i], l_lm[j] ])
+
+            r_l_  = np.sort(r_l.view('f8, f8'), order=['f1'], axis=0).view(np.float) # sorting dictionary according to l_lm
+            r_l__ = np.reshape(r_l_, (len(l_lm), 2))
+
+
+            r_ = r_l__[:,0] # i-th column, sorted by l_lm
+            l_lm_ = r_l__[:,1] # l_lm sorted
+
+            f2 = interpolate.InterpolatedUnivariateSpline(l_lm_, r_) # column by column it goes
+            r2[:,i] = f2(l_lm_grid)
+
+
+            # --- --- --- T --- --- ---
+
+        for i in range( len(t[0, :]) ):
+            t_l_lm = [] # DICTIONARY
+            for j in range(len(t[:,i])): # this wierd thing allows you to create a dictionary that you can sort
+               t_l_lm = np.append(t_l_lm, [ t[j,i], l_lm[j] ])
+
+            t_l_lm_  = np.sort(t_l_lm.view('f8, f8'), order=['f1'], axis=0).view(np.float) # sorting dictionary according to l_lm
+            t_l_lm__ = np.reshape(t_l_lm_, (len(l_lm), 2))
+
+
+            t_ = t_l_lm__[:,0] # i-th column, sorted by l_lm
+            l_lm_ = t_l_lm__[:,1] # l_lm sorted
+
+            f2 = interpolate.InterpolatedUnivariateSpline(l_lm_, t_) # column by column it goes
+            t2[:,i] = f2(l_lm_grid)
+
+        '''=======================================INTERPOLATE=R=f(L, T)=============================================='''
+
+        # If in every row of const. l_lm, the temp 't' is decreasing monotonically:
+        t2_ = t2[:, ::-1]    # so t is from min to max increasing
+        r2_ = r2[:, ::-1]    # necessary of Univariate spline
+
+        if not t2_.any() or not r2_.any():
+            raise ValueError('Array t2_{} or r2_{} is empty'.format(t2_.shape, r2_.shape))
+
+        def interp_t_l_r(l_1d_arr, t_2d_arr, r_2d_arr, depth = 1000, t_llm_vrho = np.empty([])):
+
+            t1 = t_2d_arr[:, 0].max()
+            t2 = t_2d_arr[:, -1].min()
+
+            '''------------------------SETTING-T-GRID-OR-CROPPING-THE-GIVEN-ONE--------------------------------------'''
+            if t_llm_vrho.any():
+
+                t_grid_ = t_llm_vrho[0, 1:]
+                l_lm_grid_ = t_llm_vrho[1:, 0]
+                vrho = t_llm_vrho[1:, 1:]
+
+                if t_grid_[0] > t_grid_[-1]:
+                    raise ValueError('Array t_grid_ must be increasing, now it is from {} to {}'
+                                     .format(t_grid_[0], t_grid_[-1]))
+
+                i1 = Math.find_nearest_index(t_grid_, t1)
+                i2 = Math.find_nearest_index(t_grid_, t2)
+
+                crop_t_grid = t_grid_[i1:i2]
+                vrho = vrho[:,i1:i2]
+
+                t_llm_vrho = Math.combine(crop_t_grid, l_lm_grid_, vrho)
+
+
+                print('\t__Note: provided t_grid{} is cropped to {}, with limits: ({}, {})'
+                      .format(t_grid_.shape, crop_t_grid.shape, crop_t_grid.min(), crop_t_grid.max()))
+            else:
+                crop_t_grid = np.mgrid[t1:t2:depth * 1j]
+                t_llm_vrho = np.empty([])
+
+            '''---------------------USING-2*1D-INTERPOLATIONS-TO-GO-FROM-2D_T->1D_T----------------------------------'''
+            crop_r = np.empty(( len(l_1d_arr), len(crop_t_grid) ))
+            crop_l_lm = []
+
+            for si in range(len(l_1d_arr)):
+                # if t1 <= t_2d_arr[si, :].max() and t2 >= t_2d_arr[si, :].min():
+
+                t_row = t_2d_arr[si, :]
+                r_row = r_2d_arr[si, :]
+
+                print(t_row.shape, r_row.shape, crop_t_grid.T.shape)
+
+                crop_r[si, :] = Math.interp_row(t_row, r_row, crop_t_grid.T)
+                crop_l_lm = np.append(crop_l_lm, l_1d_arr[si])
+
+
+            extend_crop_l = l_1d_arr # np.mgrid[l_1d_arr.min():l_1d_arr.max():depth*1j]
+
+            extend_r = np.zeros((len(extend_crop_l), len(crop_t_grid)))
+
+            print(crop_l_lm.shape, crop_r.shape, extend_crop_l.shape)
+
+            for si in range(len(extend_r[0,:])):
+                extend_r[:,si] = Math.interp_row( crop_l_lm, crop_r[:, si], extend_crop_l )
+
+            return Math.combine(crop_t_grid, extend_crop_l, extend_r), t_llm_vrho
+
+        t_l_or_lm_r, t_llm_vrho = interp_t_l_r(l_lm_grid, t2_, r2_, 1000, t_llm_vrho)
+
+        if plot:
+            plt.figure()
+            # ax = fig.add_subplot(1, 1, 1)
+            plt.xlim(t_l_or_lm_r[0,1:].min(), t_l_or_lm_r[0,1:].max())
+            plt.ylim(t_l_or_lm_r[1:,0].min(), t_l_or_lm_r[1:,0].max())
+            plt.ylabel(Labels.lbls(l_or_lm))
+            plt.xlabel(Labels.lbls('ts'))
+            levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6]
+            contour_filled = plt.contourf(t_l_or_lm_r[0, 1:], t_l_or_lm_r[1:, 0], t_l_or_lm_r[1:,1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+            plt.colorbar(contour_filled, label=Labels.lbls('r'))
+            contour = plt.contour(t_l_or_lm_r[0, 1:], t_l_or_lm_r[1:, 0], t_l_or_lm_r[1:,1:], levels, colors='k')
+            plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
+            plt.title('SONIC HR DIAGRAM')
+
+            # plt.ylabel(l_or_lm)
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+            # plt.savefig(name)
+            plt.show()
+
+        return t_l_or_lm_r, t_llm_vrho
 
 
     #--METHODS THAT DO REQUIRE OPAL TABLES
@@ -787,18 +1019,58 @@ class Combine:
         plt.savefig(name)
         plt.show()
 
+
     @staticmethod
-    def empirical_l_r(x):
-        '''
-        X:[5.141 , 5.722], Y:[0.923 , 1.906]
-        :param x:
-        :return:
-        '''
+    def empirical_l_r_crit(t_k_rho, l_or_lm):
 
-        return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3
+        #=======================================EMPIRICAL=FUNCTIONS=AND=LIMITS==========================================
+        l_lim = [5.15, 5.7]
+        def r_l(x):
+            return (38.976) + (-15.221*x) + (1.521*x**2)
+
+        lm_lim = [4.14, 4.37]
+        def r_lm(x):
+            return (157.341) + (-76.119*x) + (9.260*x**2)
+        #====================================================END========================================================
+
+        kap = t_k_rho[1:, 0]
+        t   = t_k_rho[0, 1:]
+        rho2d = t_k_rho[1:, 1:]
+
+        if l_or_lm == 'l':  # to account for different limits in mass and luminocity
+            l = Physics.lm_to_l( Physics.logk_loglm(kap, True) )
+            cropped = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, l, rho2d)),
+                                         None, None, l_lim[0], l_lim[-1])
+
+            l_lm = cropped[1:, 0]
+            t = cropped[0, 1:]
+            rho2d = cropped[1:, 1:]
+
+            vrho = Physics.get_vrho(t, rho2d, 2)
+            m_dot = Physics.vrho_mdot(vrho, r_l(l_lm), 'l')  # r_s = given by the func
+
+        else:
+            lm = Physics.logk_loglm(kap, True)
+            cropped = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, lm, rho2d)),
+                                         None, None, lm_lim[0], lm_lim[-1])
 
 
-    def plot_t_l_mdot(self, l_or_lm, r_s_, num_var_plot = 'xm', lim_t1 = None, lim_t2 = None):
+            l_lm = cropped[1:, 0]
+            t    = cropped[0, 1:]
+            rho2d = cropped[1:, 1:]
+
+            vrho = Physics.get_vrho(t, rho2d, 2)
+            m_dot = Physics.vrho_mdot(vrho, r_lm(l_lm), 'l')  # r_s = given by the func
+
+
+        return Math.combine(t, l_lm, m_dot)
+
+        # return (40.843) + (-15.943*x) + (1.591*x**2)                    # FROM GREY ATMOSPHERE ESTIMATES
+
+        # return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3        # FROM SONIC POINT ESTIMATES
+
+
+    def plot_t_l_mdot(self, l_or_lm, rs, plot_obs, plot_nums, use_r_tl = False, lim_t1 = None, lim_t2 = None):
 
         # ---------------------LOADING-INTERPOLATED-TABLE---------------------------
 
@@ -810,28 +1082,32 @@ class Combine:
         t   =   t_k_rho[0, 1:]
         rho2d = t_k_rho[1:, 1:]
 
+
+
         if l_or_lm == 'l':
             l_lm_arr  = Physics.lm_to_l( Physics.logk_loglm(kap, True) ) # Kappa -> L/M -> L
+
+            l_lm_arr = l_lm_arr[::-1]
+            rho2d = rho2d[::-1, :]
+
         else:
             l_lm_arr = Physics.logk_loglm(kap, 1)
 
-        l_limits = [5.141, 5.722]
-        ind_1 = Math.find_nearest_index(l_lm_arr, l_limits[0]) + 1
-        ind_2 = Math.find_nearest_index(l_lm_arr, l_limits[1]) - 1
-        print(ind_2, ind_1, '->', l_lm_arr[ind_2], l_lm_arr[ind_1], '->', len(l_lm_arr[ind_2:ind_1]))
+        vrho = Physics.get_vrho(t,rho2d, 2)          # mu = 1.34 everywhere
 
-        l_lm_arr = l_lm_arr[ind_2:ind_1]
-        rho2d = rho2d[ind_2:ind_1 , :]
+        if use_r_tl:
+            t_l_or_lm_r, t_llm_vrho = self.sp_get_r_lt_table(l_or_lm, 1000, True, Math.combine(t, l_lm_arr, vrho))
 
-        rs = Combine.empirical_l_r(l_lm_arr)
-        print('rs(l=5.2):{} , rs(l=5.7):{}'.format(Combine.empirical_l_r(5.2), Combine.empirical_l_r(5.7)))
-        # rs = l_lm_arr.fill(1.)
+            rs = t_l_or_lm_r[1:,1:]
+            t = t_l_or_lm_r[0,1:]
+            l_lm_arr = t_l_or_lm_r[1:,0]
 
+            vrho = t_llm_vrho[1:,1:]
 
-        vrho = Physics.get_vrho(t,rho2d,2, 1.34)          # mu = 1.34 everywhere
-        m_dot = Physics.vrho_mdot(vrho, rs, 't')      # r_s = constant
+            m_dot = Physics.vrho_mdot(vrho, rs, 'tl')
 
-        mins = Math.get_mins_in_every_row(t, l_lm_arr, m_dot, 5000, 5.1, 5.3)
+        else:
+            m_dot = Physics.vrho_mdot(vrho, rs, '')      # r_s = constant
 
         print('\t__Note: PLOT: x: {}, y: {}, z: {} shapes.'.format(t.shape, l_lm_arr.shape, m_dot.shape))
 
@@ -859,57 +1135,53 @@ class Combine:
 
         #--------------------------------------------------PLOT-MINS----------------------------------------------------
 
-        plt.plot(mins[0, :], mins[1, :], '-.', color='red', label='min_Mdot (rs: {} )'.format(r_s_))
+        # plt.plot(mins[0, :], mins[1, :], '-.', color='red', label='min_Mdot (rs: {} )'.format(r_s_))
 
         #-----------------------------------------------PLOT-OBSERVABLES------------------------------------------------
-        classes = []
-        classes.append('dum')
-        x = []
-        y = []
-        # classes.append(self.obs.get_star_class(self.obs.stars_n[0]))
-        for star_n in self.obs.stars_n:
-            xyz = self.obs.get_xyz_from_yz(star_n, l_or_lm, 'mdot', t, l_lm_arr, m_dot, lim_t1, lim_t2)
-            if xyz.any():
-                x = np.append(x, xyz[0, 0])
-                y = np.append(y, xyz[1, 0])
-                for i in range(len(xyz[0,:])):
-                    plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
-                    ax.annotate(int(star_n), xy=(xyz[0,i], xyz[1,i]),
-                                textcoords='data')  # plot numbers of stars
-                    if self.obs.get_star_class(star_n) not in classes:
-                        plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='', label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
-                        classes.append(self.obs.get_star_class(star_n))
+        if plot_obs:
+            classes = []
+            classes.append('dum')
+            x = []
+            y = []
+            for star_n in self.obs.stars_n:
+                xyz = self.obs.get_xyz_from_yz(star_n, l_or_lm, 'mdot', t, l_lm_arr, m_dot, lim_t1, lim_t2)
+                if xyz.any():
+                    x = np.append(x, xyz[0, 0])
+                    y = np.append(y, xyz[1, 0])
+                    for i in range(len(xyz[0,:])):
+                        plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
+                        ax.annotate(int(star_n), xy=(xyz[0,i], xyz[1,i]),
+                                    textcoords='data')  # plot numbers of stars
+                        if self.obs.get_star_class(star_n) not in classes:
+                            plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='', label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
+                            classes.append(self.obs.get_star_class(star_n))
 
-        fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
-        f = np.poly1d(fit)
-        fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
-        plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
-
-        # plt.ylim(y.min(),y.max())
-
+            fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
+            plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
 
         #--------------------------------------------------_NUMERICALS--------------------------------------------------
-        for i in range(len(self.num_files)):
-            ts_llm_mdot = self.mdl[i].get_xyz_from_yz(i, 'sp', l_or_lm, 'mdot', t , l_lm_arr, m_dot, lim_t1, lim_t2)
-            lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
+        if plot_nums:
+            for i in range(len(self.num_files)):
+                ts_llm_mdot = self.mdl[i].get_xyz_from_yz(i, 'sp', l_or_lm, 'mdot', t , l_lm_arr, m_dot, lim_t1, lim_t2)
+                # lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
 
-            if ts_llm_mdot.any():
-                lbl = 'i:{}, lm:{}, {}:{}'.format(i, "%.2f" % ts_llm_mdot[2, -1], num_var_plot, "%.2f" % lbl1)
-                plt.plot(ts_llm_mdot[0, :], ts_llm_mdot[1,:], marker='x', color='C' + str(Math.get_0_to_max([i],9)[i]), ls='', label=lbl)  # plot color dots)))
-                ax.annotate(str("%.2f" % ts_llm_mdot[2, -1]), xy=(ts_llm_mdot[0, -1], ts_llm_mdot[1,-1]), textcoords='data')
+                if ts_llm_mdot.any():
+                    # lbl = 'i:{}, lm:{}, {}:{}'.format(i, "%.2f" % ts_llm_mdot[2, -1], num_var_plot, "%.2f" % lbl1)
+                    plt.plot(ts_llm_mdot[0, :], ts_llm_mdot[1,:], marker='x', color='C' + str(Math.get_0_to_max([i],9)[i]), ls='')  # plot color dots)))
+                    ax.annotate(str("%.2f" % ts_llm_mdot[2, -1]), xy=(ts_llm_mdot[0, -1], ts_llm_mdot[1,-1]), textcoords='data')
 
-        for i in range(len(self.num_files)):
-            x_coord = self.mdl[i].get_cond_value('t', 'sp')
-            y_coord = self.mdl[i].get_cond_value(l_or_lm, 'sp')
-            lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
-            lbl2 = self.mdl[i].get_cond_value('He4', 'core')
+            for i in range(len(self.num_files)):
+                x_coord = self.mdl[i].get_cond_value('t', 'sp')
+                y_coord = self.mdl[i].get_cond_value(l_or_lm, 'sp')
+                # lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
+                # lbl2 = self.mdl[i].get_cond_value('He4', 'core')
 
-            lbl = 'i:{}, Yc:{}, {}:{}'.format(i, "%.2f" % lbl2, num_var_plot, "%.2f" % lbl1)
-            plt.plot(x_coord, y_coord, marker='X', color='C' + str(Math.get_0_to_max([i], 9)[i]),
-                     ls='', label=lbl)  # plot color dots)))
-            ax.annotate(str(int(i)), xy=(x_coord, y_coord),
-                        textcoords='data')
-
+                # lbl = 'i:{}, Yc:{}, {}:{}'.format(i, "%.2f" % lbl2, num_var_plot, "%.2f" % lbl1)
+                plt.plot(x_coord, y_coord, marker='X', color='C' + str(Math.get_0_to_max([i], 9)[i]),
+                         ls='')  # plot color dots)))
+                ax.annotate(str(int(i)), xy=(x_coord, y_coord), textcoords='data')
 
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plt.gca().invert_xaxis()
@@ -917,87 +1189,112 @@ class Combine:
         plt.show()
 
 
-    def min_mdot(self, l_or_lm, r_s, num_var_plot = 'xm', lim_t1 = None, lim_t2 = None):
+    def min_mdot(self, l_or_lm, plot_obs, plot_nums, lim_t1, lim_t2):
         # ---------------------LOADING-INTERPOLATED-TABLE---------------------------
 
         t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
-
-        # ---------------------Getting KAPPA[], T[], RHO2D[]-------------------------
-
-        kap = t_k_rho[1:, 0]
-        t = t_k_rho[0, 1:]
-        rho2d = t_k_rho[1:, 1:]
-
-        if l_or_lm == 'l':
-            l_lm_arr = Physics.lm_to_l(Physics.logk_loglm(kap, True))  # Kappa -> L/M -> L
-        else:
-            l_lm_arr = Physics.logk_loglm(kap, 1)
-
-        l_limits = [5.141, 5.722]
-        ind_1 = Math.find_nearest_index(l_lm_arr, l_limits[0]) + 1
-        ind_2 = Math.find_nearest_index(l_lm_arr, l_limits[1]) - 1
-        print(ind_2, ind_1, '->', l_lm_arr[ind_2], l_lm_arr[ind_1], '->', len(l_lm_arr[ind_2:ind_1]))
-
-        l_lm_arr = l_lm_arr[ind_2:ind_1]
-        rho2d = rho2d[ind_2:ind_1, :]
-
-        rs = Combine.empirical_l_r(l_lm_arr)
-        print('rs(l=5.2):{} , rs(l=5.7):{}'.format(Combine.empirical_l_r(5.2), Combine.empirical_l_r(5.7)))
-        # rs = l_lm_arr.fill(1.)
-
-        vrho = Physics.get_vrho(t, rho2d, 2)  # mu = 1.34 everywhere
-        m_dot = Physics.vrho_mdot(vrho, rs, 't')  # r_s = constant
-
-        mins = Math.get_mins_in_every_row(t, l_lm_arr, m_dot, 5000, 5.0, None)
-
-        print('\t__Note: PLOT: x: {}, y: {}, z: {} shapes.'.format(t.shape, l_lm_arr.shape, m_dot.shape))
-
+        l_lim1, l_lim2 = None, None
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 
+        def plot_emp_min_mdot(t_k_rho, l_or_lm):
+
+            t_llm_mdot = Combine.empirical_l_r_crit(t_k_rho, l_or_lm)
+            t = t_llm_mdot[0, 1:]
+            l_lm_arr = t_llm_mdot[1:, 0]
+            m_dot = t_llm_mdot[1:, 1:]
+
+            mins = Math.get_mins_in_every_row(t, l_lm_arr, m_dot, 5000, lim_t1, lim_t2)
+
+            plt.plot(mins[2, :], mins[1, :], '-', color='black')
+
+            ax.fill_between(mins[2, :], mins[1, :], color="lightgray")
+
+            l_lm_lim1 = l_lm_arr[0]
+            l_lm_lim2 = l_lm_arr[-1]
+
+            return l_lm_lim1, l_lm_lim2
+
+        def plot_min_mdot_with_const_r(t_k_rho, l_or_lm, rs, l_lim1, l_lim2):
+
+            kap = t_k_rho[1:, 0]
+            t = t_k_rho[0, 1:]
+            rho2d = t_k_rho[1:, 1:]
+
+            if l_or_lm == 'l':
+                l_lm = Physics.lm_to_l(Physics.logk_loglm(kap, True))
+            else:
+                l_lm = Physics.logk_loglm(kap, True)
+
+
+
+            cropped = Math.crop_2d_table( Math.invet_to_ascending_xy( Math.combine(t, l_lm, rho2d) ),  None, None, l_lim1, l_lim2)
+
+            print(l_lim1, l_lim2, cropped.shape)
+
+            l_lm = cropped[1:,0]
+            t = cropped[0, 1:]
+            rho2d = cropped[1:, 1:]
+
+            vrho_ = Physics.get_vrho(t, rho2d, 2)  # mu = 1.34 everywhere
+            m_dot_ = Physics.vrho_mdot(vrho_, rs, '')  # r_s = constant
+
+            print('x:', t.shape, l_lm.shape, m_dot_.shape)
+            mins_ = Math.get_mins_in_every_row(t, l_lm, m_dot_, 5000, lim_t1, lim_t2)
+
+            plt.plot(mins_[2, :], mins_[1, :], '-', color='C'+str(int(rs)), label='rs:{}'.format(rs))
+
         #----------------------------------------------PLOT MIN MDOT----------------------------------------------------
 
-        plt.plot(mins[2,:], mins[1,:], '-', color='black')
+        l_lim1, l_lim2 = plot_emp_min_mdot(t_k_rho, l_or_lm)
 
-        # -----------------------------------------------PLOT-OBSERVABLES------------------------------------------------
-        classes = []
-        classes.append('dum')
-        x = []
-        y = []
-        # classes.append(self.obs.get_star_class(self.obs.stars_n[0]))
-        for star_n in self.obs.stars_n:
-            i=-1
-            x = np.append(x, self.obs.get_num_par('mdot',  star_n))
-            y = np.append(y, self.obs.get_num_par(l_or_lm, star_n))
+        plot_min_mdot_with_const_r(t_k_rho, l_or_lm, 1.0, l_lim1, l_lim2)
 
-            plt.plot(x[i], y[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
-                     color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
-            ax.annotate(int(star_n), xy=(x[i], y[i]),
-                        textcoords='data')  # plot numbers of stars
-            if self.obs.get_star_class(star_n) not in classes:
+        plot_min_mdot_with_const_r(t_k_rho, l_or_lm, 2.0, l_lim1, l_lim2)
+
+        # -----------------------------------------------PLOT-OBSERVABLES-----------------------------------------------
+
+        if plot_obs:
+
+            classes = []
+            classes.append('dum')
+            x = []
+            y = []
+
+            for star_n in self.obs.stars_n:
+                i=-1
+                x = np.append(x, self.obs.get_num_par('mdot',  star_n))
+                y = np.append(y, self.obs.get_num_par(l_or_lm, star_n))
+
                 plt.plot(x[i], y[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
-                         color=self.obs.get_class_color(star_n), ls='',
-                         label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
-                classes.append(self.obs.get_star_class(star_n))
+                         color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
+                ax.annotate(int(star_n), xy=(x[i], y[i]),
+                            textcoords='data')  # plot numbers of stars
+                if self.obs.get_star_class(star_n) not in classes:
+                    plt.plot(x[i], y[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
+                             color=self.obs.get_class_color(star_n), ls='',
+                             label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
+                    classes.append(self.obs.get_star_class(star_n))
 
-        fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
-        f = np.poly1d(fit)
-        fit_x_coord = np.mgrid[(x.min() - 1):(x.max() + 1):1000j]
-        plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+            fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            fit_x_coord = np.mgrid[(x.min() - 1):(x.max() + 1):1000j]
+            plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
 
-        # --------------------------------------------------_NUMERICALS--------------------------------------------------
+        # --------------------------------------------------NUMERICALS--------------------------------------------------
 
-        for i in range(len(self.num_files)):
-            x_coord = self.mdl[i].get_cond_value('mdot', 'sp')
-            y_coord = self.mdl[i].get_cond_value(l_or_lm, 'sp')
-            lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
-            lbl2 = self.mdl[i].get_cond_value('He4', 'core')
+        if plot_nums:
+            for i in range(len(self.num_files)):
+                x_coord = self.mdl[i].get_cond_value('mdot', 'sp')
+                y_coord = self.mdl[i].get_cond_value(l_or_lm, 'sp')
+                # lbl1 = self.mdl[i].get_cond_value(i, 'sp')
+                # lbl2 = self.mdl[i].get_cond_value('He4', 'core')
 
-            lbl = 'i:{}, Yc:{}, {}:{}'.format(i, "%.2f" % lbl2, num_var_plot, "%.2f" % lbl1)
-            plt.plot(x_coord, y_coord, marker='X', color='C' + str(Math.get_0_to_max([i], 9)[i]),
-                     ls='', label=lbl)  # plot color dots)))
-            ax.annotate(str(int(i)), xy=(x_coord, y_coord),
-                        textcoords='data')
+                # lbl = 'i:{}, Yc:{}, {}:{}'.format(i, "%.2f" % lbl2, num_var_plot, "%.2f" % lbl1)
+                plt.plot(x_coord, y_coord, marker='x', color='C' + str(Math.get_0_to_max([i], 9)[i]),
+                         ls='')  # plot color dots)))
+                ax.annotate(str(int(i)), xy=(x_coord, y_coord),
+                            textcoords='data')
 
 
 
@@ -1012,7 +1309,6 @@ class Combine:
 
         ax.grid(which='both')
         ax.grid(which='minor', alpha=0.2)
-        ax.fill_between(mins[2,:], mins[1,:], color="lightgray")
         plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
         plot_name = self.plot_dir + 'minMdot_l.pdf'
         plt.savefig(plot_name)
@@ -1040,12 +1336,18 @@ class Annotation3D(Annotation):
         self.xy=(xs,ys)
         Annotation.draw(self, renderer)
 
-
-
 class TEST:
-    def __init__(self, out_dir):
+    def __init__(self, spfiles, out_dir, plot_dir):
+
+        self.spfiles = spfiles
+
+        self.spmdl = []
+        for file in spfiles:
+            self.spmdl.append( Read_SP_data_file(file, out_dir, plot_dir) )
+
+        self.plot_dit = plot_dir
         self.out_dir = out_dir
-        pass
+
 
     def xy_last_points(self, v_n1, v_n2, v_lbl1, v_lbl_cond, list_of_list_of_smfiles = list(), num_pol_fit = True):
         fig = plt.figure()
@@ -1108,7 +1410,7 @@ class TEST:
         plt.savefig(name)
 
 
-    def d3_plotting_x_y_z(self, v_n1, v_n2, v_n3, v_lbl1, v_lbl_cond, list_of_list_of_smfiles = list(), num_pol_fit = True):
+    def sm_3d_plotting_x_y_z(self, v_n1, v_n2, v_n3, v_lbl1, v_lbl_cond, list_of_list_of_smfiles = list(), num_pol_fit = True):
         from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -1197,6 +1499,167 @@ class TEST:
 
         # def fitting()
 
+    def sp_3d_plotting_x_y_z(self, v_n1, v_n2, v_n3, v_n_col):
+        from mpl_toolkits.mplot3d import Axes3D
+
+
+        fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        ax = fig.gca(projection='3d')
+
+        all_x = []
+        all_y = []
+        all_z = []
+        all_t = []
+
+        all_x_cr = []
+        all_y_cr = []
+        all_z_cr = []
+        all_t_cr = []
+
+
+        for i in range(len(self.spfiles)):
+
+            xc = self.spmdl[i].get_crit_value(v_n1)
+            yc = self.spmdl[i].get_crit_value(v_n2)
+            zc = self.spmdl[i].get_crit_value(v_n3)
+            col_c = self.spmdl[i].get_crit_value(v_n_col)
+
+            ax.scatter(xc, yc, zc, color='black', marker='x', linewidths='')
+
+
+            n_of_rows = len( self.spmdl[i].table[:, 0] ) - 1
+            x = []
+            y = []
+            z = []
+            t = []
+
+            for j in range(n_of_rows):
+                if self.spmdl[i].get_sonic_cols('r')[j] > 0.:              # selecting only the solutions with found rs
+                    x = np.append( x, self.spmdl[i].get_sonic_cols(v_n1)[j] )
+                    y = np.append( y, self.spmdl[i].get_sonic_cols(v_n2)[j] )
+                    z = np.append( z, self.spmdl[i].get_sonic_cols(v_n3)[j] )
+                    t = np.append( t, self.spmdl[i].get_sonic_cols(v_n_col)[j] )
+
+            all_x_cr = np.append(all_x_cr, self.spmdl[i].get_crit_value(v_n1))
+            all_y_cr = np.append(all_y_cr, self.spmdl[i].get_crit_value(v_n2))
+            all_z_cr = np.append(all_z_cr, self.spmdl[i].get_crit_value(v_n3))
+            all_t_cr = np.append(all_t_cr, self.spmdl[i].get_crit_value(v_n_col))
+
+            x = np.append(x, all_x_cr) # adding critical values
+            y = np.append(y, all_y_cr)
+            z = np.append(z, all_z_cr)
+            t = np.append(t, all_t_cr)
+
+            all_x = np.append(all_x, x)
+            all_y = np.append(all_y, y)
+            all_z = np.append(all_z, z)
+            all_t = np.append(all_t, t)
+
+            # ax.scatter(x, y, z, c=t, marker='o', cmap=plt.get_cmap('RdYlBu_r'))
+
+
+
+        # ---------------------------------------------------------------------------------------
+
+        print(len(all_x), len(all_y), len(all_z), len(all_t))
+
+        sc = ax.scatter(all_x, all_y, all_z, c=all_t, marker='o', cmap=plt.get_cmap('Purples_r'))
+
+        plt.colorbar(sc, label=Labels.lbls(v_n_col))
+
+
+
+
+        # print(all_x)
+
+
+        # Z = np.outer(all_z.T, all_z)  # 50x50
+        # X, Y = np.meshgrid(all_x, all_y)
+        #
+        # color_dimension = X
+        # minn, maxx = color_dimension.min(), color_dimension.max()
+        # import matplotlib
+        # norm = matplotlib.colors.Normalize(minn, maxx)
+        #
+        # m = plt.cm.ScalarMappable(norm=norm, cmap='jet')
+        # m.set_array([])
+        # fcolors = m.to_rgba(color_dimension)
+        #
+        # ax.plot_surface(X, Y, Z, rstride=1, cstride=1, facecolors=fcolors, vmin=minn, vmax=maxx, shade=False)
+
+        # levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
+            # contour_filled = plt.contourf(x, y, z, levels, cmap=plt.get_cmap('RdYlBu_r'))
+            # plt.colorbar(contour_filled, label=Labels.lbls('mdot'))
+
+        # surf = ax.plot_surface(x, y, z, cmap=plt.get_cmap('RdYlBu_r'),  linewidth=0, antialiased=False)
+        #
+        # fig.colorbar(surf, shrink=0.5, aspect=5)
+        # print(x.shape, y.shape, z.shape, col.shape)
+
+        # ax.plot_surface(x, y, x, rstride=4, cstride=4, alpha=0.25)
+        ax.w_xaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
+        ax.w_yaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
+        ax.w_zaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
+
+        ax.set_xlabel(Labels.lbls(v_n1))
+        ax.set_ylabel(Labels.lbls(v_n2))
+        ax.set_zlabel(Labels.lbls(v_n3))
+
+        plt.show()
+        fig.canvas.show()
+
+        # def fitFunc(t, a, b, c, d, e):
+        #         # return c * np.exp(-b * t ** a) + d
+        #         return a + t**b + t**c + t**d + e ** t    #
+        #         # return a + b/t + c/t**2 + d/t**3
+        #
+        # def myfunc(x, a, b, c):
+        #     return a * np.exp(b * x**4) + c*x
+        #
+        # def fitting():
+        #     from scipy.optimize import curve_fit
+        #
+        #     plt.plot(x, y, 'b.', label='data')
+        #     popt, pcov = curve_fit(fitFunc, x, y)
+        #     print(popt)
+        #
+        #     # plt.plot(x, fitFunc(x, *popt), 'r-', label = '' % tuple(popt))
+        #     x_new = np.mgrid[x[0]:x[-1]:100j]
+        #
+        #     plt.plot(x_new, fitFunc(x_new, popt[0], popt[1], popt[2], popt[3], popt[4]), 'r-')
+        #
+        #     # plt.plot(x, myfunc(x, 1, 1, y[0]))
+        #
+        #
+        #     # t = x# np.linspace(0, 4, 50)
+        #     # temp = y# fitFunc(t, 2.5, 1.3, 0.5)
+        #     # noisy = temp + 0.05 * np.random.normal(size=len(temp))
+        #     # fitParams, fitCovariances = curve_fit(fitFunc, t, noisy)
+        #     # print(fitParams)
+        #     # print(fitCovariances)
+        #     #
+        #     # plt.ylabel('Temperature (C)', fontsize=16)
+        #     # plt.xlabel('time (s)', fontsize=16)
+        #     # plt.xlim(0, 4.1)
+        #     # # plot the data as red circles with errorbars in the vertical direction
+        #     # plt.errorbar(t, noisy, fmt='ro', yerr=0.2)
+        #     # # now plot the best fit curve and also +- 3 sigma curves
+        #     # # the square root of the diagonal covariance matrix element
+        #     # # is the uncertianty on the corresponding fit parameter.
+        #     # sigma = [fitCovariances[0, 0], fitCovariances[1, 1], fitCovariances[2, 2]]
+        #     # plt.plot(t, fitFunc(t, fitParams[0], fitParams[1], fitParams[2]),
+        #     #          t, fitFunc(t, fitParams[0] + sigma[0], fitParams[1] - sigma[1], fitParams[2] + sigma[2]),
+        #     #          t, fitFunc(t, fitParams[0] - sigma[0], fitParams[1] + sigma[1], fitParams[2] - sigma[2])
+        #     #          )
+        #     plt.show()
+        #
+        # fitting()
+        # save plot to a fil    e
+        # savefig('dataFitted.pdf', bbox_inches=0, dpi=600)
+
+
+        # def fitting()
 
     def new_3d(self):
 

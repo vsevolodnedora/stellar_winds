@@ -156,9 +156,12 @@ class Math:
         y = np.array(y)
         xy = np.array((xy))
 
-        Errors.is_arr_eq(x, y, 'Math | combine', False, 'x!=y')
-        Errors.is_arr_eq(x, xy[0, :], 'Math | combine', True, 'x!=xy[0, :]')
-        Errors.is_arr_eq(y, xy[:, 0], 'Math | combine', True, 'y!=xy[:, 0]')
+        if len(x) != len(y):
+            print('\t__Warning. x({}) != y({}) (combine)'.format(len(x), len(y)))
+        if len(x) != len(xy[0, :]):
+            raise ValueError('\t__Warning. x({}) != xy[0, :]({}) (combine)'.format(len(x), len(xy[0, :])))
+        if len(y) != len(xy[:, 0]):
+            raise ValueError('\t__Warning. y({}) != xy[:, 0]({}) (combine)'.format(len(y), len(xy[:, 0])))
 
         res = np.insert(xy, 0, x, axis=0)
         new_y = np.insert(y, 0, 0, axis=0)  # inserting a 0 to a first column of a
@@ -202,10 +205,15 @@ class Math:
             # print("y_arr:({} to {}), x_arr: ({} to {}) find: y_val {} ."
             #       .format("%.2f"%arr_y[0],"%.2f"%arr_y[-1], "%.2f"%arr_x[0], "%.2f"%arr_x[-1],"%.2f"%val))
 
+            red_arr_y = np.array(red_arr_y, dtype=np.float)
+            arr_x = np.array(arr_x, dtype=np.float)
+
+
+
             f = interpolate.InterpolatedUnivariateSpline(arr_x, red_arr_y)
             # print("y_arr:({} to {}), can't find find: y_val {} .".format("%.2f"%arr_y[0],"%.2f"%arr_y[-1],"%.2f"%val))
             # f = interpolate.UnivariateSpline(arr_x, red_arr_y, s = 0)
-            return f.roots()
+            return f.roots() # x must be ascending to get roots()!
 
     @staticmethod
     def interp_row(x_arr, y_arr, new_x_arr):
@@ -278,6 +286,45 @@ class Math:
             new_y = Math.interp_row(x_arr, z2d_arr[i, :], new_x)
             x_points[i] = new_x[ new_y.argmin() ]
             values[i] = new_y.min()
+
+        return np.vstack((x_points, y_arr, values))
+
+    @staticmethod
+    def get_maxs_in_every_row(x_arr, y_arr, z2d_arr, depth, from_=None, to_=None):
+        '''
+        Finds a min. value in every row of z2darr
+        :param x_arr: usually temp
+        :param y_arr: usually L/M
+        :param z2d_arr: usually Mdot 2d array (watch for .T)
+        :param depth: usually 2000-5000
+        :param from_: beginnignof a dip you are studying
+        :param to_: end of a dip you are studying
+        :return: x_points, y_arr, values
+        '''
+        x_points = np.zeros(len(z2d_arr[:, 0]))
+        values = np.zeros(len(z2d_arr[:, 0]))
+
+        x1 = x_arr[0]  # default values (all the x range)
+        x2 = x_arr[-1]
+
+        if from_ != None:
+            x1 = from_
+
+        if to_ != None:
+            x2 = to_
+
+        if x1 < x_arr[0]:
+            sys.exit('\t__Error. *from_* is too small. {} < {} '.format(x1, x_arr[0]))
+
+        if x2 > x_arr[-1]:
+            sys.exit('\t__Error. *from_* is too big. {} > {} '.format(x2, x_arr[-1]))
+
+        new_x = np.mgrid[x1:x2:depth * 1j]
+
+        for i in range(len(z2d_arr[:, 0])):
+            new_y = Math.interp_row(x_arr, z2d_arr[i, :], new_x)
+            x_points[i] = new_x[new_y.argmin()]
+            values[i] = new_y.max()
 
         return np.vstack((x_points, y_arr, values))
 
@@ -378,14 +425,101 @@ class Math:
         # print(x.min(), x.max())
         guess = x[np.where(y == y.max())]
         # print(guess)
+        print('Gues:', guess)
 
         x_max = fmin(f2, guess)
+
 
         return x_max, f(x_max)
 
         # xfit = np.linspace(0, 4)
 
+    @staticmethod
+    def invet_to_ascending_xy(d2array):
+        x = np.array(d2array[0, 1:])
+        y = np.array(d2array[1:,0])
+        z = np.array(d2array[1:,1:])
 
+        if x[0] > x[-1]:
+            print('\t__Note: Inverting along X axis')
+            x = x[::-1]
+            z = z.T
+            z = z[::1]
+            z = z.T
+
+        if y[0] > y[-1]:
+            print('\t__Note: Inverting along Y axis')
+            y = y[::-1]
+            z = z[::-1]
+
+        print(x.shape, y.shape, z.shape)
+        return Math.combine(x,y,z)
+
+    @staticmethod
+    def crop_2d_table(table, x1 ,x2 ,y1, y2):
+        x = table[0,1:]
+        y = table[1:,0]
+        z = table[1:,1:]
+
+        if x1 != None:
+            if x[0] > x[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(x[0],x[-1]))
+            if x1 > x[-1]:
+                raise ValueError('x1({}) > x[-1]({})'.format(x1, x[-1]))
+            if x1 < x[0]:
+                raise ValueError('x1({}) < x[0]({})'.format(x1, x[0]))
+
+            ix1 = Math.find_nearest_index(x, x1)
+            x = x[ix1:]
+            z = z[:, ix1:]
+
+        if x2 != None:
+            if x[0] > x[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(x[0],x[-1]))
+            if x2 > x[-1]:
+                raise ValueError('x2({}) > x[-1]({})'.format(x2, x[-1]))
+            if x2 < x[0]:
+                raise ValueError('x2({}) < x[0]({})'.format(x2, x[0]))
+
+            ix2 = Math.find_nearest_index(x,x2)
+            x = x[:ix2 +1]
+            z = z[:, :ix2+1]
+
+        if y1 != None:
+            if y[0] > y[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(y[0],y[-1]))
+            if y1 > y[-1]:
+                raise ValueError('y1({}) > y[-1]({})'.format(y1, y[-1]))
+            if y1 < y[0]:
+                raise ValueError('y1({}) < y[0]({})'.format(y1, y[0]))
+
+            iy1 = Math.find_nearest_index(y, y1)
+            y = y[iy1: ]
+            z = z[iy1:, :]
+
+        if y2 != None:
+            if y2 > y[-1]:
+                raise ValueError('y2({}) > y[-1]({})'.format(y2, y[-1]))
+            if y2 < y[0]:
+                raise ValueError('y1({}) < y[0]({})'.format(y2, y[0]))
+            if y[0] > y[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(y[0],y[-1]))
+
+            iy2 = Math.find_nearest_index(y, y2)
+            y = y[:iy2+1]
+            z = z[:iy2+1, : ]
+
+
+
+        print(x.shape, y.shape, z.shape)
+        return Math.combine(x,y,z)
+
+    # @staticmethod
+    # def sort_2d_table(table):
+    #
+    #
+    #
+    #     return table
 
 class Physics:
     def __init__(self):
@@ -597,7 +731,7 @@ class Physics:
 
         # if vrho is 2darray and r_s is a 1d array - r_s_for_t_l_vrho = 't' or 'l' to change columns or rows of vrho
 
-        # if vrho is 2darray and r_s is a 2d array - r_s_for_t_l_vrho = 'vrho' to change columns and rows of vrho
+        # if vrho is 2darray and r_s is a 2d array - r_s_for_t_l_vrho = 'tl' to change columns and rows of vrho
 
         # r_s_for_t_l_vrho = '', 't', 'l', 'lm', 'vrho'
 
@@ -622,25 +756,25 @@ class Physics:
             for i in range(len(vrho)):
                 mdot[i] = vrho[i] + c + np.log10(r_s[i] ** 2)
 
-        if r_s_for_t_l_vrho == 't' or r_s_for_t_l_vrho == 'ts':  # ---r_s = 1darray
+        if r_s_for_t_l_vrho == 'l' or r_s_for_t_l_vrho == 'lm':  # ---r_s = 1darray
             if len(r_s) != len(vrho[:, 0]): raise ValueError('len(r_s)={}!=len(vrho[:, 0])={}'.format(len(r_s), len(vrho[:, 0])))
             for i in range(len(vrho[:, 0])):
                 mdot[i, :] = vrho[i, :] + c + np.log10(r_s[i] ** 2)
 
-        if r_s_for_t_l_vrho == 'l' or r_s_for_t_l_vrho == 'lm':  # ---r_s = 1darray
+        if r_s_for_t_l_vrho == 't' or r_s_for_t_l_vrho == 'ts':  # ---r_s = 1darray
             if len(r_s) != len(vrho[0, :]): raise ValueError('len(r_s)={}!=len(vrho[0, :])={}'.format(len(r_s), len(vrho[0, :])))
             for i in range(len(vrho[0, :])):
                 mdot[:, i] = vrho[:, i] + c + np.log10(r_s[i] ** 2)
 
-        if r_s_for_t_l_vrho == 'vrho':  # ---------------------REQUIRED r_s = 2darray
+        if r_s_for_t_l_vrho == 'tl':  # ---------------------REQUIRED r_s = 2darray
             if r_s.shape != vrho.shape: raise ValueError('r_s.shape {} != vrho.shape {}'.format(r_s.shape, vrho.shape))
             cols = len(vrho[0, :])
             rows = len(vrho[:, 0])
-            m_dot = np.zeros((rows, cols))
+            mdot = np.zeros((rows, cols))
 
             for i in range(rows):
                 for j in range(cols):
-                    m_dot[i, j] = vrho[i, j] + c + np.log10(r_s[i, j] ** 2)
+                    mdot[i, j] = vrho[i, j] + c + np.log10(r_s[i, j] ** 2)
 
         return mdot
 
@@ -967,6 +1101,15 @@ class Physics:
         c2 = 0.055467
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
 
+    @staticmethod
+    def apply_emp_l_r_crit_rel(x):
+
+
+
+
+        return (40.843) + (-15.943*x) + (1.591*x**2)                    # FROM GREY ATMOSPHERE ESTIMATES
+        # return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3        # FROM SONIC POINT ESTIMATES
+
 class Labels:
     def __init__(self):
         pass
@@ -978,6 +1121,8 @@ class Labels:
             return '$\log(L)$'#(L_{\odot})
         if v_n == 'r':
             return '$R(R_{\odot})$'
+        if v_n == 'm' or v_n == 'xm':
+            return '$M(M_{\odot})$'
 
         #sonic and general
         if v_n == 'v' or v_n == 'u':
@@ -994,4 +1139,5 @@ class Labels:
             return '$\log(L/M)$'
         if v_n == 'mdot':
             return '$\log(\dot{M}$)'
+
 

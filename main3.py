@@ -55,16 +55,20 @@ plot_dir    = '../data/plots/'
 opal_fl     = '../data/opal/table8.data'
 obs_fl      = '../data/obs/gal_wn.data'
 
-smfiles  = get_files('../../sse/ga_z002/', ['13sm/y10/'], [], 'sm.data')
+smfiles = get_files('../../sse/ga_z002/', [], [], 'sm.data')
+#'20sm/y10/'
 
-plotfls = get_files('../../sse/ga_z002/', ['10sm/','11sm/','12sm/','13sm/','14sm/','15sm/'], [], '.plot1')
+plotfls = get_files('../../sse/ga_z002/', [], [], '.plot1')
+#'10sm/','11sm/','12sm/','13sm/','14sm/','15sm/', '16sm/', '17sm/', '18sm/', '19sm/', '20sm/'
 
-spfiles = get_files('../data/output/', ['criticals/'], [], '.data')
+spfiles = get_files('../data/output/',    ['criticals/ZAMSz002/'], [], '.data')
 
-#
+'''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
+
 # from analyze_r_crit import Critical_R
-# cr = Critical_R(smfiles, output_dir+'criticals/', plot_dir, ['sse', 'ga_z002']) # [] is a listof folders not to be put in output name
-# cr.velocity_profile()
+# cr = Critical_R(smfiles, output_dir+'criticals/ZAMSz002/', plot_dir, ['sse', 'ga_z002']) # [] is a listof folders not to be put in output name
+# cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'])
+# ## cr.velocity_profile()
 
 # from Read_Obs_Numers import Read_SP_data_file
 # x = Read_SP_data_file(spfiles, output_dir, plot_dir)
@@ -79,6 +83,7 @@ spfiles = get_files('../data/output/', ['criticals/'], [], '.data')
 
 '''=====================================================CREATION====================================================='''
 
+# from main_methods import Creation
 # make = Creation(opal_fl, 4.9, 5.5, 1000)
 # # make.save_t_rho_k()
 # make.save_t_k_rho(3.8, None, 1000)
@@ -95,18 +100,26 @@ spfiles = get_files('../data/output/', ['criticals/'], [], '.data')
 '''====================================================MAIN=METHODS=================================================='''
 
 comb = Combine(smfiles, spfiles, plotfls, obs_fl, opal_fl)
-comb.sp_xy_last_points('r','l','mdot',True)
-# comb.xy_profile('r','u','mdot','xm')
+
+# comb.sp_xy_last_points('l','r','mdot',True)
+# comb.sp_get_r_lt_table('lm')
+# comb.xy_profile('xm','H','mdot','xm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
 # comb.xy_last_points('r','l','mdot',True)
-# comb.hrd(plotfls)
+# comb.hrd(['../../sse/ev30z0008_H/ev.plot1'])
+
 # comb.plot_t_rho_kappa('mdot','xm')
 # comb.plot_t_mdot_lm()
-# comb.plot_t_l_mdot('l',1.0,'xm',5.2)
-# comb.min_mdot('l',None,'xm',5.2)
+# comb.plot_t_l_mdot('l', 1.0, True, False, True, 5.22, None)
+# comb.min_mdot('lm', True, False, 5.2, None)
 
-'''=================================================================================================================='''
+'''===========================================================3D====================================================='''
+#
+# from main_methods import TEST
+# tst = TEST(spfiles, output_dir, plot_dir)
+# tst.sp_3d_plotting_x_y_z('t','l','r','mdot')
 
+'''==========================================================REST===================================================='''
 
 # from __future__ import division
 # import numpy as np
@@ -207,3 +220,37 @@ comb.sp_xy_last_points('r','l','mdot',True)
 # plt.title('Max point = ({0:1.2f}, {1:1.2f})'.format(float(xmax),
 #                                                     float(f(xmax))))
 # plt.show()
+
+
+# x = np.array([1,2,3,4,5])
+# y = np.array([3,5,5,5,5])
+# z= np.array([5,6,6,6,6])
+# xy = np.vstack((x,y,z))
+# print(xy)
+# print(xy[::-1])
+# print('--------------')
+# print(x[1:])
+# x = np.array([0,,4,4,4])
+# y = np.array([3,5,5,5,5])
+
+
+# fig, ax = plt.subplots()
+#
+# cax = ax.imshow(P_min)#, norm=matplotlib.colors.LogNorm())#, cmap=cm.coolwarm)
+# #plt.matshow(bla, norm=matplotlib.colors.LogNorm())
+# cbar=fig.colorbar(cax, label='P / days')
+# #cbar.ax.set_yticklabels(['','1','2','','','5','','','','','10','20','','','50','','','','90','100'])
+# ax.set_title("minimal Period")
+# ax.set_xlabel("M$_\mathrm{He}$ / M$_{\odot}$")
+# ax.set_ylabel("M$_\mathrm{MS}$ / M$_{\odot}$")
+# plt.xticks(arange(8), (2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5), size=8)
+# plt.yticks(arange(13), (1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,7.5,10.0,12.5,15.0), size=8)
+# ax.invert_yaxis()
+#
+# for i in range(0,8):
+#     for j in range(0,13):
+#         c = round(P_min[j][i],2)
+#         ax.text(i, j, str(c), va='center', ha='center', size=6)
+#
+# plt.show()
+# #plt.savefig('min_P.png', dpi=1000)

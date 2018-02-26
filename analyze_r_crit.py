@@ -270,17 +270,17 @@ class Critical_R:
             int_ts_arr=Math.interp_row(r, ts_arr, int_r)
 
 
-            # ax1.plot(r, u, '.', color='black')
+            ax1.plot(r, u, '.', color='gray')
             ax1.plot(int_r, int_u, '-', color='gray')
             ax1.annotate(str('%.2f' % mdot_u), xy=(int_r[-1], int_u[-1]), textcoords='data')
 
             # ax1.plot(r, u_s, '.', color='gray')
             ax1.plot(r, u_s, '--', color='gray')
 
-            # ax2.plot(r,t,'.',color='orange')
+            # ax2.plot(r,t,'.',color='gray')
             ax2.plot(int_r, int_t,'-',color='gray')
 
-            # ax2.plot(r, ts_arr,'.', color='red')
+            ax2.plot(r, ts_arr,'.', color='gray')
             ax2.plot(int_r, int_ts_arr, '--', color='gray')
 
 

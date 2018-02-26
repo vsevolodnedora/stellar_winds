@@ -1502,10 +1502,14 @@ class TEST:
     def sp_3d_plotting_x_y_z(self, v_n1, v_n2, v_n3, v_n_col):
         from mpl_toolkits.mplot3d import Axes3D
 
+        # fig = plt.subplot(2, 1, 1)
 
-        fig = plt.figure()
+
+        # fig = plt.subplot(2, 1, 1,)
+        # ax1 = plt.subplot(211)
         # ax = fig.add_subplot(111, projection='3d')
-        ax = fig.gca(projection='3d')
+        ax = plt.gca(projection='3d')  # fig.gca(projection='3d')
+        # ax1 = fig.add_subplot(2, 1, 2, projection='3d')
 
         all_x = []
         all_y = []
@@ -1568,36 +1572,22 @@ class TEST:
 
         plt.colorbar(sc, label=Labels.lbls(v_n_col))
 
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.plot(all_x, all_z, 'r.', zdir='y', zs = all_y.max() - all_y.max()/2)
+        # ax.plot(all_y, all_z, 'g.', zdir='x', zs = all_x.max() - all_x.max()/20)
+        # ax.plot(all_x, all_y, 'k.', zdir='z', zs = all_z.max() - all_z.max())
+
+        # ax.plot(all_x, all_z, 'r.', zdir='y', zs = all_y.min())
+        # ax.plot(all_y, all_z, 'g.', zdir='x', zs = all_x.min())
+        # ax.plot(all_x, all_y, 'k.', zdir='z', zs = all_z.min())
 
 
+        # --- --- --- SUBPLOTS --- --- ---
 
-        # print(all_x)
+        # ax1 = fig.add_subplot(1, 1, 1)
+        # plt.plot(all_x, all_y, '.')
 
 
-        # Z = np.outer(all_z.T, all_z)  # 50x50
-        # X, Y = np.meshgrid(all_x, all_y)
-        #
-        # color_dimension = X
-        # minn, maxx = color_dimension.min(), color_dimension.max()
-        # import matplotlib
-        # norm = matplotlib.colors.Normalize(minn, maxx)
-        #
-        # m = plt.cm.ScalarMappable(norm=norm, cmap='jet')
-        # m.set_array([])
-        # fcolors = m.to_rgba(color_dimension)
-        #
-        # ax.plot_surface(X, Y, Z, rstride=1, cstride=1, facecolors=fcolors, vmin=minn, vmax=maxx, shade=False)
-
-        # levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
-            # contour_filled = plt.contourf(x, y, z, levels, cmap=plt.get_cmap('RdYlBu_r'))
-            # plt.colorbar(contour_filled, label=Labels.lbls('mdot'))
-
-        # surf = ax.plot_surface(x, y, z, cmap=plt.get_cmap('RdYlBu_r'),  linewidth=0, antialiased=False)
-        #
-        # fig.colorbar(surf, shrink=0.5, aspect=5)
-        # print(x.shape, y.shape, z.shape, col.shape)
-
-        # ax.plot_surface(x, y, x, rstride=4, cstride=4, alpha=0.25)
         ax.w_xaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
         ax.w_yaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
         ax.w_zaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
@@ -1607,7 +1597,7 @@ class TEST:
         ax.set_zlabel(Labels.lbls(v_n3))
 
         plt.show()
-        fig.canvas.show()
+        # fig.canvas.show()
 
         # def fitFunc(t, a, b, c, d, e):
         #         # return c * np.exp(-b * t ** a) + d
@@ -1660,6 +1650,119 @@ class TEST:
 
 
         # def fitting()
+
+    def sp_3d_and_multiplot(self, v_n1, v_n2, v_n3, v_n_col):
+
+        all_x = []
+        all_y = []
+        all_z = []
+        all_t = []
+
+        all_x_cr = []
+        all_y_cr = []
+        all_z_cr = []
+        all_t_cr = []
+
+        # set up a figure twice as wide as it is tall
+        fig = plt.figure(figsize=plt.figaspect(1.0))
+
+        # ===============
+        # First subplot
+        # ===============
+
+        ax = fig.add_subplot(221, projection='3d')  # ax = fig.add_subplot(1, 2, 1, projection='3d') for 2 plots
+
+        for i in range(len(self.spfiles)):
+
+            xc = self.spmdl[i].get_crit_value(v_n1)
+            yc = self.spmdl[i].get_crit_value(v_n2)
+            zc = self.spmdl[i].get_crit_value(v_n3)
+            col_c = self.spmdl[i].get_crit_value(v_n_col)
+
+            ax.scatter(xc, yc, zc, color='black', marker='x', linewidths='')
+
+            n_of_rows = len(self.spmdl[i].table[:, 0]) - 1
+            x = []
+            y = []
+            z = []
+            t = []
+
+            for j in range(n_of_rows):
+                if self.spmdl[i].get_sonic_cols('r')[j] > 0.:  # selecting only the solutions with found rs
+                    x = np.append(x, self.spmdl[i].get_sonic_cols(v_n1)[j])
+                    y = np.append(y, self.spmdl[i].get_sonic_cols(v_n2)[j])
+                    z = np.append(z, self.spmdl[i].get_sonic_cols(v_n3)[j])
+                    t = np.append(t, self.spmdl[i].get_sonic_cols(v_n_col)[j])
+
+            all_x_cr = np.append(all_x_cr, self.spmdl[i].get_crit_value(v_n1))
+            all_y_cr = np.append(all_y_cr, self.spmdl[i].get_crit_value(v_n2))
+            all_z_cr = np.append(all_z_cr, self.spmdl[i].get_crit_value(v_n3))
+            all_t_cr = np.append(all_t_cr, self.spmdl[i].get_crit_value(v_n_col))
+
+            x = np.append(x, all_x_cr)  # adding critical values
+            y = np.append(y, all_y_cr)
+            z = np.append(z, all_z_cr)
+            t = np.append(t, all_t_cr)
+
+            all_x = np.append(all_x, x)
+            all_y = np.append(all_y, y)
+            all_z = np.append(all_z, z)
+            all_t = np.append(all_t, t)
+
+        sc = ax.scatter(all_x, all_y, all_z, c=all_t, marker='o', cmap=plt.get_cmap('Spectral'))
+
+        clb = plt.colorbar(sc)
+        clb.ax.set_title(Labels.lbls(v_n_col))
+
+
+        ax.w_xaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
+        ax.w_yaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
+        ax.w_zaxis.set_pane_color((0.4, 0.4, 0.6, 0.3))
+
+        ax.set_xlabel(Labels.lbls(v_n1))
+        ax.set_ylabel(Labels.lbls(v_n2))
+        ax.set_zlabel(Labels.lbls(v_n3))
+
+        # ===============
+        # Second subplots
+        # ===============
+
+        ax = fig.add_subplot(222)
+        ax.grid()
+        sc = ax.scatter(all_x_cr, all_y_cr, c=all_t_cr, marker='o', cmap=plt.get_cmap('Spectral'))
+        ax.set_xlabel(Labels.lbls(v_n1))
+        ax.set_ylabel(Labels.lbls(v_n2))
+        for i in range(len(all_x_cr)):
+            ax.annotate("%.2f" % all_t_cr[i], xy=(all_x_cr[i], all_y_cr[i]), textcoords='data')  # plot numbers of stars
+        clb = plt.colorbar(sc)
+        clb.ax.set_title(Labels.lbls(v_n_col))
+
+
+        ax = fig.add_subplot(223)
+        ax.grid()
+        sc = ax.scatter(all_y_cr, all_z_cr, c=all_t_cr, marker='o', cmap=plt.get_cmap('Spectral'))
+        ax.set_xlabel(Labels.lbls(v_n2))
+        ax.set_ylabel(Labels.lbls(v_n3))
+        for i in range(len(all_x_cr)):
+            ax.annotate("%.2f" % all_t_cr[i], xy=(all_y_cr[i], all_z_cr[i]), textcoords='data')  # plot numbers of stars
+        clb = plt.colorbar(sc)
+        clb.ax.set_title(Labels.lbls(v_n_col))
+
+
+        ax = fig.add_subplot(224)
+        ax.grid()
+        sc = ax.scatter(all_x_cr, all_z_cr, c=all_t_cr, marker='o', cmap=plt.get_cmap('Spectral'))
+        ax.set_xlabel(Labels.lbls(v_n1))
+        ax.set_ylabel(Labels.lbls(v_n3))
+        for i in range(len(all_x_cr)):
+            ax.annotate("%.2f" % all_t_cr[i], xy=(all_x_cr[i], all_z_cr[i]), textcoords='data')  # plot numbers of stars
+        clb = plt.colorbar(sc)
+        clb.ax.set_title(Labels.lbls(v_n_col))
+
+
+
+        plt.show()
+
 
     def new_3d(self):
 

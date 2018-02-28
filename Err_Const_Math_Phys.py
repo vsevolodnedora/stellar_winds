@@ -406,12 +406,44 @@ class Math:
         return xc, yc
 
     @staticmethod
-    def get_max_by_interpolating(x,y):
+    def get_max_by_interpolating(x, y):
 
         x = np.array(x, dtype=float)
         y = np.array(y, dtype=float)
 
+        def crop_ends(x, y):
+            '''
+            In case of 'wierd' vel/temp profile with rapidly rising end, first this rising part is to be cut of
+            before maximum can be searched for.
+            :param x:
+            :param y:
+            :return:
+            '''
+
+            x_mon = x
+            y_mon = y
+
+            non_monotonic = True
+
+            while non_monotonic:
+
+                if len(x_mon) <= 10:
+                    return x, y
+                    # raise ValueError('Whole array is removed in a searched for monotonic part.')
+
+                if y_mon[-1] > y_mon[-2]:
+                    y_mon = y_mon[:-1]
+                    x_mon = x_mon[:-1]
+                    # print(x_mon[-1], y_mon[-1])
+                else:
+                    non_monotonic = False
+
+            return x_mon, y_mon
+
+        x, y = crop_ends(x, y)
+
         # create the interpolating function
+        print(len(x), len(y))
         f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
 
         # to find the maximum, we minimize the negative of the function. We

@@ -471,6 +471,7 @@ class Combine:
 
             lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
             ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
             ax1.plot(x[-1], y[-1], 'x',   color='C' + str(Math.get_0_to_max([i], 9)[i]))
 
             ax1.annotate(str('%.2e' % 10**self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')
@@ -1019,18 +1020,21 @@ class Combine:
         plt.savefig(name)
         plt.show()
 
-
     @staticmethod
     def empirical_l_r_crit(t_k_rho, l_or_lm):
 
         #=======================================EMPIRICAL=FUNCTIONS=AND=LIMITS==========================================
         l_lim = [5.15, 5.7]
         def r_l(x):
-            return (38.976) + (-15.221*x) + (1.521*x**2)
+            return (13.490) + (-5.437 * x) + (0.581 * x ** 2) # lmc
 
-        lm_lim = [4.14, 4.37]
-        def r_lm(x):
-            return (157.341) + (-76.119*x) + (9.260*x**2)
+        # l_lim = [5.15, 5.7]
+        # def r_l(x):
+        #     return (38.976) + (-15.221*x) + (1.521*x**2) # gal
+
+        # lm_lim = [4.14, 4.37]
+        # def r_lm(x):
+        #     return (157.341) + (-76.119*x) + (9.260*x**2) # gal
         #====================================================END========================================================
 
         kap = t_k_rho[1:, 0]
@@ -1068,7 +1072,6 @@ class Combine:
         # return (40.843) + (-15.943*x) + (1.591*x**2)                    # FROM GREY ATMOSPHERE ESTIMATES
 
         # return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3        # FROM SONIC POINT ESTIMATES
-
 
     def plot_t_l_mdot(self, l_or_lm, rs, plot_obs, plot_nums, use_r_tl = False, lim_t1 = None, lim_t2 = None):
 
@@ -1156,10 +1159,10 @@ class Combine:
                             plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='', label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
                             classes.append(self.obs.get_star_class(star_n))
 
-            fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
-            f = np.poly1d(fit)
-            fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
-            plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+            # fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
+            # f = np.poly1d(fit)
+            # fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
 
         #--------------------------------------------------_NUMERICALS--------------------------------------------------
         if plot_nums:
@@ -1187,7 +1190,6 @@ class Combine:
         plt.gca().invert_xaxis()
         plt.savefig(name)
         plt.show()
-
 
     def min_mdot(self, l_or_lm, plot_obs, plot_nums, lim_t1, lim_t2):
         # ---------------------LOADING-INTERPOLATED-TABLE---------------------------

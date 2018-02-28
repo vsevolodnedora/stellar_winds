@@ -52,22 +52,24 @@ def get_files(compath, req_dirs, requir_files, extension):
 
 output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
-opal_fl     = '../data/opal/table8.data'
-obs_fl      = '../data/obs/gal_wn.data'
+opal_fl     = '../data/opal/table_x.data'
+obs_fl      = '../data/obs/lmc_wn.data'
 
-smfiles = get_files('../../sse/ga_z002/', ['15sm/y1/'], [], 'sm.data')
+sse_locaton = '/media/vnedora/HDD/sse/'
+
+smfiles = get_files(sse_locaton + 'ga_z0008/', ['11sm/y10/'], [], 'sm.data')
 #'20sm/y10/'
 
-plotfls = get_files('../../sse/ga_z002/', [], [], '.plot1')
+plotfls = get_files(sse_locaton + 'ga_z0008/', ['10sm/','11sm/','12sm/','13sm/','14sm/','15sm/', '16sm/', '17sm/', '18sm/', '19sm/', '20sm/'], [], '.plot1')
 #'10sm/','11sm/','12sm/','13sm/','14sm/','15sm/', '16sm/', '17sm/', '18sm/', '19sm/', '20sm/'
 
-spfiles = get_files('../data/output/',    ['criticals/ZAMSz002/'], [], '.data')
+spfiles = get_files('../data/output/',    ['criticals/ZAMSz0008/'], [], '.data')
 
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
 #
-from analyze_r_crit import Critical_R
-cr = Critical_R(smfiles, output_dir+'criticals/15z002/', plot_dir, ['sse', 'ga_z002']) # [] is a listof folders not to be put in output name
-cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'])
+# from analyze_r_crit import Critical_R
+# cr = Critical_R(smfiles, output_dir+'criticals/ZAMSz0008/', plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD']) # [] is a listof folders not to be put in output name
+# cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'])
 # # # # # # # cr.velocity_profile()
 
 # from Read_Obs_Numers import Read_SP_data_file
@@ -99,19 +101,19 @@ cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'])
 
 '''====================================================MAIN=METHODS=================================================='''
 
-# comb = Combine(smfiles, spfiles, plotfls, obs_fl, opal_fl)
+comb = Combine(smfiles, spfiles, plotfls, obs_fl, opal_fl)
 
 # comb.sp_xy_last_points('l','r','mdot',True)
 # comb.sp_get_r_lt_table('lm')
-# comb.xy_profile('xm','H','mdot','xm')
+# comb.xy_profile('r','u','mdot','xm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
 # comb.xy_last_points('r','l','mdot',True)
-# comb.hrd(['../../sse/ev30z0008_H/ev.plot1'])
+# comb.hrd(plotfls)
 
 # comb.plot_t_rho_kappa('mdot','xm')
 # comb.plot_t_mdot_lm()
-# comb.plot_t_l_mdot('l', 1.0, True, False, True, 5.22, None)
-# comb.min_mdot('lm', True, False, 5.2, None)
+comb.plot_t_l_mdot('l', 1.0, True, False, True, 5.22, None)
+# comb.min_mdot('l', True, False, 5.2, None)
 
 '''===========================================================3D====================================================='''
 #

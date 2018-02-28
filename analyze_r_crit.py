@@ -162,6 +162,34 @@ class Critical_R:
 
             return rs0, ts0, r, ts_arr
 
+        def crop_ends(x, y):
+            '''
+            In case of 'wierd' vel/temp profile with rapidly rising end, first this rising part is to be cut of
+            before maximum can be searched for.
+            :param x:
+            :param y:
+            :return:
+            '''
+            x_mon = x
+            y_mon = y
+
+            non_monotonic = True
+
+            while non_monotonic:
+
+                if len(x_mon) <= 10:
+                    return x, y
+                    # raise ValueError('Whole array is removed in a searched for monotonic part.')
+
+                if y_mon[-1] > y_mon[-2]:
+                    y_mon = y_mon[:-1]
+                    x_mon = x_mon[:-1]
+                    # print(x_mon[-1], y_mon[-1])
+                else:
+                    non_monotonic = False
+
+            return Math.find_nearest_index(x, x_mon[-1])
+
         def all_values_array(i_model, rs_p, ts_p, min_indx, add_sonic_vals):
 
             out_array = []
@@ -218,10 +246,6 @@ class Critical_R:
 
             return out_array
 
-
-        r_min = get_boundary(0.1) # setting the lower value of r that above which the analysis will take place
-
-
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
         ax2 = ax1.twinx()
@@ -235,7 +259,21 @@ class Critical_R:
         r_t_mdot_max = np.array([0., 0., 0.])
         # rs_ts_mdot   = np.array([0.,0.,0.])
 
-        out_array = np.zeros(len(add_sonic_vals) + 6) # where 6 are: [l, m, Yc, mdot, rs, ts] # always included
+        out_array = np.zeros(len(add_sonic_vals) + 6) # where 6 are: [l, m, Yc, mdot, rs, ts] # always include
+
+        min_ind = 0
+        max_ind = -1
+        r_min = get_boundary(0.1) # setting the lower value of r that above which the analysis will take place
+        for i in range(len(self.num_files)):
+            r = self.smdl[i].get_col('r')
+            u = self.smdl[i].get_col('u')
+            t = self.smdl[i].get_col('t')
+            min_ind = Math.find_nearest_index(r, r_min)
+            max_ind = crop_ends(r, u)
+
+            ax1.plot(r[min_ind:], u[min_ind:], '.', color='black')
+            ax2.plot(r[min_ind:], t[min_ind:], '.', color='orange')
+
 
         '''------------------------------------------MAIN CYCLE------------------------------------------------------'''
         for i in range(len(self.num_files)):
@@ -253,35 +291,35 @@ class Critical_R:
             min_ind = Math.find_nearest_index(r, r_min)
 
 
-            r  = r[min_ind:]
-            u  = u[min_ind:]
-            mu = mu[min_ind:]
-            t  = t[min_ind:]
-            u_s= u_s[min_ind:]
-            ts_arr = np.log10( (mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b )
-            print('\t__Cropped Array Length: {}'.format(len(r)))
+            # ----------------------- R U ----------------------------
+            r  = r[min_ind:max_ind]
+            u  = u[min_ind:max_ind]
+            u_s= u_s[min_ind:max_ind]
+            t = t[min_ind:max_ind]
+            mu = mu[min_ind:max_ind]
 
+            print('\t__Cropped Array Length: {}'.format(len(r)))
 
             int_r  = np.mgrid[r[0]:r[-1]:depth*1j]
             int_u  = Math.interp_row(r, u, int_r)
-            # int_mu = Math.interp_row(r, mu, int_r)
+
+            # ax1.plot(r, u, '.', color='black')
+            ax1.plot(r, u_s, '--', color='black')
+            ax1.annotate(str('%.2f' % mdot_u), xy=(r[-1], u[-1]), textcoords='data')
+            ax1.plot(int_r, int_u, '-', color='gray')
+
+            # ------------------------R T --------------------------------
+
+            ts_arr = np.log10((mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b)
+
+
+            int_r = np.mgrid[r[0]:r[-1]:depth * 1j]
             int_t  = Math.interp_row(r, t, int_r)
-            # int_u_s = Math.interp_row(r, u_s, int_r)
             int_ts_arr=Math.interp_row(r, ts_arr, int_r)
 
-
-            ax1.plot(r, u, '.', color='gray')
-            ax1.plot(int_r, int_u, '-', color='gray')
-            ax1.annotate(str('%.2f' % mdot_u), xy=(int_r[-1], int_u[-1]), textcoords='data')
-
-            # ax1.plot(r, u_s, '.', color='gray')
-            ax1.plot(r, u_s, '--', color='gray')
-
-            # ax2.plot(r,t,'.',color='gray')
-            ax2.plot(int_r, int_t,'-',color='gray')
-
-            ax2.plot(r, ts_arr,'.', color='gray')
-            ax2.plot(int_r, int_ts_arr, '--', color='gray')
+            ax2.plot(r, ts_arr, '.', color='orange')
+            ax2.plot(int_r, int_t,'-',color='orange')
+            ax2.plot(int_r, int_ts_arr, '--', color='orange')
 
 
             r_u_max_p, u_max_p = Math.get_max_by_interpolating(int_r, int_u)      # MAXIMUM VALUES OF VELOCITY
@@ -305,6 +343,7 @@ class Critical_R:
                 out_array = np.vstack((out_array, row))
 
 
+
         r_u_mdot_max = np.delete(r_u_mdot_max, 0, 0) # removing the 0th row with zeros
         r_t_mdot_max = np.delete(r_t_mdot_max, 0, 0)
         mdots = np.delete(mdots, 0, 0)
@@ -313,12 +352,18 @@ class Critical_R:
         if len(mdots) != len(r_u_mdot_max[:,0]):
             raise ValueError('len(mdots){} != len(r_u_mdot_max[:,0]){}'.format(len(mdots), len(r_u_mdot_max[:,0])))
 
+        if len(mdots) ==0:
+            raise ValueError('len(mdots) = 0')
+
         ax1.plot(r_u_mdot_max[:,0],  r_u_mdot_max[:,1],  '-.', color='blue')
 
-
+        # plt.show()
         # print(out_array)
 
-        def cross(mdot, r1, u1, r2, u2, mdot_maxs):
+
+
+
+        def cross(mdot, r1, u1, r2, u2, mdot_maxs, u_ot_t = 'u'):
             '''
             Finds the delta = (u_i_max - cs_i) where u_i is a maximum of u profile along the r, cs_i - point along sonic
             velocity profile, that lies on the line thac connects the u_i maximums.
@@ -369,33 +414,76 @@ class Critical_R:
             r_umin1 = r1[np.where(u1 == u1.min())]
             r_umin2 = r2[np.where(u2 == u2.min())]
 
-            if r_umin2 < u_min1:        # if there is a common area in terms of radii
-                if r_umin1 > r_umin2:   # if there is a common area in case of velocity
-                    u_lim1 = u_min1
-                    u_lim2 = u_max1
+            u_lim1 = u_min1
+            u_lim2 = u_max1
 
-                    u_grid = np.mgrid[u_lim2:u_lim1:1000*1j]
+            u_grid = np.mgrid[u_lim2:u_lim1:1000 * 1j]
 
-                    r1_grid = Math.interp_row(u1, r1, u_grid)
-                    r2_grid = Math.interp_row(u2, r2, u_grid)
+            r1_grid = Math.interp_row(u1, r1, u_grid)
+            r2_grid = Math.interp_row(u2, r2, u_grid)
 
-                    ax1.plot(r1_grid, u_grid, '-', color='green')
-                    ax1.plot(r2_grid, u_grid, '-', color='green')
+            if u_ot_t == 'u':
+                ax1.plot(r1_grid, u_grid, '-.', color='green')
+                ax1.plot(r2_grid, u_grid, '-.', color='green')
+            else:
+                ax2.plot(r1_grid, u_grid, '-.', color='green')
+                ax2.plot(r2_grid, u_grid, '-.', color='green')
 
-                    uc, rc = Math.interpolated_intercept(u_grid, r1_grid, r2_grid)
-                    if uc.any(): # if there is an intersections between sonic vel. profile and max.r-u line
+            uc, rc = Math.interpolated_intercept(u_grid, r1_grid, r2_grid)
+            if uc.any():  # if there is an intersections between sonic vel. profile and max.r-u line
 
-                        uc0 = uc[0][0]
-                        rc0 = rc[0][0]
 
-                        ax1.plot(rc0, uc0, 'X', color='green')
-                        ax1.annotate(str('%.2f' % mdot), xy=(rc0, uc0), textcoords='data')
 
-                        delta = u2[np.where(mdots == mdot)] - uc0
+                uc0 = uc[0][0]
+                rc0 = rc[0][0]
 
-                        # print('Delta: ' , delta_ut, )
+                if u_ot_t == 'u':
+                    ax1.plot(rc0, uc0, 'X', color='green')
+                    ax1.annotate(str('%.2f' % mdot), xy=(rc0, uc0), textcoords='data')
+                if u_ot_t == 't':
+                    ax2.plot(rc0, uc0, 'X', color='green')
+                    ax2.annotate(str('%.2f' % mdot), xy=(rc0, uc0), textcoords='data')
 
-                        return delta
+                delta = u2[np.where(mdots == mdot)] - uc0
+                # print(uc, rc, '\t', delta)
+                # print('Delta: ' , delta_ut, )
+
+                return delta
+
+
+            # if u_min2 < u_min1:        # if there is a common area in terms of radii
+            #     if r_umin1 > r_umin2:   # if there is a common area in case of velocity
+            #         u_lim1 = u_min1
+            #         u_lim2 = u_max1
+            #
+            #         u_grid = np.mgrid[u_lim2:u_lim1:1000*1j]
+            #
+            #         r1_grid = Math.interp_row(u1, r1, u_grid)
+            #         r2_grid = Math.interp_row(u2, r2, u_grid)
+            #
+            #         ax1.plot(r1_grid, u_grid, '-', color='green')
+            #         ax1.plot(r2_grid, u_grid, '-', color='green')
+            #
+            #         uc, rc = Math.interpolated_intercept(u_grid, r1_grid, r2_grid)
+            #         if uc.any(): # if there is an intersections between sonic vel. profile and max.r-u line
+            #
+            #             uc0 = uc[0][0]
+            #             rc0 = rc[0][0]
+            #
+            #             ax1.plot(rc0, uc0, 'X', color='green')
+            #             ax1.annotate(str('%.2f' % mdot), xy=(rc0, uc0), textcoords='data')
+            #
+            #             delta = u2[np.where(mdots == mdot)] - uc0
+            #
+            #             # print('Delta: ' , delta_ut, )
+            #
+            #             return delta
+            #         else:
+            #             print('\t__Warning. No common area in velocity found: '
+            #                   'r_at_u_min1:{} > r_at_u_min2{}'.format(r_umin1, r_umin2))
+            #     else:
+            #         print('\t__Warning. No common area in radii found: '
+            #               'r_at_u_min2:{} < r_at_u_min2{}'.format(r_umin1, r_umin2))
 
         def get_mdot_delta(r_ut_mdot_max, u_or_t):
 
@@ -413,13 +501,18 @@ class Critical_R:
                 mdot = self.mdl[i].get_col('mdot')[-1]
 
                 if u_or_t == 'u':
-                    delta_ut = cross(mdot, r, u_s, r_ut_mdot_max[1:, 0], r_ut_mdot_max[1:, 1], r_ut_mdot_max[1:, 2])
+                    delta_ut = cross(mdot, r, u_s, r_ut_mdot_max[1:, 0], r_ut_mdot_max[1:, 1], r_ut_mdot_max[1:, 2], u_or_t)
+                    # print(delta_ut, u_or_t)
                 else:
-                    delta_ut = cross(mdot, r, t,   r_ut_mdot_max[1:, 0], r_ut_mdot_max[1:, 1], r_ut_mdot_max[1:, 2])
+                    delta_ut = cross(mdot, r, t,   r_ut_mdot_max[1:, 0], r_ut_mdot_max[1:, 1], r_ut_mdot_max[1:, 2], u_or_t)
+                    # print(delta_ut, u_or_t)
 
                 if delta_ut != None:
                     mdot_delta_ut = np.append(mdot_delta_ut, [mdot, delta_ut])
                     n = n + 1
+
+            if len(mdot_delta_ut) == 0:
+                raise ValueError('mdot_delta_ut is not found at all for <{}>'.format(u_or_t))
 
             mdot_delta_ut = np.sort(mdot_delta_ut.view('f8, f8'), order=['f1'], axis=0).view(np.float)
             mdot_delta_ut_shape = np.reshape(mdot_delta_ut, (n, 2))
@@ -429,14 +522,26 @@ class Critical_R:
 
             crit_mdot_u = Math.solv_inter_row(mdot, delta_ut, 0.)  # Critical Mdot when the delta_ut == 0
 
-            if crit_mdot_u == None:
+            print('\t\t crit_mdot_u', crit_mdot_u)
+
+            if not crit_mdot_u.any():
                 raise ValueError('Critical Mdot is not found.')
             else:
                 print('\t__Critical Mdot: {} (for: {})'.format(crit_mdot_u, u_or_t))
 
             return mdot, delta_ut
 
+
         mdot_arr, delta_arr = get_mdot_delta(r_u_mdot_max, 'u')
+
+        if delta_arr.min() > 0. and delta_arr.max() > 0.:
+            raise ValueError('if delta_arr.min({}) and delta_arr.max({}) > 0 : '
+                             'peak of vel. profs do not cross sonic. vel.'.format(delta_arr.min(), delta_arr.max()))
+
+        if delta_arr.min() < 0. and delta_arr.max() < 0.:
+            raise ValueError('if delta_arr.min({}) and delta_arr.max({}) < 0 : '
+                             'vel. profile does not crossing the sonic val.'.format(delta_arr.min(), delta_arr.max()))
+
         crit_mdot_u = Math.solv_inter_row(mdot_arr, delta_arr, 0.)
 
         ax3 = fig.add_axes([0.18, 0.18, 0.25, 0.25])
@@ -448,6 +553,7 @@ class Critical_R:
         ax3.plot(crit_mdot_u, 0., 'x', color='black')
         ax3.annotate('({}, {})'.format('%.3f' % crit_mdot_u, 0. ), xy=(crit_mdot_u, 0.),
                      textcoords='data')
+
 
         mdot_arr, delta_arr = get_mdot_delta(r_t_mdot_max, 't')
         crit_mdot_t = Math.solv_inter_row(mdot_arr, delta_arr, 0.)
@@ -586,7 +692,7 @@ class Critical_R:
         print(extended_head)
 
         # --- --- --- MAKING A OUTPUT FILE NAME OUT OF FOLDERS THE SM.DATA FILES CAME FROM --- --- ---
-        out_name = 'SP_'
+        out_name = 'SP'
         for i in range(len(self.input_dirs)):
             if self.input_dirs[i] not in self.dirs_not_to_be_included and self.input_dirs[i] != '..':
                 out_name = out_name + self.input_dirs[i]

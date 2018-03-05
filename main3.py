@@ -40,40 +40,73 @@ def get_files(compath, req_dirs, requir_files, extension):
 
             # print(file, requir)
                 if requir_files == []:
-                    print('\t__Note: Files to be plotted: ', dir_ + file)
+                    # print('\t__Note: Files to be plotted: ', dir_ + file)
                     comb.append(compath + dir_ + file)
                 else:
                     for req_file in requir_files:
                         if req_file+extension == file:
-                            print('\t__Note: Files to be plotted: ', dir_+file)
+                            # print('\t__Note: Files to be plotted: ', dir_+file)
                             comb.append(compath+dir_+file)
 
     return comb
 
+
+
+
 output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
-opal_fl     = '../data/opal/table_x.data'
-obs_fl      = '../data/obs/lmc_wn.data'
-
 sse_locaton = '/media/vnedora/HDD/sse/'
 
-smfiles = get_files(sse_locaton + 'ga_z0008/', ['11sm/y10/'], [], 'sm.data')
-#'20sm/y10/'
+gal_plotfls = get_files(sse_locaton + 'ga_z002/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
+                                                   '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
+                                                   '24sm/', '25sm/'], [], '.plot1')
 
-plotfls = get_files(sse_locaton + 'ga_z0008/', ['10sm/','11sm/','12sm/','13sm/','14sm/','15sm/', '16sm/', '17sm/', '18sm/', '19sm/', '20sm/'], [], '.plot1')
-#'10sm/','11sm/','12sm/','13sm/','14sm/','15sm/', '16sm/', '17sm/', '18sm/', '19sm/', '20sm/'
+lmc_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
+                                                   '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
+                                                   '24sm/', '25sm/', '26sm/', '27sm/', '28sm/', '29sm/', '30sm/'
+                                                   ], [], '.plot1')
 
-spfiles = get_files('../data/output/',    ['criticals/ZAMSz0008/'], [], '.data')
+
+gal_spfiles = get_files('../data/output/criticals/', ['10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
+                                                      '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
+                                                      '22z002/', '23z002/', '24z002/', '25z002/'], [], '.data')
+
+lmc_spfiles = get_files('../data/output/criticals/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
+                                                      '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
+                                                      '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
+                                                      '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/',
+                                                      '30z0008/' ], [], '.data')
+
+lmc_obs_file = '../data/obs/lmc_wn.data'
+gal_obs_file = '../data/obs/gal_wn.data'
+
+smfiles = get_files(sse_locaton + 'ga_z002/', ['10sm/y1/'], [], 'sm.data')
+
+lmc_opal_file = '../data/opal/table_x.data'
+gal_opal_file = '../data/opal/table8.data'
 
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
-#
-# from analyze_r_crit import Critical_R
-# cr = Critical_R(smfiles, output_dir+'criticals/ZAMSz0008/', plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD']) # [] is a listof folders not to be put in output name
-# cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'])
-# # # # # # # cr.velocity_profile()
 
-# from Read_Obs_Numers import Read_SP_data_file
-# x = Read_SP_data_file(spfiles, output_dir, plot_dir)
+def gray_analysis(z, m_set, y_set, plot):
+
+    from analyze_r_crit import Critical_R
+    for m in m_set:
+        for y in y_set:
+            root_name = 'ga_z' + z + '/'
+            folder_name = str(m)+'sm/y'+str(y)+'/'
+            out_name = str(m) + 'z' + z + '/'
+
+
+            print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
+            smfiles_ = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
+
+            cr = Critical_R(smfiles_, output_dir + 'criticals/' + out_name, plot_dir,
+                         ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])  # [] is a listof folders not to be put in output name
+            cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'], plot)
+
+            print('m:{}, y:{} DONE'.format(m,y))
+
+gray_analysis('002', [], [], False)
 
 '''======================================================TEST========================================================'''
 
@@ -101,26 +134,62 @@ spfiles = get_files('../data/output/',    ['criticals/ZAMSz0008/'], [], '.data')
 
 '''====================================================MAIN=METHODS=================================================='''
 
-comb = Combine(smfiles, spfiles, plotfls, obs_fl, opal_fl)
+def select_sp_files(spfiles, req_name_parts):
 
-# comb.sp_xy_last_points('l','r','mdot',True)
-# comb.sp_get_r_lt_table('lm')
-# comb.xy_profile('r','u','mdot','xm')
+    res_spfiles = []
+
+    for spfile in spfiles:
+
+        if len(req_name_parts) == 0:
+            res_spfiles.append(spfile)
+
+        no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
+
+        # print(spfile, '   ', no_extens_sp_file)
+
+        for req_part in req_name_parts:
+            if req_part in no_extens_sp_file.split('_')[1:]:
+
+                res_spfiles.append(spfile)
+            else:
+                pass
+
+    print('Total {} sp_files uploaded, selecting those with {} in the name.'.format(len(res_spfiles), req_name_parts))
+    return res_spfiles
+
+# comb = Combine()
+#
+# comb.opal_used = lmc_opal_file
+# comb.sp_files = select_sp_files(lmc_spfiles, ['y10'])
+# comb.sm_files = []
+# comb.obs_files = lmc_obs_file
+# comb.plot_files = lmc_plotfls
+#
+# comb.set_files()
+
+
+
+# comb.sp_xy_last_points('l','r','mdot', 4)
+# comb.xy_profile('r','H','mdot','xm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
 # comb.xy_last_points('r','l','mdot',True)
-# comb.hrd(plotfls)
+# comb.hrd(gal_plotfls)
+# comb.sp_get_r_lt_table2('l')
 
 # comb.plot_t_rho_kappa('mdot','xm')
 # comb.plot_t_mdot_lm()
-comb.plot_t_l_mdot('l', 1.0, True, False, True, 5.22, None)
-# comb.min_mdot('l', True, False, 5.2, None)
+# comb.plot_t_l_mdot('l', 0, True, False, 5.22, None)
+# comb.min_mdot('l', 1, True, False)
 
 '''===========================================================3D====================================================='''
 #
-from main_methods import TEST
-tst = TEST(spfiles, output_dir, plot_dir)
-# tst.sp_3d_plotting_x_y_z('t','l','r','mdot')
+# from main_methods import TEST
+# tst = TEST(lmc_spfiles, ['y10'], output_dir, plot_dir)
+# # # # tst.sp_3d_plotting_x_y_z('t','l','r','mdot')
 # tst.sp_3d_and_multiplot('t','l','r','mdot')
+
+
+
 
 '''==========================================================REST===================================================='''
 

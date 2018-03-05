@@ -114,7 +114,7 @@ class Critical_R:
         # for i in range(len(self.num_files)):
         #     print(self.smdl[i].get_col(v_n)[where])
 
-    def sonic_criticals(self, depth, add_sonic_vals):
+    def sonic_criticals(self, depth, add_sonic_vals, show_plot):
         def get_boundary(u_min):
             '''
             RETURNS ' bourders.min() ' - min radius among all the models, where u exceeds the 'u_min'
@@ -379,6 +379,8 @@ class Critical_R:
             :return:
             '''
 
+
+
             r1_u1 = []
             for i in range(len(r1)):
                 r1_u1 = np.append(r1_u1, [r1[i], u1[i]])
@@ -401,26 +403,53 @@ class Critical_R:
             u2    = r2_u2_mdot_sort[:,1]
             mdots = r2_u2_mdot_sort[:,2]
 
+            #
+            # u_rmax1 = u1[np.where(r1 == r1.max())]
+            # u_rmax2 = u2[np.where(r2 == r2.max())]
+            #
+            # r_umin1_i = r1[np.where(u1 == u1.min())]
+            # r_umin2_i = r2[np.where(u2 == u2.min())]
 
-            u_max1 = u1.max()
-            u_max2 = u2.max()
 
-            u_min1 = u1.min()
-            u_min2 = u2.min()
+            i_u2_where_u1_max = Math.find_nearest_index(u2, u1.max()) # needed to avoide violent behaviour in high mdot
+            u2_crop = u2[:i_u2_where_u1_max]            # otherwise there was crossing with sonic profiles at temps 5.9,
+            r2_crop = r2[:i_u2_where_u1_max]
 
-            u_rmax1 = u1[np.where(r1 == r1.max())]
-            u_rmax2 = u2[np.where(r2 == r2.max())]
 
-            r_umin1 = r1[np.where(u1 == u1.min())]
-            r_umin2 = r2[np.where(u2 == u2.min())]
+            u_lim1 = np.array([u1.min(), u2_crop.min()]).max()
+            u_lim2 = np.array([u1.max(), u2_crop.max()]).min()
 
-            u_lim1 = u_min1
-            u_lim2 = u_max1
+            if u_lim2 < u_lim1:
+                raise ValueError('u_lim1({}) < u_lim2({})'.format(u_lim1, u_lim2))
 
-            u_grid = np.mgrid[u_lim2:u_lim1:1000 * 1j]
+            u_grid = np.mgrid[u_lim2:u_lim1:1000*1j]
 
-            r1_grid = Math.interp_row(u1, r1, u_grid)
-            r2_grid = Math.interp_row(u2, r2, u_grid)
+            if u_grid.max() > u2.max() or u_grid.max() > u1.max():
+                raise ValueError('u_grid.max({}) > u2.max({}) or u_grid.max({}) > u1.max({})'
+                                 .format(u_grid.max(), u2.max(), u_grid.max(), u1.max()))
+            #
+            # if u_grid.min() < u2.min() or u_grid.min() < u1.min():
+            #     raise ValueError('u_grid.min({}) < u2.min({}) or u_grid.min({}) < u1.min({})'
+            #                      .format(u_grid.min(), u2.min(), u_grid.min(), u1.min()))
+
+
+            f1 = interpolate.InterpolatedUnivariateSpline(u1, r1)
+            r1_grid = f1(u_grid)
+
+            # if u_ot_t == 't':
+                # print('\t')
+                # print('u1:[{} {}] u_lim1:{} u_lim2:{}'.format(u1.min(), u1.max(), u_lim1, u_lim2))
+                # print('u2:[{} {}] u_lim1:{} u_lim2:{}'.format(u2.min(), u2.max(), u_lim1, u_lim2))
+                #
+
+
+                # ax2.plot(r2_crop, u2_crop, 'o', color='magenta')
+
+            f2 = interpolate.InterpolatedUnivariateSpline(u2_crop, r2_crop) # cropping is done to cut the high mdot prob
+            r2_grid = f2(u_grid)
+
+            # r1_grid = Math.interp_row(u1, r1, u_grid)
+            # r2_grid = Math.interp_row(u2, r2, u_grid)
 
             if u_ot_t == 'u':
                 ax1.plot(r1_grid, u_grid, '-.', color='green')
@@ -431,9 +460,6 @@ class Critical_R:
 
             uc, rc = Math.interpolated_intercept(u_grid, r1_grid, r2_grid)
             if uc.any():  # if there is an intersections between sonic vel. profile and max.r-u line
-
-
-
                 uc0 = uc[0][0]
                 rc0 = rc[0][0]
 
@@ -514,7 +540,7 @@ class Critical_R:
             if len(mdot_delta_ut) == 0:
                 raise ValueError('mdot_delta_ut is not found at all for <{}>'.format(u_or_t))
 
-            mdot_delta_ut = np.sort(mdot_delta_ut.view('f8, f8'), order=['f1'], axis=0).view(np.float)
+            mdot_delta_ut = np.sort(mdot_delta_ut.view('f8, f8'), order=['f0'], axis=0).view(np.float)
             mdot_delta_ut_shape = np.reshape(mdot_delta_ut, (n, 2))
 
             mdot     = mdot_delta_ut_shape[:, 0]
@@ -543,6 +569,8 @@ class Critical_R:
                              'vel. profile does not crossing the sonic val.'.format(delta_arr.min(), delta_arr.max()))
 
         crit_mdot_u = Math.solv_inter_row(mdot_arr, delta_arr, 0.)
+        if len(crit_mdot_u) > 1:
+            raise ValueError('More than one mdot_cr. found. {}'.format(crit_mdot_u))
 
         ax3 = fig.add_axes([0.18, 0.18, 0.25, 0.25])
         ax3.set_xlabel(Labels.lbls('mdot'))
@@ -658,8 +686,10 @@ class Critical_R:
         ax1.grid(which='major', alpha=0.2)
         ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
         plot_name = self.plot_dir + 'critical_radius.pdf'
-        plt.savefig(plot_name)
-        plt.show()
+        plt.savefig(plot_name, dpi=240, format='pdf')
+
+        if show_plot:
+            plt.show()
 
 
         l = out_array[-1,0]  # choosing the last mpdel to get l, m, yc as low mdot would affect these them the least

@@ -1072,14 +1072,14 @@ class Read_SM_data_file:
 
 class Read_SP_data_file:
 
-    def __init__(self, sp_data_file, out_dir, plot_dir):
+    def __init__(self, sp_data_file, out_dir = '../data/output/', plot_dir = '../data/plots/'):
 
         self.files = sp_data_file
         self.out_dir = out_dir
         self.plot_dir = plot_dir
 
-        self.list_of_v_n = ['l', 'm', 't', 'mdot', 'r', 'Yc']
 
+        self.list_of_v_n = ['l', 'm', 't', 'mdot', 'r', 'Yc']
 
         self.table = np.loadtxt(sp_data_file)
 

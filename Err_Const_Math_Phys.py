@@ -427,7 +427,7 @@ class Math:
 
             while non_monotonic:
 
-                if len(x_mon) <= 10:
+                if len(x_mon) <= len(x)*0.9: # criteria for rising ends
                     return x, y
                     # raise ValueError('Whole array is removed in a searched for monotonic part.')
 
@@ -469,8 +469,8 @@ class Math:
     @staticmethod
     def invet_to_ascending_xy(d2array):
         x = np.array(d2array[0, 1:])
-        y = np.array(d2array[1:,0])
-        z = np.array(d2array[1:,1:])
+        y = np.array(d2array[1:, 0])
+        z = np.array(d2array[1:, 1:])
 
         if x[0] > x[-1]:
             print('\t__Note: Inverting along X axis')
@@ -485,7 +485,7 @@ class Math:
             z = z[::-1]
 
         print(x.shape, y.shape, z.shape)
-        return Math.combine(x,y,z)
+        return Math.combine(x, y, z)
 
     @staticmethod
     def crop_2d_table(table, x1 ,x2 ,y1, y2):
@@ -514,8 +514,8 @@ class Math:
                 raise ValueError('x2({}) < x[0]({})'.format(x2, x[0]))
 
             ix2 = Math.find_nearest_index(x,x2)
-            x = x[:ix2 +1]
-            z = z[:, :ix2+1]
+            x = x[:ix2 + 1]
+            z = z[:, :ix2 + 1]
 
         if y1 != None:
             if y[0] > y[-1]:
@@ -1134,13 +1134,18 @@ class Physics:
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
 
     @staticmethod
-    def apply_emp_l_r_crit_rel(x):
+    def t_kap_rho_to_t_llm_rho(table, l_or_lm):
 
+        kap   = table[1:, 0]
+        t   =   table[0, 1:]
+        rho2d = table[1:, 1:]
 
+        if l_or_lm == 'l':
+            l_lm_arr  = Physics.lm_to_l(Physics.logk_loglm(kap, True)) # Kappa -> L/M -> L
+        else:
+            l_lm_arr = Physics.logk_loglm(kap, 1)
 
-
-        return (40.843) + (-15.943*x) + (1.591*x**2)                    # FROM GREY ATMOSPHERE ESTIMATES
-        # return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3        # FROM SONIC POINT ESTIMATES
+        return Math.invet_to_ascending_xy(Math.combine(t, l_lm_arr, rho2d))
 
 class Labels:
     def __init__(self):
@@ -1171,5 +1176,8 @@ class Labels:
             return '$\log(L/M)$'
         if v_n == 'mdot':
             return '$\log(\dot{M}$)'
+        if v_n == 'Yc':
+            return'$^{4}$He$_{core}$'
+
 
 

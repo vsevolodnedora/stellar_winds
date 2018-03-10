@@ -19,10 +19,10 @@ import matplotlib.pyplot as plt
 import os
 #-----------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------CLASSES-----------------------------------------------------
-from Err_Const_Math_Phys import Errors
-from Err_Const_Math_Phys import Math
-from Err_Const_Math_Phys import Physics
-from Err_Const_Math_Phys import Constants
+from Phys_Math_Labels import Errors
+from Phys_Math_Labels import Math
+from Phys_Math_Labels import Physics
+from Phys_Math_Labels import Constants
 
 class PhysPlots:
     def __init__(self):

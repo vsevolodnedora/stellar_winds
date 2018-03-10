@@ -27,6 +27,7 @@ from Plots_Obs_treat import New_Table
 from Plots_Obs_treat import Read_Plot_file
 from Plots_Obs_treat import Treat_Observables
 from main_methods import Combine
+from Phys_Math_Labels import Opt_Depth_Analythis
 
 def get_files(compath, req_dirs, requir_files, extension):
     comb = []
@@ -85,11 +86,84 @@ smfiles = get_files(sse_locaton + 'ga_z002/', ['10sm/y1/'], [], 'sm.data')
 lmc_opal_file = '../data/opal/table_x.data'
 gal_opal_file = '../data/opal/table8.data'
 
+lmc_ml_relation = '../data/output/l_yc_m_lmc_wn.data'
+gal_ml_relation = '../data/output/l_yc_m_gal_wn.data'
+
+def select_sp_files(spfiles, req_z, req_m, req_yc):
+
+    res_spfiles = []
+
+    '''----------------------SELECT-req_z-FILES----------------------'''
+
+    z_files = []
+    for spfile in spfiles:
+
+        if len(req_z) == 0:
+            z_files.append(spfile)
+        else:
+            no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
+
+            # print(spfile, '   ', no_extens_sp_file)
+
+            for req_part in req_z:
+                if req_part in no_extens_sp_file.split('_')[1:]:
+                    if spfile not in z_files:
+                        req_z.append(spfile)
+                else:
+                    pass
+
+    print('__For z:{} requirement, {} SP-files selected.'.format(req_z, len(z_files)))
+    '''----------------------SELECT-req_m-FILES----------------------'''
+
+    zm_files = []
+    for spfile in z_files:
+
+        if len(req_m) == 0:
+            zm_files.append(spfile)
+        else:
+            no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
+
+            # print(spfile, '   ', no_extens_sp_file)
+
+            for req_part in req_m:
+                if req_part in no_extens_sp_file.split('_')[1:]:
+                    if spfile not in zm_files:
+                        zm_files.append(spfile)
+                else:
+                    pass
+
+
+    print('__For z:{} and m:{} requirement, {} SP-files selected.'.format(req_z, req_m, len(zm_files)))
+    '''----------------------SELECT-req_m-FILES----------------------'''
+
+    zmy_files = []
+    for spfile in zm_files:
+
+        if len(req_yc) == 0:
+            zmy_files.append(spfile)
+        else:
+            no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
+
+            # print(spfile, '   ', no_extens_sp_file)
+
+            for req_part in req_yc:
+                if req_part in no_extens_sp_file.split('_')[1:]:
+                    if spfile not in zmy_files:
+                        zmy_files.append(spfile)
+                else:
+                    pass
+
+
+
+    print('\t__ With Conditions: z:{}, m:{}, yc:{}, the {} sp_files selected.'.format(req_z, req_m, req_yc, len(zmy_files)))
+    print('\n')
+    return zmy_files
+
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
 
 def gray_analysis(z, m_set, y_set, plot):
 
-    from analyze_r_crit import Critical_R
+    from Sonic_Criticals import Critical_R
     for m in m_set:
         for y in y_set:
             root_name = 'ga_z' + z + '/'
@@ -118,8 +192,8 @@ gray_analysis('002', [], [], False)
 
 '''=====================================================CREATION====================================================='''
 
-# from main_methods import Creation
-# make = Creation(opal_fl, 4.9, 5.5, 1000)
+from FilesWork import Creation
+# make = Creation(gal_opal_file, 4.9, 5.5, 1000)
 # # make.save_t_rho_k()
 # make.save_t_k_rho(3.8, None, 1000)
 # # file_table = np.zeros(1)
@@ -127,66 +201,48 @@ gray_analysis('002', [], [], False)
 # make.save_t_llm_vrho('l')
 # # print(file_table)
 # make.save_t_llm_mdot(1.,'l','',1.34)
-#
+# make.save_ly_m_or_r_relation(select_sp_files(lmc_spfiles, [], [], []), lmc_obs_file, 'm', True)
 # a = np.array(([1,1,1,1], [5,5,5,5], [7,7,7,7], [9,9,9,9]))
 # a = np.flip(a, 0)
 # print(a)
 
 '''====================================================MAIN=METHODS=================================================='''
 
-def select_sp_files(spfiles, req_name_parts):
+comb = Combine()
 
-    res_spfiles = []
+comb.opal_used = lmc_opal_file
+comb.sp_files = select_sp_files(lmc_spfiles, [], [], ['y10'])
+comb.sm_files = []
+comb.obs_files = lmc_obs_file
+comb.plot_files = lmc_plotfls
+comb.m_l_relation=0.993
 
-    for spfile in spfiles:
-
-        if len(req_name_parts) == 0:
-            res_spfiles.append(spfile)
-
-        no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
-
-        # print(spfile, '   ', no_extens_sp_file)
-
-        for req_part in req_name_parts:
-            if req_part in no_extens_sp_file.split('_')[1:]:
-
-                res_spfiles.append(spfile)
-            else:
-                pass
-
-    print('Total {} sp_files uploaded, selecting those with {} in the name.'.format(len(res_spfiles), req_name_parts))
-    return res_spfiles
-
-# comb = Combine()
-#
-# comb.opal_used = lmc_opal_file
-# comb.sp_files = select_sp_files(lmc_spfiles, ['y10'])
-# comb.sm_files = []
-# comb.obs_files = lmc_obs_file
-# comb.plot_files = lmc_plotfls
-#
-# comb.set_files()
+comb.set_files()
 
 
 
-# comb.sp_xy_last_points('l','r','mdot', 4)
-# comb.xy_profile('r','H','mdot','xm')
+# comb.sp_xy_last_points('m','l','mdot', 4)
+
+# comb.xy_profile('l','m','mdot','xm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
 # comb.xy_last_points('r','l','mdot',True)
-# comb.hrd(gal_plotfls)
-# comb.sp_get_r_lt_table2('l')
+# comb.hrd('lm')
+# comb.sp_get_r_lt_table2('rho', 'lm')
+
 
 # comb.plot_t_rho_kappa('mdot','xm')
 # comb.plot_t_mdot_lm()
-# comb.plot_t_l_mdot('l', 0, True, False, 5.22, None)
-# comb.min_mdot('l', 1, True, False)
+# comb.plot_t_l_mdot('lm', 0, True, False, 5.22, None)
+comb.min_mdot('lm', 0, True, False, True)
 
 '''===========================================================3D====================================================='''
 #
 # from main_methods import TEST
-# tst = TEST(lmc_spfiles, ['y10'], output_dir, plot_dir)
+# tst = TEST(select_sp_files(lmc_spfiles, [], ['10sm', '15sm', '20sm', '25sm', '30sm'], []), output_dir, plot_dir)
+# # '10sm', '15sm', '20sm', '25sm'
+# # 'y1','y2', 'y3', 'y4', 'y5', 'y6', 'y7', 'y8', 'y9', 'y10'
 # # # # tst.sp_3d_plotting_x_y_z('t','l','r','mdot')
-# tst.sp_3d_and_multiplot('t','l','r','mdot')
+# tst.sp_3d_and_multiplot('t','l','r','Yc')
 
 
 
@@ -326,3 +382,11 @@ def select_sp_files(spfiles, req_name_parts):
 #
 # plt.show()
 # #plt.savefig('min_P.png', dpi=1000)
+
+
+tau = Opt_Depth_Analythis(20, 2000, 1.,1.,-4.522,0.20)
+print('ref tau:', tau.anal_eq_b1(1.))
+tau = Opt_Depth_Analythis(30,1600,1.,1.,-5.46,0.20)
+print('86 tau:', tau.anal_eq_b1(1.))
+
+print(Physics.logk_loglm(-0.28,0))

@@ -18,7 +18,7 @@ from scipy.optimize import fmin
 
 # import scipy.ndimage
 # from scipy.interpolate import interp1d
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 # from scipy.interpolate import griddata
 # import os
 #-----------------------------------------------------------------------------------------------------------------------
@@ -113,17 +113,19 @@ class Errors:
 
 class Constants:
 
-    light_v = float( 2.99792458 * (10 ** 10) )      # cm/s
-    solar_m = float ( 1.99 * (10 ** 33)  )         # g
-    solar_l = float ( 3.9 * (10 ** 33)  )         # erg s^-1
-    solar_r = float ( 6.96 * (10 ** 10) )          #cm
-    grav_const = float ( 6.67259 * (10 ** (-8) )  ) # cm3 g^-1 s^-2
-    k_b     =  float ( 1.380658 * (10 ** (-16) ) )  # erg k^-1
-    m_H     =  float ( 1.6733 * (10 ** (-24) ) )    # g
-    c_k_edd =  float ( 4 * light_v * np.pi * grav_const * ( solar_m / solar_l ) )# k = c_k_edd*(M/L) (if M and L in solar units)
+    light_v = np.float( 2.99792458 * (10 ** 10) )      # cm/s
+    solar_m = np.float ( 1.99 * (10 ** 33)  )          # g
+    solar_l = np.float ( 3.9 * (10 ** 33)  )           # erg s^-1
+    solar_r = np.float ( 6.96 * (10 ** 10) )           #cm
+    grav_const = np.float ( 6.67259 * (10 ** (-8) )  ) # cm3 g^-1 s^-2
+    k_b     =  np.float ( 1.380658 * (10 ** (-16) ) )  # erg k^-1
+    m_H     =  np.float ( 1.6733 * (10 ** (-24) ) )    # g
+    c_k_edd =  np.float ( 4 * light_v * np.pi * grav_const * ( solar_m / solar_l ) )# k = c_k_edd*(M/L) (if M and L in solar units)
 
-    yr      = float( 31557600. )
-    smperyear = float(solar_m / yr)
+    yr      = np.float( 31557600. )
+    smperyear = np.float(solar_m / yr)
+
+
 
     def __init__(self):
         pass
@@ -1123,7 +1125,7 @@ class Physics:
         '''
         From Langer 1987 paper Mass Lum relation for WNE stars
         :param log_l:
-        :return:
+        :return: log_lm
         '''
         a1 = 2.357485
         b1 = 3.407930
@@ -1132,6 +1134,59 @@ class Physics:
         b2 = -0.053868
         c2 = 0.055467
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
+
+    @staticmethod
+    def l_y_to_m(log_l, yc_value, dimension=0, sp_file_1_name = None):
+        '''
+        RETURNS l, m (if l dimension = 0) and l_arr, m_arr (if dimension = 1)
+        :param log_l:
+        :param yc_value:
+        :param dimension:
+        :return:
+        '''
+        from FilesWork import Save_Load_tables
+
+        l_yc_m = Save_Load_tables.load_table('l_yc_m', 'l', 'yc', 'm', sp_file_1_name)
+        l_arr = l_yc_m[1:, 0]
+        yc_arr= l_yc_m[0, 1:]
+        m2d = l_yc_m[1:, 1:]
+
+        # yc_value = np.float("%.3f" % yc_value)
+
+        if yc_value in yc_arr:
+            ind_yc = Math.find_nearest_index(yc_arr, yc_value)
+        else:
+            raise ValueError('Given yc_arr({}) is not in available yc_arr:({})'.format(yc_value, yc_arr))
+
+        if dimension == 0:
+            if log_l >= l_arr.min() and log_l <= l_arr.max():
+                m_arr = m2d[:, ind_yc]
+                # lm_arr = []
+                # for i in range(len(m_arr)):
+                #     lm_arr = np.append(lm_arr, [l_arr[i], m_arr[i]])
+                #
+                # lm_arr_sort = np.sort(lm_arr.view('float64, float64'), order=['f0'], axis=0).view(np.float)
+                # lm_arr_shaped = np.reshape(lm_arr_sort, (len(m_arr), 2))
+
+                f = interpolate.UnivariateSpline(l_arr, m_arr)
+                m = f(log_l)
+                # print(log_l, m)
+
+                return log_l, m
+            else:
+                raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
+        if dimension == 1:
+            m_arr_f = []
+            l_arr_f = []
+            for i in range(len(log_l)):
+                if log_l[i] >= l_arr.min() and log_l[i] <= l_arr.max():
+                    f = interpolate.UnivariateSpline(l_arr, m2d[ind_yc, :])
+                    m_arr_f = np.append(m_arr_f, f(log_l[i]))
+                    l_arr_f = np.append(l_arr_f, log_l[i])
+                else:
+                    raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
+
+            return l_arr_f, m_arr_f
 
     @staticmethod
     def t_kap_rho_to_t_llm_rho(table, l_or_lm):
@@ -1147,6 +1202,48 @@ class Physics:
 
         return Math.invet_to_ascending_xy(Math.combine(t, l_lm_arr, rho2d))
 
+# class Opt_Depth_Analythis():
+#
+#
+#     def __init__(self, v0, v_inf, R, b, mdot, k = 0.20):
+#         self.v0 = v0 * 100000           # km-s -> cm/s
+#         self.b = b
+#         self.v_inf = v_inf * 100000     # km-s -> cm/s
+#         self.R = R * Constants.solar_r  # r_sol -> cm
+#         self.k = k   # electron scattering assumed by default
+#         self.mdot = 10**mdot * (Constants.solar_m / Constants.yr)              #
+#
+#         self.v0vinf = self.v0/self.v_inf
+#
+#
+#     def b_vel_low(self, r):
+#         return self.v0 + (self.v_inf - self.v0) * (1 - (self.R / (r * Constants.solar_r)))**self.b
+#
+#     def anal_eq_b1(self, r):
+#         logs = np.log(1 - ((self.R / (r * Constants.solar_r)) * (1 - self.v0vinf)) )
+#         return -((self.k * np.abs(self.mdot)) / (4 * np.pi * self.R * (self.v_inf - self.v0))) * logs
+
+class Opt_Depth_Analythis():
+
+
+    def __init__(self, v0, v_inf, R, b, mdot, k = 0.20):
+        self.v0 = v0 * 100000 * Constants.yr / Constants.solar_r           # km-s -> cm/s -> r_sol / yr
+        self.b = b
+        self.v_inf = v_inf * 100000 * Constants.yr / Constants.solar_r     # km-s -> cm/s -> r_sol / yr
+        self.R = R   # r_sol -> cm
+        self.k = k  * Constants.solar_m / Constants.solar_r ** 2           # cm^2/g -> sol_r^2 / sol_m
+        self.mdot = 10**mdot              #
+
+        self.v0vinf = self.v0/self.v_inf
+
+
+    def b_vel_low(self, r):
+        return self.v0 + (self.v_inf - self.v0) * (1 - (self.R / (r * Constants.solar_r)))**self.b
+
+    def anal_eq_b1(self, r):
+        logs = np.log(1 - ((self.R / (r)) * (1 - self.v0vinf)) )
+        return -((self.k * np.abs(self.mdot)) / (4 * np.pi * self.R * (self.v_inf - self.v0))) * logs
+
 class Labels:
     def __init__(self):
         pass
@@ -1155,29 +1252,35 @@ class Labels:
     def lbls(v_n):
         #solar
         if v_n == 'l':
-            return '$\log(L)$'#(L_{\odot})
+            return r'$\log(L)$'#(L_{\odot})
         if v_n == 'r':
-            return '$R(R_{\odot})$'
+            return r'$R(R_{\odot})$'
         if v_n == 'm' or v_n == 'xm':
-            return '$M(M_{\odot})$'
+            return r'$M(M_{\odot})$'
 
         #sonic and general
         if v_n == 'v' or v_n == 'u':
             return 'v (km/s)'
         if v_n == 'rho':
-            return '$\log(\rho)$'
+            return r'$\log(\rho)$'
         if v_n == 'k' or v_n == 'kappa':
-            return '$\kappa$'
+            return r'$\kappa$'
         if v_n == 't':
-            return 'log(T)'
+            return r'log(T)'
         if v_n == 'ts':
-            return '$\log(T_{s})$'
+            return r'$\log(T_{s})$'
         if v_n == 'lm':
-            return '$\log(L/M)$'
+            return r'$\log(L/M)$'
         if v_n == 'mdot':
-            return '$\log(\dot{M}$)'
+            return r'$\log(\dot{M}$)'
         if v_n == 'Yc':
-            return'$^{4}$He$_{core}$'
+            return r'$^{4}$He$_{core}$'
+
+        if v_n == 't_eff' or v_n == 'T_eff':
+            return r'$\log($T$_{eff})$'
+
+        if v_n == 'rho':
+            return r'$\log(\rho)$'
 
 
 

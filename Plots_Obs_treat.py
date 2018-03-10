@@ -25,10 +25,10 @@ import matplotlib.pyplot as plt
 import os
 #-----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------CLASSES-----------------------------------------------------
-from Err_Const_Math_Phys import Errors
-from Err_Const_Math_Phys import Math
-from Err_Const_Math_Phys import Physics
-from Err_Const_Math_Phys import Constants
+from Phys_Math_Labels import Errors
+from Phys_Math_Labels import Math
+from Phys_Math_Labels import Physics
+from Phys_Math_Labels import Constants
 
 from OPAL import Read_Table
 from OPAL import Row_Analyze
@@ -36,9 +36,9 @@ from OPAL import Table_Analyze
 from OPAL import OPAL_Interpol
 from OPAL import New_Table
 
-from Read_Obs_Numers import Read_Observables
-from Read_Obs_Numers import Read_Plot_file
-from Read_Obs_Numers import Read_SM_data_file
+from FilesWork import Read_Observables
+from FilesWork import Read_Plot_file
+from FilesWork import Read_SM_data_file
 
 from PhysPlots import PhysPlots
 #-----------------------------------------------------------------------------------------------------------------------

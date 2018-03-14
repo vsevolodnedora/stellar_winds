@@ -223,7 +223,10 @@ class Math:
             Uses 1d spline interpolation to give set of values new_y for provided
             cooednates x and y and new coordinates x_new (s - to be 0)
         '''
+        # print(x_arr)
         f = interpolate.InterpolatedUnivariateSpline(x_arr, y_arr)
+        # f = interpolate.interp1d(x_arr, y_arr, kind='cubic')
+
 
         return f(new_x_arr)
 
@@ -548,12 +551,69 @@ class Math:
         print(x.shape, y.shape, z.shape)
         return Math.combine(x,y,z)
 
-    # @staticmethod
-    # def sort_2d_table(table):
-    #
-    #
-    #
-    #     return table
+    @staticmethod
+    def fit_plynomial(x, y, order, depth, fit_x_coord = np.empty(0,)):
+        '''
+
+        :param x:
+        :param y:
+        :param order: 1-4 are supported
+        :return:
+        '''
+        f = None
+        lbl = None
+
+        if fit_x_coord == np.empty(0,):
+            fit_x_coord = np.mgrid[(x.min()):(x.max()):depth * 1j]
+
+
+        if order == 1:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x)'.format(
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+
+        if order == 2:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x) + ({}*x**2)'.format(
+                "%.3f" % f.coefficients[2],
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+        if order == 3:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3)'.format(
+                "%.3f" % f.coefficients[3],
+                "%.3f" % f.coefficients[2],
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+        if order == 4:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3) + ({}*x**4)'.format(
+                "%.3f" % f.coefficients[4],
+                "%.3f" % f.coefficients[3],
+                "%.3f" % f.coefficients[2],
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+
+        print(lbl)
+
+        return fit_x_coord, f(fit_x_coord)
 
 class Physics:
     def __init__(self):
@@ -1136,59 +1196,6 @@ class Physics:
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
 
     @staticmethod
-    def l_y_to_m(log_l, yc_value, dimension=0, sp_file_1_name = None):
-        '''
-        RETURNS l, m (if l dimension = 0) and l_arr, m_arr (if dimension = 1)
-        :param log_l:
-        :param yc_value:
-        :param dimension:
-        :return:
-        '''
-        from FilesWork import Save_Load_tables
-
-        l_yc_m = Save_Load_tables.load_table('l_yc_m', 'l', 'yc', 'm', sp_file_1_name)
-        l_arr = l_yc_m[1:, 0]
-        yc_arr= l_yc_m[0, 1:]
-        m2d = l_yc_m[1:, 1:]
-
-        # yc_value = np.float("%.3f" % yc_value)
-
-        if yc_value in yc_arr:
-            ind_yc = Math.find_nearest_index(yc_arr, yc_value)
-        else:
-            raise ValueError('Given yc_arr({}) is not in available yc_arr:({})'.format(yc_value, yc_arr))
-
-        if dimension == 0:
-            if log_l >= l_arr.min() and log_l <= l_arr.max():
-                m_arr = m2d[:, ind_yc]
-                # lm_arr = []
-                # for i in range(len(m_arr)):
-                #     lm_arr = np.append(lm_arr, [l_arr[i], m_arr[i]])
-                #
-                # lm_arr_sort = np.sort(lm_arr.view('float64, float64'), order=['f0'], axis=0).view(np.float)
-                # lm_arr_shaped = np.reshape(lm_arr_sort, (len(m_arr), 2))
-
-                f = interpolate.UnivariateSpline(l_arr, m_arr)
-                m = f(log_l)
-                # print(log_l, m)
-
-                return log_l, m
-            else:
-                raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
-        if dimension == 1:
-            m_arr_f = []
-            l_arr_f = []
-            for i in range(len(log_l)):
-                if log_l[i] >= l_arr.min() and log_l[i] <= l_arr.max():
-                    f = interpolate.UnivariateSpline(l_arr, m2d[ind_yc, :])
-                    m_arr_f = np.append(m_arr_f, f(log_l[i]))
-                    l_arr_f = np.append(l_arr_f, log_l[i])
-                else:
-                    raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
-
-            return l_arr_f, m_arr_f
-
-    @staticmethod
     def t_kap_rho_to_t_llm_rho(table, l_or_lm):
 
         kap   = table[1:, 0]
@@ -1281,6 +1288,3 @@ class Labels:
 
         if v_n == 'rho':
             return r'$\log(\rho)$'
-
-
-

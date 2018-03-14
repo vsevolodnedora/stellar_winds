@@ -1129,7 +1129,7 @@ class New_Table:
             sys.exit('\t___Error. |New_table, init| n of tables and values is different: {} != {}'.format(len(tables), len(values)))
         self.ntbls = 0
         for i in range(len(tables)):
-            self.tbls.append(Read_Table(path + tables[i]))
+            self.tbls.append(Read_Table(path + tables[i] + '.data'))
             self.ntbls = self.ntbls + 1
 
 
@@ -1180,7 +1180,7 @@ class New_Table:
                         new_kappa[i, j] = mask
 
         # "%.2f" %
-        fname = self.plot_dir_name
+        fname = self.plot_dir_name + 'table_x.data'
         res = Math.combine(self.tbls[0].r,self.tbls[0].t, new_kappa)
         np.savetxt(fname,res,'%.3f','\t')
         return res

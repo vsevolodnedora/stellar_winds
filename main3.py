@@ -28,6 +28,7 @@ from Plots_Obs_treat import Read_Plot_file
 from Plots_Obs_treat import Treat_Observables
 from main_methods import Combine
 from Phys_Math_Labels import Opt_Depth_Analythis
+from FilesWork import SP_file_work
 
 def get_files(compath, req_dirs, requir_files, extension):
     comb = []
@@ -68,26 +69,26 @@ lmc_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '11sm/', '12sm/', '1
                                                    ], [], '.plot1')
 
 
-gal_spfiles = get_files('../data/output/criticals/', ['10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
-                                                      '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
-                                                      '22z002/', '23z002/', '24z002/', '25z002/'], [], '.data')
+gal_spfiles = get_files('../data/sp_files/', ['10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
+                                              '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
+                                              '22z002/', '23z002/', '24z002/', '25z002/'], [], '.data')
 
-lmc_spfiles = get_files('../data/output/criticals/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
-                                                      '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
-                                                      '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
-                                                      '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/',
-                                                      '30z0008/' ], [], '.data')
+lmc_spfiles = get_files('../data/sp_files/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
+                                              '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
+                                              '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
+                                              '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/',
+                                              '30z0008/' ], [], '.data')
 
-lmc_obs_file = '../data/obs/lmc_wn.data'
-gal_obs_file = '../data/obs/gal_wn.data'
+lmc_obs_file = '../data/obs/lmc_wne.data'
+gal_obs_file = '../data/obs/gal_wne.data'
 
 smfiles = get_files(sse_locaton + 'ga_z002/', ['10sm/y1/'], [], 'sm.data')
 
 lmc_opal_file = '../data/opal/table_x.data'
 gal_opal_file = '../data/opal/table8.data'
 
-lmc_ml_relation = '../data/output/l_yc_m_lmc_wn.data'
-gal_ml_relation = '../data/output/l_yc_m_gal_wn.data'
+lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
+gal_ml_relation = '../data/output/l_yc_m_gal_wne.data'
 
 def select_sp_files(spfiles, req_z, req_m, req_yc):
 
@@ -159,6 +160,12 @@ def select_sp_files(spfiles, req_z, req_m, req_yc):
     print('\n')
     return zmy_files
 
+'''=================================================NEW=TABLE========================================================'''
+# ntbl = New_Table('../data/opal/',['table1','table2','table3','table4','table5','table6','table7','table8', 'table9', 'table10'],
+#                  [0.000, 0.0001, 0.0003, 0.0010, 0.0020, 0.0040, 0.0100, 0.0200, 0.0300, 0.0400], '../data/opal/')
+#
+# ntbl.check_if_opals_same_range()
+# ntbl.get_new_opal(0.008)
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
 
 def gray_analysis(z, m_set, y_set, plot):
@@ -174,13 +181,13 @@ def gray_analysis(z, m_set, y_set, plot):
             print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
             smfiles_ = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
 
-            cr = Critical_R(smfiles_, output_dir + 'criticals/' + out_name, plot_dir,
+            cr = Critical_R(smfiles_, '../data/sp_files/' + out_name, plot_dir,
                          ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])  # [] is a listof folders not to be put in output name
             cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'], plot)
 
             print('m:{}, y:{} DONE'.format(m,y))
 
-gray_analysis('002', [], [], False)
+gray_analysis('0008', [], [], False)
 
 '''======================================================TEST========================================================'''
 
@@ -192,30 +199,33 @@ gray_analysis('002', [], [], False)
 
 '''=====================================================CREATION====================================================='''
 
-from FilesWork import Creation
+# from FilesWork import Creation
 # make = Creation(gal_opal_file, 4.9, 5.5, 1000)
-# # make.save_t_rho_k()
+# # # make.save_t_rho_k()
 # make.save_t_k_rho(3.8, None, 1000)
 # # file_table = np.zeros(1)
 # # make.read_table('t_k_rho', 't', 'k', 'rho', '../data/opal/table8.data')
 # make.save_t_llm_vrho('l')
 # # print(file_table)
 # make.save_t_llm_mdot(1.,'l','',1.34)
-# make.save_ly_m_or_r_relation(select_sp_files(lmc_spfiles, [], [], []), lmc_obs_file, 'm', True)
-# a = np.array(([1,1,1,1], [5,5,5,5], [7,7,7,7], [9,9,9,9]))
-# a = np.flip(a, 0)
-# print(a)
+
+from FilesWork import SP_file_work
+# spcls = SP_file_work(gal_spfiles, output_dir, plot_dir)
+# spcls.save_y_yc_z_relation('l', 'm', gal_opal_file, True)
+# spcls.separate_sp_by_crit_val('Yc', 0.1)
+
+
 
 '''====================================================MAIN=METHODS=================================================='''
 
 comb = Combine()
 
 comb.opal_used = lmc_opal_file
-comb.sp_files = select_sp_files(lmc_spfiles, [], [], ['y10'])
+comb.sp_files = select_sp_files(lmc_spfiles, [], [], [])
 comb.sm_files = []
 comb.obs_files = lmc_obs_file
 comb.plot_files = lmc_plotfls
-comb.m_l_relation=0.993
+# comb.m_l_relation=0.993
 
 comb.set_files()
 
@@ -228,12 +238,12 @@ comb.set_files()
 # comb.xy_last_points('r','l','mdot',True)
 # comb.hrd('lm')
 # comb.sp_get_r_lt_table2('rho', 'lm')
-
+comb.save_yc_llm_mdot_cr('l')
 
 # comb.plot_t_rho_kappa('mdot','xm')
 # comb.plot_t_mdot_lm()
 # comb.plot_t_l_mdot('lm', 0, True, False, 5.22, None)
-comb.min_mdot('lm', 0, True, False, True)
+comb.min_mdot_sp('lm', 0.1)
 
 '''===========================================================3D====================================================='''
 #

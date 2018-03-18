@@ -552,9 +552,9 @@ class Math:
         return Math.combine(x,y,z)
 
     @staticmethod
-    def fit_plynomial(x, y, order, depth, fit_x_coord = np.empty(0,)):
+    def fit_plynomial(x, y, order, depth, new_x = np.empty(0, )):
         '''
-
+        RETURNS f(new_x)
         :param x:
         :param y:
         :param order: 1-4 are supported
@@ -563,8 +563,8 @@ class Math:
         f = None
         lbl = None
 
-        if fit_x_coord == np.empty(0,):
-            fit_x_coord = np.mgrid[(x.min()):(x.max()):depth * 1j]
+        if not new_x.any():
+            new_x = np.mgrid[(x.min()):(x.max()):depth * 1j]
 
 
         if order == 1:
@@ -611,9 +611,14 @@ class Math:
             # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
             # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
 
+        if not order in [1,2,3,4]:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            # raise ValueError('Supported orders: 1,2,3,4 only')
+
         print(lbl)
 
-        return fit_x_coord, f(fit_x_coord)
+        return new_x, f(new_x)
 
 class Physics:
     def __init__(self):
@@ -1133,7 +1138,7 @@ class Physics:
         return np.vstack(( np.array(int_star_x_coord), y_fill, z_fill))
 
     @staticmethod
-    def lm_to_l(log_lm):
+    def lm_to_l_langer(log_lm):
         '''
         From Langer 1987 paper Mass Lum relation for WNE stars
         :param log_lm:
@@ -1157,7 +1162,7 @@ class Physics:
         return res
 
     @staticmethod
-    def l_to_m(log_l):
+    def l_to_m_langer(log_l):
         '''
         From Langer 1987 paper Mass Lum relation for WNE stars
         :param log_l:
@@ -1169,7 +1174,7 @@ class Physics:
         return ( a2 + b2 * log_l + c2*(log_l**2) )
 
     @staticmethod
-    def m_to_l(log_m):
+    def m_to_l_langer(log_m):
         '''
         From Langer 1987 paper Mass Lum relation for WNE stars
         :param log_m:
@@ -1181,7 +1186,7 @@ class Physics:
         return ( a1 + b1*log_m + (c1*log_m**2) )
 
     @staticmethod
-    def l_to_lm(log_l):
+    def l_to_lm_langer(log_l):
         '''
         From Langer 1987 paper Mass Lum relation for WNE stars
         :param log_l:
@@ -1244,12 +1249,46 @@ class Opt_Depth_Analythis():
         self.v0vinf = self.v0/self.v_inf
 
 
+    def eff_kappa(self, r, k_sp, beta, v_inf, v_esc_rs, rs):
+        '''
+        Effective kappa formula from Japaneese paper
+        :param r:
+        :param k_sp:
+        :param beta:
+        :param v_inf:
+        :param v_esc_rs:
+        :param rs:
+        :return:
+        '''
+        return k_sp * (1 + (2*self.b*(v_inf / v_esc_rs)**2) * (1-(rs/r))**(2*beta - 1))
+
+    def esc_vel(self, m, r):
+        '''
+        Escape Velocity at radius 'r' in sol_r / yr
+        :param m:
+        :param r:
+        :return:
+        '''
+        g = 1.90809 * 10**5 # grav const in r_sol/m_sol
+        return np.sqrt(2*g*m/r)
+
     def b_vel_low(self, r):
         return self.v0 + (self.v_inf - self.v0) * (1 - (self.R / (r * Constants.solar_r)))**self.b
 
     def anal_eq_b1(self, r):
         logs = np.log(1 - ((self.R / (r)) * (1 - self.v0vinf)) )
         return -((self.k * np.abs(self.mdot)) / (4 * np.pi * self.R * (self.v_inf - self.v0))) * logs
+
+    def kappa_test(self):
+        m = 20
+        r = np.mgrid[1.0:10.0:100j]
+        k = []
+        for i in range(len(r)):
+            # print(self.esc_vel(m, r[i]) )
+            k = np.append(k, self.eff_kappa(r[i],0.2, 2, 1600,self.esc_vel(m,r[i]), 1.0))
+
+        plt.plot(r, k)
+        plt.show()
 
 class Labels:
     def __init__(self):

@@ -59,36 +59,38 @@ output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
 sse_locaton = '/media/vnedora/HDD/sse/'
 
+
 gal_plotfls = get_files(sse_locaton + 'ga_z002/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
                                                    '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
                                                    '24sm/', '25sm/'], [], '.plot1')
-
 lmc_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
                                                    '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
                                                    '24sm/', '25sm/', '26sm/', '27sm/', '28sm/', '29sm/', '30sm/'
                                                    ], [], '.plot1')
-
+tst_plotfls = get_files(sse_locaton +'ga_z0008/', ['test_sp_tau30/'], [], '.plot1')
 
 gal_spfiles = get_files('../data/sp_files/', ['10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
                                               '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
                                               '22z002/', '23z002/', '24z002/', '25z002/'], [], '.data')
-
 lmc_spfiles = get_files('../data/sp_files/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
                                               '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
                                               '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
                                               '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/',
                                               '30z0008/' ], [], '.data')
+tst_spfiles = get_files('../data/sp_files/', [], [], '.data')
 
 lmc_obs_file = '../data/obs/lmc_wne.data'
 gal_obs_file = '../data/obs/gal_wne.data'
-
-smfiles = get_files(sse_locaton + 'ga_z002/', ['10sm/y1/'], [], 'sm.data')
+tst_obs_file = ''
 
 lmc_opal_file = '../data/opal/table_x.data'
 gal_opal_file = '../data/opal/table8.data'
+tst_opal_file = ''
 
-lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
-gal_ml_relation = '../data/output/l_yc_m_gal_wne.data'
+
+smfiles = get_files(sse_locaton + 'ga_z0008/', ['test_sp_tau30/'], [], 'sm.data')
+# lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
+# gal_ml_relation = '../data/output/l_yc_m_gal_wne.data'
 
 def select_sp_files(spfiles, req_z, req_m, req_yc):
 
@@ -160,12 +162,44 @@ def select_sp_files(spfiles, req_z, req_m, req_yc):
     print('\n')
     return zmy_files
 
+
+'''===============================================SETTING=FILES======================================================'''
+spfiles = []
+opalfile =[]
+obsfile = []
+plotfiles=[]
+def set_sp_oopal_obs(gal_or_lmc):
+    global spfiles
+    global opalfile
+    global plotfiles
+    global obsfile
+    if gal_or_lmc == 'lmc':
+        spfiles = lmc_spfiles
+        opalfile = lmc_opal_file
+        plotfiles = lmc_plotfls
+        obsfile = lmc_obs_file
+    if gal_or_lmc == 'gal':
+        spfiles = gal_spfiles
+        opalfile = gal_opal_file
+        plotfiles = gal_plotfls
+        obsfile = gal_obs_file
+    if gal_or_lmc == 'tst':
+        spfiles = tst_spfiles
+        opalfile = tst_opal_file
+        plotfiles = tst_plotfls
+        obsfile = tst_obs_file
+    # raise NameError('Wrong name: {}'.format(gal_or_lmc))
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+set_sp_oopal_obs('tst')
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''=================================================NEW=TABLE========================================================'''
+
 # ntbl = New_Table('../data/opal/',['table1','table2','table3','table4','table5','table6','table7','table8', 'table9', 'table10'],
 #                  [0.000, 0.0001, 0.0003, 0.0010, 0.0020, 0.0040, 0.0100, 0.0200, 0.0300, 0.0400], '../data/opal/')
 #
 # ntbl.check_if_opals_same_range()
 # ntbl.get_new_opal(0.008)
+
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
 
 def gray_analysis(z, m_set, y_set, plot):
@@ -189,18 +223,16 @@ def gray_analysis(z, m_set, y_set, plot):
 
 gray_analysis('0008', [], [], False)
 
-'''======================================================TEST========================================================'''
+'''======================================================TAU========================================================='''
 
-# from main_methods import TEST
-# tst = TEST(output_dir)
-# tst.xy_last_points('l','r','He4', 'core', [smfiles1,smfiles2,smfiles3,smfiles4])
-# tst.d3_plotting_x_y_z('l','r','mdot','He4', 'core', [smfiles1,smfiles2,smfiles3,smfiles4])
-# tst.new_3d()
-
+# from Sonic_Criticals import Read_Tau
+# tau = Read_Tau(plotfiles, smfiles, output_dir, plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])
+# tau.tau()
 '''=====================================================CREATION====================================================='''
 
-# from FilesWork import Creation
-# make = Creation(gal_opal_file, 4.9, 5.5, 1000)
+from FilesWork import Creation
+# make = Creation(opalfile, 4.9, 5.5, 1000)
+# make.from_t_k_rho__to__t_lm_rho()
 # # # make.save_t_rho_k()
 # make.save_t_k_rho(3.8, None, 1000)
 # # file_table = np.zeros(1)
@@ -210,8 +242,8 @@ gray_analysis('0008', [], [], False)
 # make.save_t_llm_mdot(1.,'l','',1.34)
 
 from FilesWork import SP_file_work
-# spcls = SP_file_work(gal_spfiles, output_dir, plot_dir)
-# spcls.save_y_yc_z_relation('l', 'm', gal_opal_file, True)
+# spcls = SP_file_work(spfiles, output_dir, plot_dir)
+# spcls.save_y_yc_z_relation('lm', 't', opalfile, 'pol', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
 
@@ -220,30 +252,44 @@ from FilesWork import SP_file_work
 
 comb = Combine()
 
-comb.opal_used = lmc_opal_file
-comb.sp_files = select_sp_files(lmc_spfiles, [], [], [])
-comb.sm_files = []
-comb.obs_files = lmc_obs_file
-comb.plot_files = lmc_plotfls
+comb.opal_used = opalfile
+comb.sp_files = select_sp_files(spfiles, [], [], [])
+comb.sm_files = smfiles
+comb.obs_files = obsfile
+comb.plot_files = plotfiles
 # comb.m_l_relation=0.993
 
-comb.set_files()
+# comb.set_files()
 
 
 
 # comb.sp_xy_last_points('m','l','mdot', 4)
 
-# comb.xy_profile('l','m','mdot','xm')
+# comb.xy_profile('r','u','mdot','xm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
 # comb.xy_last_points('r','l','mdot',True)
 # comb.hrd('lm')
 # comb.sp_get_r_lt_table2('rho', 'lm')
-comb.save_yc_llm_mdot_cr('l')
+# comb.save_yc_llm_mdot_cr('l')
 
 # comb.plot_t_rho_kappa('mdot','xm')
 # comb.plot_t_mdot_lm()
 # comb.plot_t_l_mdot('lm', 0, True, False, 5.22, None)
-comb.min_mdot_sp('lm', 0.1)
+# comb.min_mdot_sp('lm', 1.)
+
+from main_methods import Crit_Mdot
+# mdot = Crit_Mdot()
+# mdot.sp_files = spfiles
+# mdot.opal_used = opalfile
+# mdot.obs_files = obsfile
+# mdot.set_files(5.18, None)
+
+# mdot.save_yc_llm_mdot_cr()
+
+# mdot.min_mdot_sp_set('l', [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1])
+
+
+
 
 '''===========================================================3D====================================================='''
 #
@@ -394,9 +440,18 @@ comb.min_mdot_sp('lm', 0.1)
 # #plt.savefig('min_P.png', dpi=1000)
 
 
-tau = Opt_Depth_Analythis(20, 2000, 1.,1.,-4.522,0.20)
-print('ref tau:', tau.anal_eq_b1(1.))
-tau = Opt_Depth_Analythis(30,1600,1.,1.,-5.46,0.20)
-print('86 tau:', tau.anal_eq_b1(1.))
+# tau = Opt_Depth_Analythis(20, 2000, 1.,1.,-4.522,0.20)
+# print('ref tau:', tau.anal_eq_b1(1.))
+# tau = Opt_Depth_Analythis(30,1600,1.,1.,-5.46,0.20)
+# print('86 tau:', tau.anal_eq_b1(1.))
+#
+# print(Physics.logk_loglm(-0.28, 0))
+# tau.kappa_test()
 
-print(Physics.logk_loglm(-0.28,0))
+
+# for i in range(1,11):
+#     print('cp y{}/fy{}.bin1 y{}/sp/;'.format(i,i,i))
+
+for i in range(10,31):
+    for j in range(1,11):
+        print('cp run_mass_loss.py {}sm/y{}/sp/'.format(i,j))

@@ -131,7 +131,7 @@ class Save_Load_tables:
         # global file_table
         file_table = np.loadtxt(full_name, dtype=float)
 
-        return file_table #[x1, x2, y1, y2, n1, n2]
+        return np.array(file_table, dtype='float64') #[x1, x2, y1, y2, n1, n2]
 
 class Creation:
 
@@ -166,6 +166,20 @@ class Creation:
         print('\t__Note. Table | t_k_rho | has been saved in {}'.format(self.out_dir))
         # self.read_table('t_k_rho', 't', 'k', 'rho', self.op_name)
         # def save_t_llm_vrho(self, llm1=None, llm2=None, n_out = 1000):
+
+    def from_t_k_rho__to__t_lm_rho(self):
+        t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.op_name)
+
+        t = t_k_rho[0, 1:]
+        k = t_k_rho[1:, 0]
+        rho2d = t_k_rho[1:, 1:]
+
+        lm = Physics.logk_loglm(k, 1)
+
+        t_lm_rho = Math.invet_to_ascending_xy( Math.combine(t, lm, rho2d) )
+
+        Save_Load_tables.save_table(t_lm_rho, self.op_name, 't_lm_rho', 't', 'lm', 'rho', self.out_dir)
+        print('\t__Note. Table | t_lm_rho | for | {} | has been saved in {}'.format(self.op_name, self.out_dir))
 
     def save_t_llm_vrho(self, l_or_lm_name):
         '''
@@ -300,7 +314,7 @@ class SP_file_work():
 
         return yc_arr, set_of_files
 
-    def save_y_yc_z_relation(self, y_v_n, z_v_n, opal_used, plot=False, yc_prec=0.1, depth=100):
+    def save_y_yc_z_relation(self, y_v_n, z_v_n, opal_used, save, plot=False, yc_prec=0.1, depth=100):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', yc_prec)
 
@@ -362,7 +376,12 @@ class SP_file_work():
         yc_llm_m_int = Math.combine(yc, y_grid, z2d_int.T)  # changing the x/y
 
         table_name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
-        Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
+        if save == 'int':
+            Save_Load_tables.save_table(yc_llm_m_int, opal_used, table_name, 'yc', y_v_n, z_v_n)
+        if save == 'pol':
+            Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
+
+        # Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
 
         if plot:
 
@@ -374,6 +393,13 @@ class SP_file_work():
                 levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
             if z_v_n == 'mdot':
                 levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
+            if z_v_n == 'l':
+                levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
+            if z_v_n == 'lm':
+                levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35,  4.4, 4.45,
+                          4.5, 4.55,  4.6, 4.65,  4.7, 4.75, 4.8, 4.85,  4.9, 4.95, 5.0]
+            if z_v_n == 't':
+                levels = [5.15, 5.16,5.17,5.18,5.19,5.20,5.21,5.22,5.23,5.24,5.25,5.26,5.27,5.28,5.29,5.30]
 
 
             ax = fig.add_subplot(223)
@@ -428,6 +454,68 @@ class SP_file_work():
             plt.show()
 
         # yc_llm_m_pol
+
+    @staticmethod
+    def yc_x__to__y__sp(yc_value, x_v_n, y_v_n, x_inp, opal_used, dimension=0):
+        '''
+        LOADS the table with given v_ns and extract the row with given Yc and interpolateds the y_value, for x_val given
+        :param yc_value:
+        :param x_v_n:
+        :param y_v_n:
+        :param x_inp:
+        :param opal_used:
+        :param dimension:
+        :return:
+        '''
+
+        name = '{}_{}_{}'.format('yc', x_v_n, y_v_n)
+        yc_x_y = Save_Load_tables.load_table(name, 'yc', x_v_n, y_v_n, opal_used)
+        x_arr = yc_x_y[1:, 0]
+        yc_arr = yc_x_y[0, 1:]
+        y2d = yc_x_y[1:, 1:]
+
+        print()
+
+        # yc_value = np.float("%.3f" % yc_value)
+
+        if yc_value in yc_arr:
+            ind_yc = Math.find_nearest_index(yc_arr, yc_value)
+        else:
+            raise ValueError('Table: {} Given yc_arr({}) is not in available yc_arr:({})'.format(name, yc_value, yc_arr))
+
+
+        if dimension == 0:
+            if x_inp >= x_arr.min() and x_inp <= x_arr.max():
+                y_arr = y2d[:, ind_yc]
+                # lm_arr = []
+                # for i in range(len(y_arr)):
+                #     lm_arr = np.append(lm_arr, [x_arr[i], y_arr[i]])
+                #
+                # lm_arr_sort = np.sort(lm_arr.view('float64, float64'), order=['f0'], axis=0).view(np.float)
+                # lm_arr_shaped = np.reshape(lm_arr_sort, (len(y_arr), 2))
+
+                f = interpolate.UnivariateSpline(x_arr, y_arr)
+                y = f(x_inp)
+                # print(log_l, y)
+
+                return x_inp, y
+            else:
+                raise ValueError('Given l({}) not in available range of l:({}, {})'.format(x_inp, x_arr.min(), x_arr.max()))
+
+        if dimension == 1:
+            x_arr_f = []
+            y_arr_f = []
+            for i in range(len(x_inp)):
+                if x_inp[i] >= x_arr.min() and x_inp[i] <= x_arr.max():
+                    f = interpolate.UnivariateSpline(x_arr, y2d[:, ind_yc])
+                    y_arr_f = np.append(x_arr_f, f(x_inp[i]))
+                    x_arr_f = np.append(x_arr_f, x_inp[i])
+                # else:
+                #     raise ValueError(
+                #         'Given x({}, {}) not in available range of x:({}, {})'.format(x_inp[0], x_inp[-1], x_arr.min(), x_arr.max()))
+
+            return x_arr_f, y_arr_f
+
 
     @staticmethod
     def l_y_to_m(log_l, yc_value, opal_used, dimension=0):
@@ -771,21 +859,31 @@ class Read_Observables:
         :param yc_val: '-1' for Langer1989 | 'None' for use 'm' | 0.9-to-0 for use of l-m-yc relation
         :return:
         '''
+
         if v_n == 'lm':
-
+            # print('\__ Yc: {}'.format(yc_val))
             l = self.get_num_par_from_table('l', star_n)
+            if yc_val >= 0 and yc_val <= 1.:
+                l, lm = SP_file_work.yc_x__to__y__sp(yc_val, 'l', 'lm', l, opal_used, 0)
+                return lm
 
-            if yc_val == None:
-                return np.log10( 10**l / self.get_num_par_from_table('m', star_n) )
-            if self.m_l_rel_yc == -1 or self.m_l_rel_yc == 'Langer':
-                m = Physics.l_to_m(l)
-                return np.log10(10**l / 10**m)
+            if yc_val == -1 or yc_val == 'langer':
+                return np.log10(10 ** l / 10 ** Physics.l_to_m_langer(l))
 
-            l, m = SP_file_work.l_y_to_m(l, yc_val, opal_used, 0)
-            # print(m)
-            return np.log10(10**l / m)
+            if yc_val == None or yc_val == 'hamman':
+                m = self.get_num_par_from_table('m', star_n)
+                np.log10(10 ** l / m)
+
+            raise ValueError('Yc = {} is not recognised. '
+                             'Use: 0-1 for loading tables | -1 or langer for langer |  None or hamman for hamman')
 
         return self.get_num_par_from_table(v_n, star_n)
+
+    def get_min_max(self, v_n, yc = None, opal_used = None):
+        arr = []
+        for star_n in self.stars_n:
+            arr = np.append(arr, self.get_num_par(v_n, star_n, yc, opal_used))
+        return arr.min(), arr.max()
 
     def get_xyz_from_yz(self,model_n, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
 
@@ -801,7 +899,6 @@ class Read_Observables:
         xyz = Physics.model_yz_to_xyz(x_1d_arr, y_1d_arr, z_2d_arr,  star_y, star_z, model_n, lx1, lx2)
 
         return xyz
-
 
     def get_star_class(self, n):
         for i in range(len(self.numers[:, 0])):
@@ -893,25 +990,30 @@ class Read_Plot_file:
                 break
 
 
-        self.time = plot_table[:i_stop, 1]
-        self.t_c = plot_table[:i_stop,2]
-        self.y_c = plot_table[:i_stop,3]
-        self.l_h = plot_table[:i_stop,4]
-        self.l_he= plot_table[:i_stop,5]
-        self.m_  = plot_table[:i_stop,6]
-        self.unknown = plot_table[:i_stop,7]
-        self.t_eff  = np.log10(plot_table[:i_stop,8])
-        # [print(i) for i in range(len(plot_table[:,8])) if plot_table[i,8]==0]
-        self.l_     = plot_table[:i_stop,9]
-        self.rho_c  = plot_table[:i_stop,10]
-        self.l_carb = plot_table[:i_stop,11]
-        self.l_nu  = plot_table[:i_stop,12]
-        self.mdot_ = plot_table[:i_stop,13]
-        self.t_max = plot_table[:i_stop,14]
-        self.rho_at_t_max = plot_table[:i_stop,15]
-        self.m_at_t_max = plot_table[:i_stop,16]
-
-
+        self.time = plot_table[:i_stop, 1]          # timeyr
+        self.t_c = plot_table[:i_stop,2]            # t(1)/1.d8
+        self.y_c = plot_table[:i_stop,3]            # yps(1,5)
+        self.l_h = plot_table[:i_stop,4]            # eshp
+        self.l_he= plot_table[:i_stop,5]            # eshep
+        self.m_  = plot_table[:i_stop,6]            # gms
+        self.unknown = plot_table[:i_stop,7]        # esdissp
+        self.t_eff= np.log10(plot_table[:i_stop,8]) # t(n)
+        self.l_     = plot_table[:i_stop,9]         # dlog10(sl(n-1)/3.83d33)
+        self.rho_c  = plot_table[:i_stop,10]        # dlog10(ro(1))
+        self.l_carb = plot_table[:i_stop,11]        # escop
+        self.l_nu  = plot_table[:i_stop,12]         # esnyp
+        self.mdot_=np.log10(plot_table[:i_stop,13]) # windmd*sec/sun
+        self.t_max = plot_table[:i_stop,14]         # vvcmax
+        self.rho_at_t_max = plot_table[:i_stop,15]  # gammax
+        self.m_at_t_max = plot_table[:i_stop,16]    # wcrit
+        self.logg = plot_table[:i_stop,17]          # logg
+        self.rwindluca = plot_table[:i_stop,18]     # rwindluca/rsun
+        self.r_n_rsun = plot_table[:i_stop, 19]     # r(n)/rsun
+        self.teffluca = plot_table[:i_stop, 20]     # teffluca
+        self.Tn = plot_table[:i_stop, 21]           # T(N)
+        self.tauatR = plot_table[:i_stop, 22]       # tauatR
+        self.windform_23 = plot_table[:i_stop, 23]     # Abs(windmd)/(4.d0*PI*rwindluca**2*(v0+(vinf-v0)*(1.d0-R(N)/rwindluca))),
+        self.windform_24 = plot_table[:i_stop, 24]     # v0+(vinf-v0)*(1-R(N)/rwindluca)
     # def
 
     @classmethod

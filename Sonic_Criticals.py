@@ -41,7 +41,6 @@ from FilesWork import Read_Observables
 from FilesWork import Read_Plot_file
 from FilesWork import Read_SM_data_file
 
-
 class Critical_R:
     def __init__(self, smfiles, out_dir, plot_dir, dirs_not_to_be_included):
 
@@ -733,351 +732,414 @@ class Critical_R:
         print('Results are saved in: {}'.format(self.out_dir + out_name))
         np.savetxt(self.out_dir + out_name, out_array, '%.5f', '  ', '\n', extended_head, '')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def velocity_profile(self):
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-
-        tlt = 'VELOCITY PROFILE'
-        plt.title(tlt, loc='left')
-        crit_sonic_values = []
-
-        r_u_mdot_max = []
-        lmdot = []
-        long_r = np.zeros(1)
-        long_i = -1
-
-        # --- --- --- FUNCTIONS --- --- ---
-        def get_sonic_t(r, u, mu, t):
-            '''
-            RETURNS rs0, ts0 (if ts0 > 5.2, else - ERROR)
-            :param r:
-            :param u:
-            :param mu:
-            :param t:
-            :return:
-            '''
-            if len(r) != len(u) != len(mu) != len(t):
-                raise ValueError('Different length of arrays: len(r){} != len(u){} != len(mu){} != len(t){}'
-                                 .format(len(r), len(u), len(mu), len(t)))
-
-            ts_arr = np.log10( (mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b )
-            rs, ts = Math.interpolated_intercept(r, ts_arr, t)
-
-            if rs.any():
-                rs0 = rs[0][0]
-                ts0 = ts[0][0]
-
-                if ts0 < 5.2:
-                    raise ValueError('Ts({})<5.2'.format(ts0))
-
-            else:
-                rs0 = None
-                ts0 = None
-
-            return rs0, ts0, r, ts_arr
-
-
-
-        # --- --- --- MAIN --- --- ---
-        ax2 = ax1.twinx()
-
-
-
-
-        for i in range(len(self.num_files)):
-
-            min_ind = Math.find_nearest_index(self.mdl[i].get_col('r'), 0.9)
-
-            r = self.mdl[i].get_col('r')[min_ind:]
-            u = self.mdl[i].get_col('u')[min_ind:]
-            mu= self.mdl[i].get_col('mu')[min_ind:]
-            t = self.mdl[i].get_col('t')[min_ind:]
-            u_s = self.mdl[i].get_sonic_u()[min_ind:]
-
-            lmdot =  np.append( lmdot,  self.mdl[i].get_col('mdot')[-1] )
-
-            # --- PLOTTING velocity and sonic velocity profiles ---
-            ax1.plot(r, u, '-', color='black')
-            ax1.plot(r, u_s, '-', color='gray')
-            ax1.annotate(str('%.2f' % lmdot[i]), xy=(r[-1], u[-1]), textcoords='data')
-
-
-            # --- get maximum of every velocity profile ---
-            r_m, u_m =  Math.get_max_by_interpolating(r, u) # use of 1d array for further sorting
-            r_u_mdot_max = np.append(r_u_mdot_max, [r_m, u_m, [lmdot[i]] ] ) # [] for lmdot bacause r_cr_c and u_s_cr_c are lists
-            ax1.plot(r_m, u_m, '*', color='red')
-
-            # --- Getting sonic temperature ---
-            rs, ts, r, ts_arr = get_sonic_t(r, u, mu, t)
-            if rs != None:
-                ax2.plot(r,t,'-',color='yellow')
-                ax2.plot(r, ts_arr, '-.', color='gray')
-                ax2.plot(rs, ts, 'x', color='black')
-                ax2.annotate(str('%.2f' % ts), xy=(rs, ts), textcoords='data')
-
-            rts_m, ts_m = Math.get_max_by_interpolating(r, ts_arr)
-
-            print('_______', rts_m, ts_m)
-            if rts_m != None:
-                ax2.plot(rts_m, ts_m, 'x', color='red')
-
-
-            # -- getting the longest (in r) model, so leter to get a critical radii from it
-            if long_r.max() < r[-1]:
-                long_r = np.append(long_r, r[-1])
-                long_i = i
-
-            # --- filling the array for the output
-            l = self.mdl[i].get_col('l')[-1]
-            m = self.mdl[i].get_col('xm')[-1]
-            yc= self.mdl[i].get_col('He4')[0]
-
-            if rs!=None:
-                crit_sonic_values = np.append(crit_sonic_values, [l, m, yc, lmdot[i], rs, ts])
-            else:
-                crit_sonic_values = np.append(crit_sonic_values, [l, m, yc, lmdot[i], 0., 0.])
-
-        # as it r coord first increasing than decreasing - you cannot use it for interpolation,
-        # u - coord, which is velocity, is decreasing if mdot is decreasing (or vise versa), but it behaves monotonicall
-        # hence, it can be used as a 'r' coordinate, while radius is a 'u'.
-        # print(r_u_mdot_max)
-
-        r_u_mdot_max_sorted = np.sort(r_u_mdot_max.view('f8, f8, f8'), order=['f1'], axis=0).view(np.float)
-        r_u_mdot_reshaped = np.reshape(r_u_mdot_max_sorted, (len(self.num_files), 3))
-
-        new_r   = r_u_mdot_reshaped[:,0]
-        new_u   = r_u_mdot_reshaped[:,1]
-        new_mdot= r_u_mdot_reshaped[:,2]
-
-        def check_limits(old_r, new_r, old_u, new_u):
-            if old_r.min() < new_r.min():
-                print('\t__Error: old_r.min({}) < new_r.min({})'.format(old_r.min(), new_r.min()))
-                return 'new_r_too_small'
-
-            if  new_r.max() > old_r.max()*1.2: # 1.2 is a criterium
-                print('\t__Error: old_r.max()({}) < new_r.max({})'.format(old_r.max(), new_r.max()))
-                return 'new_r_too_big'
-
-            if old_u.min() < new_u.min():
-                print('\t__Error: old_u.min({}) < new_u.min({})'.format(old_u.min(), new_u.min()))
-                return 'new_u_too_small'
-
-            # if new_u.max() > old_u.max():
-            #     print('\t__Error: old_u.max()({}) < new_u.max({})'.format(old_u.max(), new_u.max()))
-            #     return 'new_u_too_big'
-
-            return 'OK'
-
-        def try_interp_u_r(old_r, old_u, old_mdot):
-
-            u_max_grid = []
-            r_max_grid = []
-
-            bad_fit = True
-
-            while bad_fit:
-                ''' --- Do interpolation do determine if the fitted spline is well behavied --- '''
-
-                # print(len( old_u) )
-
-                u_max_grid = np.mgrid[old_u.min():old_u.max():1000j]
-                r_max_grid = Math.interp_row(old_u, old_r, u_max_grid)
-
-                message = check_limits(old_r, r_max_grid, old_u, new_u)
-
-                if message == 'OK': # well behaved interpolation, - exit the loop
-                    bad_fit = False
-                else:
-                    if message == 'new_r_too_big' or message == 'new_u_too_big':
-                        print('\t__Error. Fitted spline exhibit violent behaviour. Removing the following data set:\n'
-                              'r: {} u: {} mdot: {}'.format("%.2f" % old_r[-1], "%.2f" % old_u[-1], "%.2f" % old_mdot[-1]))
-                        old_r = old_r[:-1]
-                        old_u = old_u[:-1]
-                        old_mdot = old_mdot[:-1]
-
-                        bad_fit = True
-                    else:
-                        raise ValueError('Unaccounted error: {}'.format(message))
-
-                if len(old_r) <= 3:
-                    raise ValueError('Well Behaved spline not found after removing all but 2 (min) points.')
-
-            return r_max_grid, u_max_grid, old_r, old_u, old_mdot
-
-        # --- CHANGE all the arrays --- to account for possible violent behaviour of fitted spline
-        r_max_grid, u_max_grid, new_r, new_u, new_mdot = try_interp_u_r(new_r, new_u, new_mdot)
-
-
-        print('\t__Data R:({}, {}), U: ({}, {})'.format(new_r.min(),new_r.max(), new_u.min(), new_u.max()))
-        print('\t__Intr R:({}, {}), U: ({}, {})'.format(r_max_grid.min(), r_max_grid.max(), u_max_grid.min(), u_max_grid.max()))
-
-
-        ax1.plot(r_max_grid, u_max_grid, '-', color='blue') # line that connects maxs of vel. profs
-
-        # --- Find a cross between interplated curve and sonic velocity.
-
-        r = self.mdl[long_i].get_col('r')
-        t = self.mdl[long_i].get_col('t')
-        u_s = self.mdl[long_i].get_sonic_u()
-
-        ax1.plot(r, u_s, '-', color='blue') #
-
-        # ax2 = ax1.twinx()   # for plotting the temperature scale (to see the Temp at critical radius)
-        ax2.plot(r, t, '-.', color='brown')
-
-        i1 = Math.find_nearest_index(r, r_max_grid.min()) # - 1
-        i2 = Math.find_nearest_index(r, r_max_grid.max()) # + 1
-
-
-
-        print('\t__Cropped R : [{}, {}] -> ({}, {}) out of {}'.format(i1,i2, r[i1], r[i2], r.max()))
-        r_cr = r[i1:i2]
-        u_s_cr =u_s[i1:i2]
-        t_cr = t[i1:i2]
-
-
-        # x_for_us_grid = np.mgrid[r.min():r.max():1000j]
-        int_r_for_us_grid = Math.interp_row(r_cr, u_s_cr, r_max_grid) # corpped radius range
-        int_t_for_us_grid = Math.interp_row(r_cr, t_cr, r_max_grid)   # cropped temp range
-
-        ax1.plot(r_max_grid, int_r_for_us_grid, '-', color='green') # corpped radius range
-        ax2.plot(r_max_grid, int_t_for_us_grid, '-', color='brown') # cropped temp range
-
-        # --- Critical Radius ---
-
-        r_cr_c, u_s_cr_c = Math.interpolated_intercept(r_max_grid, u_max_grid, int_r_for_us_grid)
-
-        mdot_cr = None # for the case if critical point is not found
-        t_crit = None
-
-        if len(r_cr_c) == len(u_s_cr_c) == 0:
-            pass
-            #raise ValueError('Critical Radius is not found')
-        else:
-
-            print('\t__Critical radii found: ({},{})'.format(len(r_cr_c), len(u_s_cr_c)) )
-
-            i_of_u_near_yc = Math.find_nearest_index(int_r_for_us_grid, u_s_cr_c) # for f
-
-            for i in range(len(r_cr_c)):
-                ax1.plot(r_cr_c[i], u_s_cr_c[i], 'X', color='blue', label='Rc:{}'.format('%.3f' %  r_cr_c[i])) # critical Radius
-                ax1.annotate('Rs:'+str('%.3f' % r_cr_c[i]), xy=(r_cr_c[i], u_s_cr_c[i]), textcoords='data')
-
-            # --- Critical Temperature ---
-
-            t_crit = int_t_for_us_grid[i_of_u_near_yc]  # temperature at a critical radius
-            ax2.plot( r_cr_c, t_crit, 'X', color='red', label='Tc:{}'.format('%.3f' %  t_crit) )           # temp. at critical radius
-            ax1.axvline(x=r_cr_c, color='gray', linestyle='solid')
-
-            # --- Critical Mass Loss --- [SUBPLOT]
-
-            ax3 = fig.add_axes([0.23, 0.5, 0.23, 0.23])
-            ax3.plot(new_mdot, new_u, '-', color='black')
-            ax3.plot(new_mdot, new_u, '.', color='black')
-            ax3.set_xlabel(Labels.lbls('mdot'))
-            ax3.set_ylabel(Labels.lbls('u'))
-            ax3.grid()
-            ax3.axhline(y=u_s_cr_c, color='gray', linestyle='--', label='Son_vel: {}'.format( '%.3f' % u_s_cr_c))
-
-
-            if u_s_cr_c < new_u.min() or u_s_cr_c > new_u.max():
-                raise ValueError('u_s_cr_c({}) is beyond available new_u range({} , {})'.format(u_s_cr_c, new_u.min(), new_u.max()))
-            else:
-
-                # --- The 'new_mdot_new_u' and 'new_mdot_new_u_sort' are here to ensire assending order of x coord. for
-                #     interpolation in 'solv_inter_row', otherwise, interpolation breakes.
-
-                new_mdot_new_u = np.array(  [ [new_mdot[i], new_u[i]] for i in range(len(new_mdot))] )
-
-                new_mdot_new_u_sort = np.sort(new_mdot_new_u.view('f8, f8'), order=['f0'], axis=0).view(np.float)
-
-                mdot_cr = Math.solv_inter_row(new_mdot_new_u_sort[:,0], new_mdot_new_u_sort[:,1], u_s_cr_c)
-
-                ax3.plot(mdot_cr, u_s_cr_c, 'X', color='black', label='Mdot_cr: {}'.format('%.3f' % np.float(mdot_cr[0])))
-                ax3.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
-                ax3.annotate('Mdot_cr:' + str('%.3f' % mdot_cr), xy=(mdot_cr, u_s_cr_c), textcoords='data')
-
-        ax2.set_ylabel(Labels.lbls('ts'), color='r')
-        ax2.tick_params('u', colors='r')
-        ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-
-        ax1.tick_params('u', colors='b')
-        ax1.set_xlabel(Labels.lbls('r'))
-        ax1.set_ylabel(Labels.lbls('u'))
-        ax1.grid(which='both')
-        ax1.grid(which='minor', alpha=0.2)
-        ax1.grid(which='major', alpha=0.2)
-        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
-        plot_name = self.plot_dir + 'critical_radius.pdf'
-        plt.savefig(plot_name)
+    # def velocity_profile(self):
+    #     fig = plt.figure()
+    #     ax1 = fig.add_subplot(111)
+    #
+    #     tlt = 'VELOCITY PROFILE'
+    #     plt.title(tlt, loc='left')
+    #     crit_sonic_values = []
+    #
+    #     r_u_mdot_max = []
+    #     lmdot = []
+    #     long_r = np.zeros(1)
+    #     long_i = -1
+    #
+    #     # --- --- --- FUNCTIONS --- --- ---
+    #     def get_sonic_t(r, u, mu, t):
+    #         '''
+    #         RETURNS rs0, ts0 (if ts0 > 5.2, else - ERROR)
+    #         :param r:
+    #         :param u:
+    #         :param mu:
+    #         :param t:
+    #         :return:
+    #         '''
+    #         if len(r) != len(u) != len(mu) != len(t):
+    #             raise ValueError('Different length of arrays: len(r){} != len(u){} != len(mu){} != len(t){}'
+    #                              .format(len(r), len(u), len(mu), len(t)))
+    #
+    #         ts_arr = np.log10( (mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b )
+    #         rs, ts = Math.interpolated_intercept(r, ts_arr, t)
+    #
+    #         if rs.any():
+    #             rs0 = rs[0][0]
+    #             ts0 = ts[0][0]
+    #
+    #             if ts0 < 5.2:
+    #                 raise ValueError('Ts({})<5.2'.format(ts0))
+    #
+    #         else:
+    #             rs0 = None
+    #             ts0 = None
+    #
+    #         return rs0, ts0, r, ts_arr
+    #
+    #
+    #
+    #     # --- --- --- MAIN --- --- ---
+    #     ax2 = ax1.twinx()
+    #
+    #
+    #
+    #
+    #     for i in range(len(self.num_files)):
+    #
+    #         min_ind = Math.find_nearest_index(self.mdl[i].get_col('r'), 0.9)
+    #
+    #         r = self.mdl[i].get_col('r')[min_ind:]
+    #         u = self.mdl[i].get_col('u')[min_ind:]
+    #         mu= self.mdl[i].get_col('mu')[min_ind:]
+    #         t = self.mdl[i].get_col('t')[min_ind:]
+    #         u_s = self.mdl[i].get_sonic_u()[min_ind:]
+    #
+    #         lmdot =  np.append( lmdot,  self.mdl[i].get_col('mdot')[-1] )
+    #
+    #         # --- PLOTTING velocity and sonic velocity profiles ---
+    #         ax1.plot(r, u, '-', color='black')
+    #         ax1.plot(r, u_s, '-', color='gray')
+    #         ax1.annotate(str('%.2f' % lmdot[i]), xy=(r[-1], u[-1]), textcoords='data')
+    #
+    #
+    #         # --- get maximum of every velocity profile ---
+    #         r_m, u_m =  Math.get_max_by_interpolating(r, u) # use of 1d array for further sorting
+    #         r_u_mdot_max = np.append(r_u_mdot_max, [r_m, u_m, [lmdot[i]] ] ) # [] for lmdot bacause r_cr_c and u_s_cr_c are lists
+    #         ax1.plot(r_m, u_m, '*', color='red')
+    #
+    #         # --- Getting sonic temperature ---
+    #         rs, ts, r, ts_arr = get_sonic_t(r, u, mu, t)
+    #         if rs != None:
+    #             ax2.plot(r,t,'-',color='yellow')
+    #             ax2.plot(r, ts_arr, '-.', color='gray')
+    #             ax2.plot(rs, ts, 'x', color='black')
+    #             ax2.annotate(str('%.2f' % ts), xy=(rs, ts), textcoords='data')
+    #
+    #         rts_m, ts_m = Math.get_max_by_interpolating(r, ts_arr)
+    #
+    #         print('_______', rts_m, ts_m)
+    #         if rts_m != None:
+    #             ax2.plot(rts_m, ts_m, 'x', color='red')
+    #
+    #
+    #         # -- getting the longest (in r) model, so leter to get a critical radii from it
+    #         if long_r.max() < r[-1]:
+    #             long_r = np.append(long_r, r[-1])
+    #             long_i = i
+    #
+    #         # --- filling the array for the output
+    #         l = self.mdl[i].get_col('l')[-1]
+    #         m = self.mdl[i].get_col('xm')[-1]
+    #         yc= self.mdl[i].get_col('He4')[0]
+    #
+    #         if rs!=None:
+    #             crit_sonic_values = np.append(crit_sonic_values, [l, m, yc, lmdot[i], rs, ts])
+    #         else:
+    #             crit_sonic_values = np.append(crit_sonic_values, [l, m, yc, lmdot[i], 0., 0.])
+    #
+    #     # as it r coord first increasing than decreasing - you cannot use it for interpolation,
+    #     # u - coord, which is velocity, is decreasing if mdot is decreasing (or vise versa), but it behaves monotonicall
+    #     # hence, it can be used as a 'r' coordinate, while radius is a 'u'.
+    #     # print(r_u_mdot_max)
+    #
+    #     r_u_mdot_max_sorted = np.sort(r_u_mdot_max.view('f8, f8, f8'), order=['f1'], axis=0).view(np.float)
+    #     r_u_mdot_reshaped = np.reshape(r_u_mdot_max_sorted, (len(self.num_files), 3))
+    #
+    #     new_r   = r_u_mdot_reshaped[:,0]
+    #     new_u   = r_u_mdot_reshaped[:,1]
+    #     new_mdot= r_u_mdot_reshaped[:,2]
+    #
+    #     def check_limits(old_r, new_r, old_u, new_u):
+    #         if old_r.min() < new_r.min():
+    #             print('\t__Error: old_r.min({}) < new_r.min({})'.format(old_r.min(), new_r.min()))
+    #             return 'new_r_too_small'
+    #
+    #         if  new_r.max() > old_r.max()*1.2: # 1.2 is a criterium
+    #             print('\t__Error: old_r.max()({}) < new_r.max({})'.format(old_r.max(), new_r.max()))
+    #             return 'new_r_too_big'
+    #
+    #         if old_u.min() < new_u.min():
+    #             print('\t__Error: old_u.min({}) < new_u.min({})'.format(old_u.min(), new_u.min()))
+    #             return 'new_u_too_small'
+    #
+    #         # if new_u.max() > old_u.max():
+    #         #     print('\t__Error: old_u.max()({}) < new_u.max({})'.format(old_u.max(), new_u.max()))
+    #         #     return 'new_u_too_big'
+    #
+    #         return 'OK'
+    #
+    #     def try_interp_u_r(old_r, old_u, old_mdot):
+    #
+    #         u_max_grid = []
+    #         r_max_grid = []
+    #
+    #         bad_fit = True
+    #
+    #         while bad_fit:
+    #             ''' --- Do interpolation do determine if the fitted spline is well behavied --- '''
+    #
+    #             # print(len( old_u) )
+    #
+    #             u_max_grid = np.mgrid[old_u.min():old_u.max():1000j]
+    #             r_max_grid = Math.interp_row(old_u, old_r, u_max_grid)
+    #
+    #             message = check_limits(old_r, r_max_grid, old_u, new_u)
+    #
+    #             if message == 'OK': # well behaved interpolation, - exit the loop
+    #                 bad_fit = False
+    #             else:
+    #                 if message == 'new_r_too_big' or message == 'new_u_too_big':
+    #                     print('\t__Error. Fitted spline exhibit violent behaviour. Removing the following data set:\n'
+    #                           'r: {} u: {} mdot: {}'.format("%.2f" % old_r[-1], "%.2f" % old_u[-1], "%.2f" % old_mdot[-1]))
+    #                     old_r = old_r[:-1]
+    #                     old_u = old_u[:-1]
+    #                     old_mdot = old_mdot[:-1]
+    #
+    #                     bad_fit = True
+    #                 else:
+    #                     raise ValueError('Unaccounted error: {}'.format(message))
+    #
+    #             if len(old_r) <= 3:
+    #                 raise ValueError('Well Behaved spline not found after removing all but 2 (min) points.')
+    #
+    #         return r_max_grid, u_max_grid, old_r, old_u, old_mdot
+    #
+    #     # --- CHANGE all the arrays --- to account for possible violent behaviour of fitted spline
+    #     r_max_grid, u_max_grid, new_r, new_u, new_mdot = try_interp_u_r(new_r, new_u, new_mdot)
+    #
+    #
+    #     print('\t__Data R:({}, {}), U: ({}, {})'.format(new_r.min(),new_r.max(), new_u.min(), new_u.max()))
+    #     print('\t__Intr R:({}, {}), U: ({}, {})'.format(r_max_grid.min(), r_max_grid.max(), u_max_grid.min(), u_max_grid.max()))
+    #
+    #
+    #     ax1.plot(r_max_grid, u_max_grid, '-', color='blue') # line that connects maxs of vel. profs
+    #
+    #     # --- Find a cross between interplated curve and sonic velocity.
+    #
+    #     r = self.mdl[long_i].get_col('r')
+    #     t = self.mdl[long_i].get_col('t')
+    #     u_s = self.mdl[long_i].get_sonic_u()
+    #
+    #     ax1.plot(r, u_s, '-', color='blue') #
+    #
+    #     # ax2 = ax1.twinx()   # for plotting the temperature scale (to see the Temp at critical radius)
+    #     ax2.plot(r, t, '-.', color='brown')
+    #
+    #     i1 = Math.find_nearest_index(r, r_max_grid.min()) # - 1
+    #     i2 = Math.find_nearest_index(r, r_max_grid.max()) # + 1
+    #
+    #
+    #
+    #     print('\t__Cropped R : [{}, {}] -> ({}, {}) out of {}'.format(i1,i2, r[i1], r[i2], r.max()))
+    #     r_cr = r[i1:i2]
+    #     u_s_cr =u_s[i1:i2]
+    #     t_cr = t[i1:i2]
+    #
+    #
+    #     # x_for_us_grid = np.mgrid[r.min():r.max():1000j]
+    #     int_r_for_us_grid = Math.interp_row(r_cr, u_s_cr, r_max_grid) # corpped radius range
+    #     int_t_for_us_grid = Math.interp_row(r_cr, t_cr, r_max_grid)   # cropped temp range
+    #
+    #     ax1.plot(r_max_grid, int_r_for_us_grid, '-', color='green') # corpped radius range
+    #     ax2.plot(r_max_grid, int_t_for_us_grid, '-', color='brown') # cropped temp range
+    #
+    #     # --- Critical Radius ---
+    #
+    #     r_cr_c, u_s_cr_c = Math.interpolated_intercept(r_max_grid, u_max_grid, int_r_for_us_grid)
+    #
+    #     mdot_cr = None # for the case if critical point is not found
+    #     t_crit = None
+    #
+    #     if len(r_cr_c) == len(u_s_cr_c) == 0:
+    #         pass
+    #         #raise ValueError('Critical Radius is not found')
+    #     else:
+    #
+    #         print('\t__Critical radii found: ({},{})'.format(len(r_cr_c), len(u_s_cr_c)) )
+    #
+    #         i_of_u_near_yc = Math.find_nearest_index(int_r_for_us_grid, u_s_cr_c) # for f
+    #
+    #         for i in range(len(r_cr_c)):
+    #             ax1.plot(r_cr_c[i], u_s_cr_c[i], 'X', color='blue', label='Rc:{}'.format('%.3f' %  r_cr_c[i])) # critical Radius
+    #             ax1.annotate('Rs:'+str('%.3f' % r_cr_c[i]), xy=(r_cr_c[i], u_s_cr_c[i]), textcoords='data')
+    #
+    #         # --- Critical Temperature ---
+    #
+    #         t_crit = int_t_for_us_grid[i_of_u_near_yc]  # temperature at a critical radius
+    #         ax2.plot( r_cr_c, t_crit, 'X', color='red', label='Tc:{}'.format('%.3f' %  t_crit) )           # temp. at critical radius
+    #         ax1.axvline(x=r_cr_c, color='gray', linestyle='solid')
+    #
+    #         # --- Critical Mass Loss --- [SUBPLOT]
+    #
+    #         ax3 = fig.add_axes([0.23, 0.5, 0.23, 0.23])
+    #         ax3.plot(new_mdot, new_u, '-', color='black')
+    #         ax3.plot(new_mdot, new_u, '.', color='black')
+    #         ax3.set_xlabel(Labels.lbls('mdot'))
+    #         ax3.set_ylabel(Labels.lbls('u'))
+    #         ax3.grid()
+    #         ax3.axhline(y=u_s_cr_c, color='gray', linestyle='--', label='Son_vel: {}'.format( '%.3f' % u_s_cr_c))
+    #
+    #
+    #         if u_s_cr_c < new_u.min() or u_s_cr_c > new_u.max():
+    #             raise ValueError('u_s_cr_c({}) is beyond available new_u range({} , {})'.format(u_s_cr_c, new_u.min(), new_u.max()))
+    #         else:
+    #
+    #             # --- The 'new_mdot_new_u' and 'new_mdot_new_u_sort' are here to ensire assending order of x coord. for
+    #             #     interpolation in 'solv_inter_row', otherwise, interpolation breakes.
+    #
+    #             new_mdot_new_u = np.array(  [ [new_mdot[i], new_u[i]] for i in range(len(new_mdot))] )
+    #
+    #             new_mdot_new_u_sort = np.sort(new_mdot_new_u.view('f8, f8'), order=['f0'], axis=0).view(np.float)
+    #
+    #             mdot_cr = Math.solv_inter_row(new_mdot_new_u_sort[:,0], new_mdot_new_u_sort[:,1], u_s_cr_c)
+    #
+    #             ax3.plot(mdot_cr, u_s_cr_c, 'X', color='black', label='Mdot_cr: {}'.format('%.3f' % np.float(mdot_cr[0])))
+    #             ax3.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+    #             ax3.annotate('Mdot_cr:' + str('%.3f' % mdot_cr), xy=(mdot_cr, u_s_cr_c), textcoords='data')
+    #
+    #     ax2.set_ylabel(Labels.lbls('ts'), color='r')
+    #     ax2.tick_params('u', colors='r')
+    #     ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #
+    #     ax1.tick_params('u', colors='b')
+    #     ax1.set_xlabel(Labels.lbls('r'))
+    #     ax1.set_ylabel(Labels.lbls('u'))
+    #     ax1.grid(which='both')
+    #     ax1.grid(which='minor', alpha=0.2)
+    #     ax1.grid(which='major', alpha=0.2)
+    #     ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+    #     plot_name = self.plot_dir + 'critical_radius.pdf'
+    #     plt.savefig(plot_name)
+    #     plt.show()
+    #
+    #     # --- SORTING the array according to the mass loss (max -> min)
+    #     crit_sonic_values = np.sort(crit_sonic_values.view('f8, f8, f8, f8, f8, f8'), order=['f3'], axis=0).view(
+    #         np.float)
+    #
+    #
+    #     # head = '\t {} \t {} \t {} \t\t {} \t {} \t {}'\
+    #     #     .format('log(L)', 'M(Msun)', 'Yc', 'log(Mdot)', 'Rs(Rsun)', 'log(Ts)')
+    #     tablehead = '{}  {}  {}  {}  {}  {}'\
+    #         .format('log(L)', 'M(Msun)', 'Yc', 'l(Mdot)', 'Rs(Rsun)', 'log(Ts)')
+    #
+    #     # --- Adding a first row of values for critical r, mdot, and t, and l, m, Yc for the model, whose sonic vel. was
+    #     # used to interplate the temp amd mdot.
+    #
+    #     l = self.mdl[long_i].get_col('l')[-1] # for the first row
+    #     m = self.mdl[long_i].get_col('xm')[-1]
+    #     yc = self.mdl[long_i].get_col('He4')[0]
+    #
+    #     # --- Appending the ROW with critical values, if found
+    #     if len(r_cr_c) == len(u_s_cr_c) == 0:
+    #         crit_sonic_values = np.reshape(crit_sonic_values, (len(self.num_files), 6))
+    #         print('\t__Warning! Critical Values are not found. Ouptut tale contain {} rows instead of {}'
+    #               .format(len(self.num_files), len(self.num_files) + 1))
+    #     else:
+    #         crit_sonic_values = np.insert(crit_sonic_values, 0, [l, m, yc, mdot_cr, r_cr_c, t_crit])
+    #         crit_sonic_values = np.reshape(crit_sonic_values, (len(self.num_files)+1, 6))
+    #
+    #         print('\t__Note. Critical Values are found and written in the FIRST row (out of {}) in output file.'.
+    #               format(len(self.num_files)+1))
+    #
+    #     # print('Critical values:')
+    #     # print(head)
+    #     # print(crit_sonic_values[0,:])
+    #     #
+    #     #
+    #     # print('\n')
+    #     # print(head)
+    #     # print(crit_sonic_values[1:,:])
+    #     #
+    #     # print('\t__Note: Value {} means that solution was not found (extended configutration)'.format(0.))
+    #     # print('Critical Radii found: {}'.format(r_cr_c))
+    #
+    #     out_name = 'SP_'
+    #     for i in range(len(self.input_dirs)):
+    #         if self.input_dirs[i] not in self.dirs_not_to_be_included and self.input_dirs[i] != '..':
+    #             out_name = out_name + self.input_dirs[i]
+    #             if i < len(self.input_dirs) - 1:
+    #                 out_name = out_name + '_'
+    #     out_name = out_name + '.data'
+    #
+    #
+    #
+    #
+    #     print('Results are saved in: {}'.format(self.out_dir + out_name))
+    #     np.savetxt(self.out_dir + out_name, crit_sonic_values, '%.4f', '  ', '\n', tablehead, '')
+
+class Read_Tau:
+
+    def __init__(self, plotfiles, smfiles, out_dir, plot_dir, dirs_not_to_be_included):
+
+        self.input_dirs = plotfiles[0].split('/')[:-1]
+        # print(self.input_dirs)
+        self.dirs_not_to_be_included = dirs_not_to_be_included # name of folders that not to be in the name of out. file.
+
+        self.out_dir = out_dir
+        self. plot_dir = plot_dir
+
+        self.plt_files = plotfiles
+        self.sm_files = smfiles
+        self.plotmdl = []
+        self.smmdl = []
+
+        if len(smfiles) != len(plotfiles):
+            raise IOError('len(smfiles)[{}] != len(plotfiles)[{}]'.format(len(smfiles), len(plotfiles)))
+
+        for file in plotfiles:
+            self.plotmdl.append(Read_Plot_file.from_file(file))
+
+        for file in smfiles:
+            self.smmdl.append(Read_SM_data_file.from_sm_data_file(file))
+
+    def tau(self):
+
+        mdot_tau = []
+        for i in range(len(self.plt_files)):
+            mdot =  self.plotmdl[i].mdot_[-1]
+            tau =  self.plotmdl[i].tauatR[-1]
+            windform_24= self.plotmdl[i].windform_24[-1]
+            mdot_tau = np.append(mdot_tau, [mdot, tau, windform_24])
+
+        mdot_tau_shape = np.sort(mdot_tau.view('f8, f8, f8'), order=['f0'], axis=0).view(np.float)
+        mdot_tau_sorted = np.reshape(mdot_tau_shape, (len(self.plt_files), 3))
+
+
+        # mdot_grid = np.mgrid[mdot_tau_sorted[:,0].min():mdot_tau_sorted[:,0].max():100j]
+        mdot_grid, tau_grid = Math.fit_plynomial(mdot_tau_sorted[:,0], mdot_tau_sorted[:,1], 6, 100)
+
+
+
+
+        plt.plot(mdot_tau_sorted[:,0], mdot_tau_sorted[:,1], '-', color = 'black')
+        plt.plot(mdot_grid, tau_grid, '-', color = 'red')
+        plt.axvline(x=-4.88096)
+        plt.grid()
+        plt.title('M:20sm Yc:0.993 SP_BEC .plot1')
+        # plt.legend()
+        plt.xlabel('mdot')
+        plt.ylabel('tau')
         plt.show()
 
-        # --- SORTING the array according to the mass loss (max -> min)
-        crit_sonic_values = np.sort(crit_sonic_values.view('f8, f8, f8, f8, f8, f8'), order=['f3'], axis=0).view(
-            np.float)
-
-
-        # head = '\t {} \t {} \t {} \t\t {} \t {} \t {}'\
-        #     .format('log(L)', 'M(Msun)', 'Yc', 'log(Mdot)', 'Rs(Rsun)', 'log(Ts)')
-        tablehead = '{}  {}  {}  {}  {}  {}'\
-            .format('log(L)', 'M(Msun)', 'Yc', 'l(Mdot)', 'Rs(Rsun)', 'log(Ts)')
-
-        # --- Adding a first row of values for critical r, mdot, and t, and l, m, Yc for the model, whose sonic vel. was
-        # used to interplate the temp amd mdot.
-
-        l = self.mdl[long_i].get_col('l')[-1] # for the first row
-        m = self.mdl[long_i].get_col('xm')[-1]
-        yc = self.mdl[long_i].get_col('He4')[0]
-
-        # --- Appending the ROW with critical values, if found
-        if len(r_cr_c) == len(u_s_cr_c) == 0:
-            crit_sonic_values = np.reshape(crit_sonic_values, (len(self.num_files), 6))
-            print('\t__Warning! Critical Values are not found. Ouptut tale contain {} rows instead of {}'
-                  .format(len(self.num_files), len(self.num_files) + 1))
-        else:
-            crit_sonic_values = np.insert(crit_sonic_values, 0, [l, m, yc, mdot_cr, r_cr_c, t_crit])
-            crit_sonic_values = np.reshape(crit_sonic_values, (len(self.num_files)+1, 6))
-
-            print('\t__Note. Critical Values are found and written in the FIRST row (out of {}) in output file.'.
-                  format(len(self.num_files)+1))
-
-        # print('Critical values:')
-        # print(head)
-        # print(crit_sonic_values[0,:])
+        # mdot_t = []
+        # for i in range(len(self.sm_files)):
+        #     mdot =  self.smmdl[i].get_col('mdot')[-1]
+        #     r    =  self.smmdl[i].get_col('r')[-1]
+        #     mdot_t = np.append(mdot_t, [mdot, r])
         #
+        # mdot_t_shape  = np.sort(mdot_t.view('f8, f8'), order=['f0'], axis=0).view(np.float)
+        # mdot_t_sorted = np.reshape(mdot_t_shape, (len(self.sm_files), 2))
+
+
+
+        # sp_file = np.loadtxt('../data/sp_files/20z0008/SP_ga_z0008_20sm_y10.data')
         #
-        # print('\n')
-        # print(head)
-        # print(crit_sonic_values[1:,:])
-        #
-        # print('\t__Note: Value {} means that solution was not found (extended configutration)'.format(0.))
-        # print('Critical Radii found: {}'.format(r_cr_c))
+        # plt.plot(mdot_t_sorted[:,0], mdot_t_sorted[:,1], '.', color = 'black')
+        # plt.plot(sp_file[1:,3], sp_file[1:,4], '-', color = 'red')
+        # plt.axvline(x=-4.88096)
+        # plt.grid()
+        # plt.title('M:20sm Yc:0.993 SP_BEC sm.data')
+        # # plt.legend()
+        # plt.xlabel(Labels.lbls('mdot'))
+        # plt.ylabel(Labels.lbls('r'))
+        # plt.show()
 
-        out_name = 'SP_'
-        for i in range(len(self.input_dirs)):
-            if self.input_dirs[i] not in self.dirs_not_to_be_included and self.input_dirs[i] != '..':
-                out_name = out_name + self.input_dirs[i]
-                if i < len(self.input_dirs) - 1:
-                    out_name = out_name + '_'
-        out_name = out_name + '.data'
-
-
-
-
-        print('Results are saved in: {}'.format(self.out_dir + out_name))
-        np.savetxt(self.out_dir + out_name, crit_sonic_values, '%.4f', '  ', '\n', tablehead, '')

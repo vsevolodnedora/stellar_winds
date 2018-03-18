@@ -880,116 +880,277 @@ class Combine:
     #
     #     #====================================================END========================================================
 
+    # def t_llm_cr_sp(self, t_k_rho, yc_val, opal_used):
+    #     kap = t_k_rho[1:, 0]
+    #     t = t_k_rho[0, 1:]
+    #     rho2d = t_k_rho[1:, 1:]
+    #     lm_op = Physics.logk_loglm(kap, 1)
+    #
+    #     yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+    #     yc = yc_lm_l[0, 1:]
+    #     lm_sp = yc_lm_l[1:, 0]
+    #     l2d_sp = yc_lm_l[1:, 1:]
+    #
+    #     yc_lm_r = Save_Load_tables.load_table('yc_lm_r', 'yc', 'lm', 'r', opal_used)
+    #     lm_sp = yc_lm_r[1:, 0]
+    #     r2d_sp = yc_lm_r[1:, 1:]
+    #
+    #     lm1 = np.array([lm_op.min(), lm_sp.min()]).max()
+    #     lm2 = np.array([lm_op.max(), lm_sp.max()]).min()
+    #
+    #     yc_lm_l = Math.crop_2d_table(Math.combine(yc, lm_sp, l2d_sp), None, None, lm1, lm2)
+    #     yc_lm_r = Math.crop_2d_table(Math.combine(yc, lm_sp, r2d_sp), None, None, lm1, lm2)
+    #     t_lm_rho = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, lm_op, rho2d)), None, None, lm1, lm2)
+    #
+    #     if not yc_val in yc:
+    #         yc_ind = None
+    #         raise ValueError('Yc = {} | not in yc from | {} | for {}'.format(yc_val, 'yc_lm_l', opal_used))
+    #     else:
+    #         yc_ind = Math.find_nearest_index(yc, yc_val) + 1  # as it starts with zero, which is non physical
+    #
+    #     t_op = t_lm_rho[0, 1:]
+    #     lm_op = t_lm_rho[1:, 0]
+    #     rho2d = t_lm_rho[1:, 1:]
+    #     lm_sp = yc_lm_l[1:, 0]
+    #     l2d = yc_lm_l[1:, yc_ind]
+    #     r2d = yc_lm_r[1:, yc_ind]
+    #
+    #     f = interpolate.UnivariateSpline(lm_sp, l2d)
+    #     l_ = f(lm_op)
+    #
+    #     f = interpolate.UnivariateSpline(lm_sp, r2d)
+    #     r_ = f(lm_op)
+    #
+    #     vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+    #     m_dot = Physics.vrho_mdot(vrho, r_, 'l')
+    #
+    #     return Math.combine(t, l_, m_dot),  Math.combine(t, lm_op, m_dot)
+    #
+    # @staticmethod
+    # def t_l_mdot_cr_sp(t_k_rho, yc_val, opal_used):
+    #     kap = t_k_rho[1:, 0]
+    #     t   = t_k_rho[0, 1:]
+    #     rho2d = t_k_rho[1:, 1:]
+    #     lm_op = Physics.logk_loglm(kap, 1)
+    #
+    #     yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+    #     yc = yc_lm_l[0, 1:]
+    #     lm_sp = yc_lm_l[1:, 0]
+    #     l2d_sp= yc_lm_l[1:, 1:]
+    #
+    #     yc_lm_r = Save_Load_tables.load_table('yc_lm_r', 'yc', 'lm', 'r', opal_used)
+    #     lm_sp  = yc_lm_r[1:, 0]
+    #     r2d_sp = yc_lm_r[1:, 1:]
+    #
+    #     lm1 = np.array([lm_op.min(), lm_sp.min()]).max()
+    #     lm2 = np.array([lm_op.max(), lm_sp.max()]).min()
+    #
+    #     yc_lm_l = Math.crop_2d_table(Math.combine(yc, lm_sp, l2d_sp), None, None, lm1, lm2)
+    #     yc_lm_r = Math.crop_2d_table(Math.combine(yc, lm_sp, r2d_sp), None, None, lm1, lm2)
+    #     t_lm_rho= Math.crop_2d_table( Math.invet_to_ascending_xy(Math.combine(t, lm_op, rho2d)), None, None, lm1, lm2)
+    #
+    #     if not yc_val in yc:
+    #         yc_ind = None
+    #         raise ValueError('Yc = {} | not in yc from | {} | for {}'.format(yc_val, 'yc_lm_l', opal_used))
+    #     else:
+    #         yc_ind = Math.find_nearest_index(yc, yc_val) + 1 # as it starts with zero, which is non physical
+    #
+    #
+    #
+    #
+    #     t_op = t_lm_rho[0, 1:]
+    #     lm_op = t_lm_rho[1:, 0]
+    #     rho2d = t_lm_rho[1:,1:]
+    #     lm_sp = yc_lm_l[1:,0]
+    #     l2d = yc_lm_l[1:, yc_ind]
+    #     r2d = yc_lm_r[1:, yc_ind]
+    #
+    #     f = interpolate.UnivariateSpline(lm_sp, l2d)
+    #     l_ = f(lm_op)
+    #
+    #     f = interpolate.UnivariateSpline(lm_sp, r2d)
+    #     r_ = f(lm_op)
+    #
+    #     vrho  = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+    #     m_dot = Physics.vrho_mdot(vrho, r_, 'l')
+    #
+    #     return Math.combine(t, l_, m_dot)
+    #
+    # @staticmethod
+    # def t_lm_mdot_cr_sp(t_k_rho, yc_val, opal_used):
+    #     kap = t_k_rho[1:, 0]
+    #     t = t_k_rho[0, 1:]
+    #     rho2d = t_k_rho[1:, 1:]
+    #     lm_op = Physics.logk_loglm(kap, 1)
+    #
+    #     # yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+    #     # yc = yc_lm_l[0, 1:]
+    #     # lm_sp = yc_lm_l[1:, 0]
+    #     # l2d_sp = yc_lm_l[1:, 1:]
+    #
+    #     yc_lm_r = Save_Load_tables.load_table('yc_lm_r', 'yc', 'lm', 'r', opal_used)
+    #     yc = yc_lm_r[0, 1:]
+    #     lm_sp = yc_lm_r[1:, 0]
+    #     r2d_sp = yc_lm_r[1:, 1:]
+    #
+    #     lm1 = np.array([lm_op.min(), lm_sp.min()]).max()
+    #     lm2 = np.array([lm_op.max(), lm_sp.max()]).min()
+    #
+    #     # yc_lm_l = Math.crop_2d_table(Math.combine(yc, lm_sp, l2d_sp), None, None, lm1, lm2)
+    #     yc_lm_r  = Math.crop_2d_table(Math.combine(yc, lm_sp, r2d_sp), None, None, lm1, lm2)
+    #     t_lm_rho = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, lm_op, rho2d)), None, None, lm1, lm2)
+    #
+    #     if not yc_val in yc:
+    #         yc_ind = None
+    #         raise ValueError('Yc = {} | not in yc from | {} | for {}'.format(yc_val, 'yc_lm_l', opal_used))
+    #     else:
+    #         yc_ind = Math.find_nearest_index(yc, yc_val) + 1  # as it starts with zero, which is non physical
+    #
+    #
+    #
+    #
+    #     t_op = t_lm_rho[0, 1:]
+    #     lm_op = t_lm_rho[1:, 0]
+    #     rho2d = t_lm_rho[1:, 1:]
+    #     # lm_sp = yc_lm_l[1:, 0]
+    #     # l2d = yc_lm_l[1:, yc_ind]
+    #     r2d = yc_lm_r[1:, yc_ind]
+    #
+    #     # f = interpolate.UnivariateSpline(lm_sp, l2d)
+    #     # l_ = f(lm_op)
+    #
+    #     f2 = interpolate.UnivariateSpline(lm_sp, r2d)
+    #     r2_ = f2(lm_op)
+    #
+    #     vrho2 = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+    #     m_dot2 = Physics.vrho_mdot(vrho2, r2_, 'l')
+    #
+    #     return Math.combine(t, lm_op, m_dot2)
 
-
-    @staticmethod
-    def t_llm_mdot_crit_sp(sp_clss, t_k_rho, l_or_lm):
-        '''
-        READS the SP files for r_crit and l/lm. Than depending on limits of l/lm in SP and limits in OPAL
-        selects the availabel range of l/am and uses OPAL values of l/lm as a grid, to interpolate critical R values
-        :param t_k_rho:
-        :param l_or_lm:
-        :param yc:
-        :param z:
-        :return:
-        '''
-
-        kap = t_k_rho[1:, 0]
-        t   = t_k_rho[0, 1:]
-        rho2d = t_k_rho[1:, 1:]
-
-        l_lm_r = []
-
-        for i in range(len(sp_clss)):
-            l    = sp_clss[i].get_crit_value('l')
-            m    = sp_clss[i].get_crit_value('m')
-            lm   = Physics.loglm(l, m, False)
-            r_cr = sp_clss[i].get_crit_value('r')
-            # t_cr = self.spmdl[i].get_crit_value('t')
-
-            l_lm_r = np.append(l_lm_r, [l, lm, r_cr])
-
-        if l_or_lm == 'l':
-            l_lm_r_sorted = np.sort(l_lm_r.view('f8, f8, f8'), order=['f0'], axis=0).view(np.float)
-            l_lm_r_shaped = np.reshape(l_lm_r_sorted, (len(sp_clss), 3))
-            llm_emp  = l_lm_r_shaped[:,0]
-            r_cr_emp = l_lm_r_shaped[:,2]
-
-            llm_opal = Physics.lm_to_l(Physics.logk_loglm(kap, True))
-            t_llm_rhp_inv = Math.invet_to_ascending_xy(Math.combine(t, llm_opal, rho2d))
-        else:
-            l_lm_r_sorted = np.sort(l_lm_r.view('f8, f8, f8'), order=['f1'], axis=0).view(np.float)
-            l_lm_r_shaped = np.reshape(l_lm_r_sorted, (len(sp_clss), 3))
-            llm_emp  = l_lm_r_shaped[:,1]
-            r_cr_emp = l_lm_r_shaped[:,2]
-
-            llm_opal = Physics.logk_loglm(kap, True)
-            t_llm_rhp_inv = Math.invet_to_ascending_xy(Math.combine(t, llm_opal, rho2d))
-
-
-        l_lim1 = np.array([llm_emp.min(), llm_opal.min()]).max()
-        l_lim2 = np.array([llm_emp.max(), llm_opal.max()]).min()
-
-        print('\t__Note: Opal <{}> limits: ({}, {}) | SP files <{}> limits: ({}, {}) \n\t  Selected: ({}, {})'
-              .format(l_or_lm, "%.2f" % llm_opal.min(), "%.2f" %  llm_opal.max(),
-                      l_or_lm, "%.2f" %  llm_emp.min(), "%.2f" %  llm_emp.max(),
-                      "%.2f" %  l_lim1, "%.2f" % l_lim2))
-
-
-        cropped = Math.crop_2d_table(t_llm_rhp_inv, None, None, l_lim1, l_lim2)
-        l_lm  = cropped[1:, 0]
-        t     = cropped[0, 1:]
-        rho2d = cropped[1:,1:]
-
-        f = interpolate.UnivariateSpline(llm_emp, r_cr_emp)
-        r_arr = f(l_lm)
-
-        vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
-        m_dot = Physics.vrho_mdot(vrho, r_arr, 'l')
-
-        return Math.combine(t, l_lm, m_dot)
-
-        # else:
-        #     l_lm_table = Physics.lm_to_l(Physics.logk_loglm(kap, True))
-        #     l_lm_r_sorted = np.sort(l_lm_r.view('f8, f8'), order=['f1'], axis=0).view(np.float)
-        #     l_lm_r_shaped = np.reshape(l_lm_r_sorted, (len(self.sp_files), 3))
-        #
-        #
-        #
-        #
-        #
-        #
-        # if l_or_lm == 'l':  # to account for different limits in mass and luminocity
-        #     l = Physics.lm_to_l( Physics.logk_loglm(kap, True) )
-        #     cropped = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, l, rho2d)),
-        #                                  None, None, l_lim[0], l_lim[-1])
-        #
-        #     l_lm = cropped[1:, 0]
-        #     t = cropped[0, 1:]
-        #     rho2d = cropped[1:, 1:]
-        #
-        #     vrho = Physics.get_vrho(t, rho2d, 2)
-        #     m_dot = Physics.vrho_mdot(vrho, Combine.llm_r_formulas(l_lm, yc, z, l_or_lm), 'l')  # r_s = given by the func
-        #
-        # else:
-        #     lm = Physics.logk_loglm(kap, True)
-        #     cropped = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, lm, rho2d)),
-        #                                  None, None, lm_lim[0], lm_lim[-1])
-        #
-        #
-        #     l_lm = cropped[1:, 0]
-        #     t    = cropped[0, 1:]
-        #     rho2d = cropped[1:, 1:]
-        #
-        #     vrho = Physics.get_vrho(t, rho2d, 2)
-        #     m_dot = Physics.vrho_mdot(vrho, r_lm(l_lm), 'l')  # r_s = given by the func
-        #
-        #
-        # return Math.combine(t, l_lm, m_dot)
-
-        # return (40.843) + (-15.943*x) + (1.591*x**2)                    # FROM GREY ATMOSPHERE ESTIMATES
-
-        # return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3        # FROM SONIC POINT ESTIMATES
+    # @staticmethod
+    # def t_llm_mdot_crit_sp(sp_clss, t_k_rho, l_or_lm, yc, opal_used):
+    #     '''
+    #     READS the SP files for r_crit and l/lm. Than depending on limits of l/lm in SP and limits in OPAL
+    #     selects the availabel range of l/am and uses OPAL values of l/lm as a grid, to interpolate critical R values
+    #     :param t_k_rho:
+    #     :param l_or_lm:
+    #     :param yc:
+    #     :param z:
+    #     :return:
+    #     '''
+    #
+    #     kap = t_k_rho[1:, 0]
+    #     t   = t_k_rho[0, 1:]
+    #     rho2d = t_k_rho[1:, 1:]
+    #
+    #     l_lm_r = []
+    #
+    #     for i in range(len(sp_clss)):
+    #         l    = sp_clss[i].get_crit_value('l')
+    #         m    = sp_clss[i].get_crit_value('m')
+    #         lm   = Physics.loglm(l, m, False)
+    #         r_cr = sp_clss[i].get_crit_value('r')
+    #         # t_cr = self.spmdl[i].get_crit_value('t')
+    #
+    #         l_lm_r = np.append(l_lm_r, [l, lm, r_cr])
+    #
+    #     if l_or_lm == 'l':
+    #         l_lm_r_sorted = np.sort(l_lm_r.view('f8, f8, f8'), order=['f0'], axis=0).view(np.float)
+    #         l_lm_r_shaped = np.reshape(l_lm_r_sorted, (len(sp_clss), 3))
+    #         llm_emp  = l_lm_r_shaped[:,0]
+    #         r_cr_emp = l_lm_r_shaped[:,2]
+    #
+    #         llm_opal = []
+    #         lm_aval = []
+    #         if yc >= 0 and yc <= 1.:
+    #             lm_aval, llm_opal = SP_file_work.yc_x__to__y__sp(yc, 'lm', 'l', Physics.logk_loglm(kap, True), opal_used, 1)
+    #         if yc == 'langer':
+    #             llm_opal = Physics.lm_to_l_langer(Physics.logk_loglm(kap, True))
+    #         if len(llm_opal) == 0: raise ValueError('Yc = {} is not recognised.'.format(yc))
+    #
+    #
+    #         old_table = Math.combine(t, Physics.logk_loglm(kap, True), rho2d)
+    #         sorted_table = Math.invet_to_ascending_xy(old_table)
+    #
+    #         table_cropped = Math.crop_2d_table(sorted_table, None, None, lm_aval.min(), lm_aval.max())
+    #
+    #
+    #
+    #         t_llm_rhp_inv = Math.invet_to_ascending_xy(Math.combine(table_cropped[0,1:], llm_opal, table_cropped[1:,1:]))
+    #     else:
+    #         l_lm_r_sorted = np.sort(l_lm_r.view('f8, f8, f8'), order=['f1'], axis=0).view(np.float)
+    #         l_lm_r_shaped = np.reshape(l_lm_r_sorted, (len(sp_clss), 3))
+    #         llm_emp  = l_lm_r_shaped[:,1]
+    #         r_cr_emp = l_lm_r_shaped[:,2]
+    #
+    #         llm_opal = Physics.logk_loglm(kap, True)
+    #         t_llm_rhp_inv = Math.invet_to_ascending_xy(Math.combine(t, llm_opal, rho2d))
+    #
+    #
+    #     l_lim1 = np.array([llm_emp.min(), llm_opal.min()]).max()
+    #     l_lim2 = np.array([llm_emp.max(), llm_opal.max()]).min()
+    #
+    #     print('\t__Note: Opal <{}> limits: ({}, {}) | SP files <{}> limits: ({}, {}) \n\t  Selected: ({}, {})'
+    #           .format(l_or_lm, "%.2f" % llm_opal.min(), "%.2f" %  llm_opal.max(),
+    #                   l_or_lm, "%.2f" %  llm_emp.min(), "%.2f" %  llm_emp.max(),
+    #                   "%.2f" %  l_lim1, "%.2f" % l_lim2))
+    #
+    #
+    #
+    #     cropped = Math.crop_2d_table(t_llm_rhp_inv, None, None, l_lim1, l_lim2)
+    #     l_lm  = cropped[1:, 0]
+    #     t     = cropped[0, 1:]
+    #     rho2d = cropped[1:,1:]
+    #
+    #     f = interpolate.UnivariateSpline(llm_emp, r_cr_emp)
+    #     r_arr = f(l_lm)
+    #
+    #     vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+    #     m_dot = Physics.vrho_mdot(vrho, r_arr, 'l')
+    #
+    #     return Math.combine(t, l_lm, m_dot)
+    #
+    #     # else:
+    #     #     l_lm_table = Physics.lm_to_l(Physics.logk_loglm(kap, True))
+    #     #     l_lm_r_sorted = np.sort(l_lm_r.view('f8, f8'), order=['f1'], axis=0).view(np.float)
+    #     #     l_lm_r_shaped = np.reshape(l_lm_r_sorted, (len(self.sp_files), 3))
+    #     #
+    #     #
+    #     #
+    #     #
+    #     #
+    #     #
+    #     # if l_or_lm == 'l':  # to account for different limits in mass and luminocity
+    #     #     l = Physics.lm_to_l( Physics.logk_loglm(kap, True) )
+    #     #     cropped = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, l, rho2d)),
+    #     #                                  None, None, l_lim[0], l_lim[-1])
+    #     #
+    #     #     l_lm = cropped[1:, 0]
+    #     #     t = cropped[0, 1:]
+    #     #     rho2d = cropped[1:, 1:]
+    #     #
+    #     #     vrho = Physics.get_vrho(t, rho2d, 2)
+    #     #     m_dot = Physics.vrho_mdot(vrho, Combine.llm_r_formulas(l_lm, yc, z, l_or_lm), 'l')  # r_s = given by the func
+    #     #
+    #     # else:
+    #     #     lm = Physics.logk_loglm(kap, True)
+    #     #     cropped = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, lm, rho2d)),
+    #     #                                  None, None, lm_lim[0], lm_lim[-1])
+    #     #
+    #     #
+    #     #     l_lm = cropped[1:, 0]
+    #     #     t    = cropped[0, 1:]
+    #     #     rho2d = cropped[1:, 1:]
+    #     #
+    #     #     vrho = Physics.get_vrho(t, rho2d, 2)
+    #     #     m_dot = Physics.vrho_mdot(vrho, r_lm(l_lm), 'l')  # r_s = given by the func
+    #     #
+    #     #
+    #     # return Math.combine(t, l_lm, m_dot)
+    #
+    #     # return (40.843) + (-15.943*x) + (1.591*x**2)                    # FROM GREY ATMOSPHERE ESTIMATES
+    #
+    #     # return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3        # FROM SONIC POINT ESTIMATES
 
     def plot_t_l_mdot(self, l_or_lm, rs, plot_obs, plot_nums, lim_t1 = None, lim_t2 = None):
 
@@ -1100,142 +1261,7 @@ class Combine:
         plt.savefig(name)
         plt.show()
 
-    def save_yc_llm_mdot_cr(self, l_or_lm,
-                            rs=None, yc_prec = 0.1, depth = 100, plot = True, lim_t1=5.18, lim_t2=None):
 
-        t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
-
-        def interp(x, y, x_grid):
-            f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
-            return x_grid, f(x_grid)
-
-        if rs == None:
-
-            spfiles_ = SP_file_work(self.sp_files, self.output_dir, self.plot_dir)
-            min_llm, max_llm = spfiles_.get_min_max(l_or_lm)
-            yc, spcls = spfiles_.separate_sp_by_crit_val('Yc', yc_prec)
-
-
-            y_grid = np.mgrid[min_llm:max_llm:depth * 1j]
-
-            mdot2d_pol = np.zeros(len(y_grid))
-            mdot2d_int = np.zeros(len(y_grid))
-
-            fig = plt.figure(figsize=plt.figaspect(1.0))
-
-            ax1 = fig.add_subplot(221)
-            ax1.grid()
-            ax1.set_ylabel(Labels.lbls(l_or_lm))
-            ax1.set_xlabel(Labels.lbls('mdot'))
-            ax1.set_title('INTERPOLATION')
-
-            ax2 = fig.add_subplot(222)
-            ax2.grid()
-            ax2.set_ylabel(Labels.lbls(l_or_lm))
-            ax2.set_xlabel(Labels.lbls('mdot'))
-            ax2.set_title('EXTRAPOLATION')
-
-            for i in range(len(spcls)):
-                t_llm_mdot = self.t_llm_mdot_crit_sp(spcls[i], t_k_rho, l_or_lm)
-                t = t_llm_mdot[0, 1:]
-                l_lm_arr = t_llm_mdot[1:, 0]
-                m_dot = t_llm_mdot[1:, 1:]
-
-                mins = Math.get_mins_in_every_row(t, l_lm_arr, m_dot, 5000, lim_t1, lim_t2)
-
-                llm = mins[1, :]
-                mdot= mins[2, :]
-
-                # plt.plot(mins[2, :], mins[1, :], '-', color='black')
-                # plt.annotate(str("%.2f" % yc[i]), xy=(mins[2, 0], mins[1, 0]), textcoords='data')
-
-                '''----------------------------POLYNOMIAL EXTRAPOLATION------------------------------------'''
-                print('\n\t Yc = {}'.format(yc[i]))
-
-
-                llm_pol, mdot_pol = Math.fit_plynomial(llm, mdot, 3, depth, y_grid)
-                mdot2d_pol = np.vstack((mdot2d_pol, mdot_pol))
-                color = 'C' + str(int(yc[i] * 10) - 1)
-                ax2.plot(mdot_pol, llm_pol, '--', color=color)
-                ax2.plot(mdot, llm, '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
-                # ax2.annotate(str("%.2f" % yc[i]), xy=(mdot_pol[0], llm_pol[0]), textcoords='data')
-
-                '''------------------------------INTERPOLATION ONLY---------------------------------------'''
-                llm_int, mdot_int = interp(llm, mdot, y_grid)
-                mdot2d_int = np.vstack((mdot2d_int, mdot_int))
-                ax1.plot(mdot_int, llm_int, '--', color=color)
-                ax1.plot(mdot, llm, '-', color=color, label='yc:{}'.format("%.2f" % yc[i]))
-                # ax1.annotate(str("%.2f" % yc[i]), xy=(mdot_int[0], llm_int[0]), textcoords='data')
-
-            ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-            ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-
-            mdot2d_int = np.delete(mdot2d_int, 0, 0)
-            mdot2d_pol = np.delete(mdot2d_pol, 0, 0)
-
-            yc_llm_mmdot_cr_pol = Math.combine(yc, y_grid, mdot2d_pol.T)  # changing the x/y
-            yc_llm_mmdot_cr_int = Math.combine(yc, y_grid, mdot2d_int.T)  # changing the x/y
-
-
-            table_name = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
-            Save_Load_tables.save_table(yc_llm_mmdot_cr_pol, self.opal_used, table_name, 'yc', l_or_lm, 'mdot_crit')
-
-
-            if plot:
-
-                levels = [-7.0,-6.9,-6.8,-6.7,-6.6,-6.5, -6.4, -6.3, -6.2, -6.1, -6.0, -5.9, -5.8,
-                          -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5, -4.4, -4.3,
-                          -4.2, -4.1, -4.]
-                ax = fig.add_subplot(223)
-
-                # ax = fig.add_subplot(1, 1, 1)
-                ax.set_xlim(yc_llm_mmdot_cr_int[0,1:].min(), yc_llm_mmdot_cr_int[0,1:].max())
-                ax.set_ylim(yc_llm_mmdot_cr_int[1:,0].min(), yc_llm_mmdot_cr_int[1:,0].max())
-                ax.set_ylabel(Labels.lbls(l_or_lm))
-                ax.set_xlabel(Labels.lbls('Yc'))
-
-                contour_filled = plt.contourf(yc_llm_mmdot_cr_int[0, 1:], yc_llm_mmdot_cr_int[1:, 0], yc_llm_mmdot_cr_int[1:,1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
-                # plt.colorbar(contour_filled, label=Labels.lbls('m'))
-                contour = plt.contour(yc_llm_mmdot_cr_int[0, 1:], yc_llm_mmdot_cr_int[1:, 0], yc_llm_mmdot_cr_int[1:,1:], levels, colors='k')
-
-                clb = plt.colorbar(contour_filled)
-                clb.ax.set_title(Labels.lbls('mdot'))
-
-                plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
-                #ax.set_title('MASS-LUMINOSITY RELATION')
-
-                # plt.ylabel(l_or_lm)
-                # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-                # plt.savefig(name)
-
-
-
-
-                ax = fig.add_subplot(224)
-
-                # ax = fig.add_subplot(1, 1, 1)
-                ax.set_xlim(yc_llm_mmdot_cr_pol[0, 1:].min(), yc_llm_mmdot_cr_pol[0, 1:].max())
-                ax.set_ylim(yc_llm_mmdot_cr_pol[1:, 0].min(), yc_llm_mmdot_cr_pol[1:, 0].max())
-                ax.set_ylabel(Labels.lbls(l_or_lm))
-                ax.set_xlabel(Labels.lbls('Yc'))
-
-
-                contour_filled = plt.contourf(yc_llm_mmdot_cr_pol[0, 1:], yc_llm_mmdot_cr_pol[1:, 0], yc_llm_mmdot_cr_pol[1:, 1:], levels,
-                                              cmap=plt.get_cmap('RdYlBu_r'))
-                # plt.colorbar(contour_filled, label=Labels.lbls('m'))
-                contour = plt.contour(yc_llm_mmdot_cr_pol[0, 1:], yc_llm_mmdot_cr_pol[1:, 0], yc_llm_mmdot_cr_pol[1:, 1:], levels, colors='k')
-
-                clb = plt.colorbar(contour_filled)
-                clb.ax.set_title(Labels.lbls('mdot'))
-
-                plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
-                #ax.set_title('MASS-LUMINOSITY RELATION')
-
-                # plt.ylabel(l_or_lm)
-                # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-
-
-                plt.show()
 
     # def min_mdot(self, l_or_lm, rs, plot_obs, plot_nums, plot_sp_crits, lim_t1=5.18, lim_t2=None):
     #     # ---------------------LOADING-INTERPOLATED-TABLE---------------------------
@@ -1366,7 +1392,355 @@ class Combine:
     #     plt.savefig(plot_name)
     #     plt.show()
 
-    def min_mdot_sp(self, l_or_lm, yc_val):
+    # def min_mdot_sp(self, l_or_lm, yc_val):
+    #
+    #     name = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
+    #     yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', l_or_lm, 'mdot_crit', self.opal_used)
+    #     yc  = yc_llm_mdot_cr[0, 1:]
+    #     llm = yc_llm_mdot_cr[1:, 0]
+    #     mdot2d= yc_llm_mdot_cr[1:, 1:]
+    #
+    #
+    #
+    #     if yc_val in yc:
+    #         ind = Math.find_nearest_index(yc, yc_val)
+    #         mdot = mdot2d[:, ind]
+    #     else:
+    #         raise ValueError('\tYc = {} not in the list: \n\t{}'.format(yc_val, yc))
+    #
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(1, 1, 1)
+    #     ax.plot(mdot, llm, '-',    color='black')
+    #     ax.fill_between(mdot, llm, color="lightgray")
+    #
+    #     classes  = []
+    #     classes.append('dum')
+    #     mdot_obs = []
+    #     llm_obs  = []
+    #
+    #
+    #     '''=============================OBSERVABELS==============================='''
+    #
+    #     # from Phys_Math_Labels import Opt_Depth_Analythis
+    #
+    #     for star_n in self.obs.stars_n:
+    #         i = -1
+    #         mdot_obs = np.append(mdot_obs, self.obs.get_num_par('mdot', star_n))
+    #         llm_obs = np.append(llm_obs, self.obs.get_num_par(l_or_lm, star_n, yc_val, self.opal_used))
+    #         eta = self.obs.get_num_par('eta', star_n)
+    #
+    #         # print(self.obs.get_num_par('mdot',  star_n), self.obs.get_num_par(l_or_lm, star_n))
+    #
+    #         plt.plot(mdot_obs[i], llm_obs[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
+    #                  color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
+    #         ax.annotate('{} {}'.format(int(star_n), eta), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plot numbers of stars
+    #
+    #
+    #         # v_inf = self.obs.get_num_par('v_inf', star_n)
+    #         # tau_cl = Opt_Depth_Analythis(30, v_inf, 1., 1., mdot_obs[i], 0.20)
+    #         # tau = tau_cl.anal_eq_b1(1.)
+    #         # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
+    #
+    #
+    #         if self.obs.get_star_class(star_n) not in classes:
+    #             plt.plot(mdot_obs[i], llm_obs[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
+    #                      color=self.obs.get_class_color(star_n), ls = '',
+    #                      label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
+    #             classes.append(self.obs.get_star_class(star_n))
+    #
+    #     print('\t__PLOT: total stars: {}'.format(len(self.obs.stars_n)))
+    #     print(len(mdot_obs), len(llm_obs))
+    #
+    #     fit = np.polyfit(mdot_obs, llm_obs, 1)  # fit = set of coeddicients (highest first)
+    #     f = np.poly1d(fit)
+    #     fit_x_coord = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):1000j]
+    #     plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+    #
+    #     min_mdot, max_mdot = self.obs.get_min_max('mdot')
+    #     min_llm, max_llm = self.obs.get_min_max(l_or_lm, yc_val, self.opal_used)
+    #
+    #     ax.set_xlim(min_mdot, max_mdot)
+    #     ax.set_ylim(min_llm, max_llm)
+    #
+    #     ax.set_ylabel(Labels.lbls(l_or_lm))
+    #     ax.set_xlabel(Labels.lbls('mdot'))
+    #     ax.grid(which='major', alpha=0.2)
+    #     ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+    #
+    #     ax.grid(which='both')
+    #     ax.grid(which='minor', alpha=0.2)
+    #     plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
+    #     plot_name = self.plot_dir + 'minMdot_l.pdf'
+    #     plt.savefig(plot_name)
+    #     plt.show()
+
+
+class Crit_Mdot:
+    output_dir = '../data/output/'
+    plot_dir = '../data/plots/'
+
+    opal_used = ''
+    sp_files = []
+
+    obs_files =  ''
+
+    def __init__(self):
+        pass
+
+    def set_files(self, lim_t1, lim_t2):
+
+        self.lim_t1 = lim_t1
+        self.lim_t2 = lim_t2
+        self.spmdl=[]
+        for file in self.sp_files:
+            self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
+
+        # self.nums = Num_Models(smfls, plotfls)
+        self.obs = Read_Observables(self.obs_files)
+
+    def save_yc_llm_mdot_cr(self, depth = 100, plot = True):
+
+        def interp(x, y, x_grid):
+            f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
+            return f(x_grid)
+
+        def univar_interp(x, y, new_x):
+            # if new_x.min() < x.min():
+            #     raise ValueError('new_x.min({}) < x.min({})'.format(new_x.min(), x.min()))
+            # if new_x.max() > x.max():
+            #     raise ValueError('new_x.min({}) > x.min({})'.format(new_x.max(), x.max()))
+            if len(x) != len(y):
+                raise ValueError('len(x)[{}] != len(y)[{}]'.format(len(x), len(y)))
+            for x_i in x:
+                if x_i < x[0]:
+                    raise ValueError('Array x is not monotonically increasing. x_i({}) < x[0]({})'.format(x_i, x[0]))
+
+            f = interpolate.UnivariateSpline(x, y)
+
+            return f(new_x)
+
+        def fit_plynomial(x, y, order, depth, new_x=np.empty(0, )):
+            '''
+            RETURNS f(new_x)
+            :param x:
+            :param y:
+            :param order: 1-4 are supported
+            :return:
+            '''
+            f = None
+            lbl = None
+
+            if new_x == np.empty(0, ):
+                new_x = np.mgrid[(x.min()):(x.max()):depth * 1j]
+
+            if order == 1:
+                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+                f = np.poly1d(fit)
+                lbl = '({}) + ({}*x)'.format(
+                    "%.3f" % f.coefficients[1],
+                    "%.3f" % f.coefficients[0]
+                )
+                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+
+            if order == 2:
+                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+                f = np.poly1d(fit)
+                lbl = '({}) + ({}*x) + ({}*x**2)'.format(
+                    "%.3f" % f.coefficients[2],
+                    "%.3f" % f.coefficients[1],
+                    "%.3f" % f.coefficients[0]
+                )
+                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+            if order == 3:
+                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+                f = np.poly1d(fit)
+                lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3)'.format(
+                    "%.3f" % f.coefficients[3],
+                    "%.3f" % f.coefficients[2],
+                    "%.3f" % f.coefficients[1],
+                    "%.3f" % f.coefficients[0]
+                )
+                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+            if order == 4:
+                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+                f = np.poly1d(fit)
+                lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3) + ({}*x**4)'.format(
+                    "%.3f" % f.coefficients[4],
+                    "%.3f" % f.coefficients[3],
+                    "%.3f" % f.coefficients[2],
+                    "%.3f" % f.coefficients[1],
+                    "%.3f" % f.coefficients[0]
+                )
+                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+
+            print(lbl)
+
+            return f(new_x)
+
+        def common_y(arr1, arr2, arr3):
+
+            y1 = arr1[1:, 0]
+            y2 = arr2[1:, 0]
+            y3 = arr3[1:, 0]
+
+            y_min = np.array([y1.min(), y2.min(), y3.min()]).max()
+            y_max = np.array([y1.max(), y2.max(), y3.max()]).min()
+
+            arr1_cropped = Math.crop_2d_table(arr1, None, None, y_min, y_max)
+            arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
+            arr3_cropped = Math.crop_2d_table(arr3, None, None, y_min, y_max)
+
+            return arr1_cropped, arr2_cropped, arr3_cropped
+
+        def l_lm_mdot_rows(t_lm_rho_opal, lm_l_sp, lm_r_sp, lim_t1, lim_t2):
+            lm_op = t_lm_rho_opal[1:, 0]
+            t = t_lm_rho_opal[0, 1:]
+            rho2d = t_lm_rho_opal[1:, 1:]
+            new_l = univar_interp(lm_l_sp[0, :], lm_l_sp[1, :], lm_op)
+            new_r = univar_interp(lm_r_sp[0, :], lm_r_sp[1, :], lm_op)
+
+            if len(lm_op) != len(new_l) or len(lm_op) != len(new_r):
+                raise ValueError('len(lm_op)[{}] != len(new_l)[{}] or len(lm_op)[{}] != len(new_r)[{}]'
+                                 .format(len(lm_op), len(new_l), len(lm_op), len(new_r)))
+
+
+            vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+            m_dot = Physics.vrho_mdot(vrho, new_r, 'l')
+            mins = Math.get_mins_in_every_row(t, new_l, m_dot, 5000, lim_t1, lim_t2)
+            mdot_cr = mins[2, :]
+
+            return new_l, lm_op, mdot_cr
+
+        def x_y_grids(x_arr, y_arr, depth):
+            x_grid = np.mgrid[x_arr.min():x_arr.max(): depth*1j ]
+            y_grid = np.mgrid[y_arr.min():y_arr.max(): depth*1j ]
+            return x_grid, y_grid
+
+        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't',  'lm', 'rho', self.opal_used, self.output_dir)
+        yc_lm_l  = Save_Load_tables.load_table('yc_lm_l',  'yc', 'lm', 'l',   self.opal_used, self.output_dir)
+        yc_lm_r  = Save_Load_tables.load_table('yc_lm_r',  'yc', 'lm', 'r',   self.opal_used, self.output_dir)
+
+        t_lm_rho, yc_lm_l, yc_lm_r = common_y(t_lm_rho, yc_lm_l, yc_lm_r)
+
+        yc  = yc_lm_l[0, 1:]
+        lm_sp  = yc_lm_l[1:, 0]
+
+        l2d = yc_lm_l[1:, 1:]
+        r2d = yc_lm_r[1:, 1:]
+
+        lm_grid, l_grid = x_y_grids(lm_sp, l2d, depth)
+
+        mdot_poly_l = np.zeros(len(l_grid))
+        mdot_poly_lm= np.zeros(len(lm_grid))
+
+        mdot_int_l = np.zeros(len(l_grid))
+        mdot_int_lm= np.zeros(len(lm_grid))
+
+        for i in range(len(yc)):
+            print('\n\t__Yc={}__'.format(yc[i]))
+            yc_i = Math.find_nearest_index(yc, yc[i])
+            lm_l = np.vstack((yc_lm_l[1:, 0] , l2d[:, yc_i]))
+            lm_r = np.vstack((yc_lm_r[1:, 0] , r2d[:, yc_i]))
+
+            l, lm, mdot = l_lm_mdot_rows(t_lm_rho, lm_l, lm_r, self.lim_t1, self.lim_t2)
+
+            mdot_poly_l  = np.vstack((mdot_poly_l,  fit_plynomial(l,  mdot, 3, depth, l_grid)))
+            mdot_poly_lm = np.vstack((mdot_poly_lm, fit_plynomial(lm, mdot, 3, depth, lm_grid)))
+
+            mdot_int_l  = np.vstack((mdot_int_l,  interp(l,  mdot, l_grid)))
+            mdot_int_lm = np.vstack((mdot_int_lm, interp(lm, mdot, lm_grid)))
+
+
+        mdot_poly_l  = np.delete(mdot_poly_l,  0, 0)
+        mdot_poly_lm = np.delete(mdot_poly_lm, 0, 0)
+        mdot_int_l   = np.delete(mdot_int_l,   0, 0)
+        mdot_int_lm  = np.delete(mdot_int_lm,  0, 0)
+
+        yc_l_mdot_pol  = Math.combine(yc, l_grid,  mdot_poly_l.T)
+        yc_lm_mdot_pol = Math.combine(yc, lm_grid, mdot_poly_lm.T)
+        yc_l_mdot_int  = Math.combine(yc, l_grid,  mdot_int_l.T)
+        yc_lm_mdot_int = Math.combine(yc, lm_grid, mdot_int_lm.T)
+
+        table_name = '{}_{}_{}'.format('yc', 'l', 'mdot_crit')
+        Save_Load_tables.save_table(yc_l_mdot_pol, self.opal_used, table_name, 'yc', 'l', 'mdot_crit')
+
+        table_name = '{}_{}_{}'.format('yc', 'lm', 'mdot_crit')
+        Save_Load_tables.save_table(yc_lm_mdot_pol, self.opal_used, table_name, 'yc', 'lm', 'mdot_crit')
+
+        if plot:
+            levels = [-7.0, -6.9, -6.8, -6.7, -6.6, -6.5, -6.4, -6.3, -6.2, -6.1, -6.0, -5.9, -5.8,
+                      -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5, -4.4, -4.3,
+                      -4.2, -4.1, -4.]
+
+            fig = plt.figure(figsize=plt.figaspect(1.0))
+
+            ax = fig.add_subplot(221)
+
+            ax.set_title('INTERPOLATION')
+            ax.set_xlim(yc_l_mdot_int[0, 1:].min(), yc_l_mdot_int[0, 1:].max())
+            ax.set_ylim(yc_l_mdot_int[1:, 0].min(), yc_l_mdot_int[1:, 0].max())
+            ax.set_ylabel(Labels.lbls('l'))
+            ax.set_xlabel(Labels.lbls('Yc'))
+            contour_filled = plt.contourf(yc_l_mdot_int[0, 1:], yc_l_mdot_int[1:, 0], yc_l_mdot_int[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+            contour = plt.contour(yc_l_mdot_int[0, 1:], yc_l_mdot_int[1:, 0], yc_l_mdot_int[1:, 1:], levels, colors='k')
+            clb = plt.colorbar(contour_filled)
+            clb.ax.set_title(Labels.lbls('mdot'))
+            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+            # ----------------------------------------------------------------------------------------------------------
+
+            ax = fig.add_subplot(222)
+
+            ax.set_title('EXTRAPOLATION')
+            ax.set_xlim(yc_l_mdot_pol[0, 1:].min(), yc_l_mdot_pol[0, 1:].max())
+            ax.set_ylim(yc_l_mdot_pol[1:, 0].min(), yc_l_mdot_pol[1:, 0].max())
+            ax.set_ylabel(Labels.lbls('l'))
+            ax.set_xlabel(Labels.lbls('Yc'))
+            contour_filled = plt.contourf(yc_l_mdot_pol[0, 1:], yc_l_mdot_pol[1:, 0], yc_l_mdot_pol[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+            contour = plt.contour(yc_l_mdot_pol[0, 1:], yc_l_mdot_pol[1:, 0], yc_l_mdot_pol[1:, 1:], levels, colors='k')
+            clb = plt.colorbar(contour_filled)
+            clb.ax.set_title(Labels.lbls('mdot'))
+            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+            # ----------------------------------------------------------------------------------------------------------
+
+
+
+            ax = fig.add_subplot(223)
+
+            ax.set_xlim(yc_lm_mdot_int[0, 1:].min(), yc_lm_mdot_int[0, 1:].max())
+            ax.set_ylim(yc_lm_mdot_int[1:, 0].min(), yc_lm_mdot_int[1:, 0].max())
+            ax.set_ylabel(Labels.lbls('lm'))
+            ax.set_xlabel(Labels.lbls('Yc'))
+            contour_filled = plt.contourf(yc_lm_mdot_int[0, 1:], yc_lm_mdot_int[1:, 0], yc_lm_mdot_int[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+            contour = plt.contour(yc_lm_mdot_int[0, 1:], yc_lm_mdot_int[1:, 0], yc_lm_mdot_int[1:, 1:], levels, colors='k')
+            clb = plt.colorbar(contour_filled)
+            clb.ax.set_title(Labels.lbls('mdot'))
+            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+
+            # ----------------------------------------------------------------------------------------------------------
+
+
+            ax = fig.add_subplot(224)
+
+            ax.set_xlim(yc_lm_mdot_pol[0, 1:].min(), yc_lm_mdot_pol[0, 1:].max())
+            ax.set_ylim(yc_lm_mdot_pol[1:, 0].min(), yc_lm_mdot_pol[1:, 0].max())
+            ax.set_ylabel(Labels.lbls('lm'))
+            ax.set_xlabel(Labels.lbls('Yc'))
+            contour_filled = plt.contourf(yc_lm_mdot_pol[0, 1:], yc_lm_mdot_pol[1:, 0], yc_lm_mdot_pol[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+            contour = plt.contour(yc_lm_mdot_pol[0, 1:], yc_lm_mdot_pol[1:, 0], yc_lm_mdot_pol[1:, 1:], levels, colors='k')
+            clb = plt.colorbar(contour_filled)
+            clb.ax.set_title(Labels.lbls('mdot'))
+            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+            plt.show()
+
+    def min_mdot_sp_set(self, l_or_lm, yc_vals):
 
         name = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
         yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', l_or_lm, 'mdot_crit', self.opal_used)
@@ -1374,71 +1748,748 @@ class Combine:
         llm = yc_llm_mdot_cr[1:, 0]
         mdot2d= yc_llm_mdot_cr[1:, 1:]
 
-        if yc_val in yc:
-            ind = Math.find_nearest_index(yc, yc_val)
-            mdot = mdot2d[:, ind]
-        else:
-            raise ValueError('\tYc = {} not in the list: \n\t{}'.format(yc_val, yc))
+        for i in range(len(yc_vals)):
+            if not yc_vals[i] in yc:
+                raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc_vals[i], yc))
+
+        yc_vals = np.sort(yc_vals, axis=0)
+
+        yc_n = len(yc_vals)
 
         fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-        ax.plot(mdot, llm, '-',    color='black')
-        ax.fill_between(mdot, llm, color="lightgray")
+        fig.subplots_adjust(hspace=0.2, wspace=0.3)
 
-        classes  = []
-        classes.append('dum')
-        mdot_obs = []
-        llm_obs  = []
+        for i in range(1, yc_n+1):
+            print(i)
+            yc_val = yc_vals[i-1]
 
+            ind = Math.find_nearest_index(yc, yc_val)
+            mdot = mdot2d[:, ind]
 
-        '''=============================OBSERVABELS==============================='''
+            if yc_n % 2 == 0: ax = fig.add_subplot(2, yc_n/2, i)
+            else:             ax = fig.add_subplot(1, yc_n, i)
 
-        # from Phys_Math_Labels import Opt_Depth_Analythis
-
-        for star_n in self.obs.stars_n:
-            i = -1
-            mdot_obs = np.append(mdot_obs, self.obs.get_num_par('mdot', star_n))
-            llm_obs = np.append(llm_obs, self.obs.get_num_par(l_or_lm, star_n, yc_val, self.opal_used))
-            eta = self.obs.get_num_par('eta', star_n)
-
-            # print(self.obs.get_num_par('mdot',  star_n), self.obs.get_num_par(l_or_lm, star_n))
-
-            plt.plot(mdot_obs[i], llm_obs[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
-                     color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
-            ax.annotate('{} {}'.format(int(star_n), eta), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plot numbers of stars
+            # ax = fig.add_subplot(2, 5, i)
+            ax.plot(mdot, llm, '-',    color='black')
+            ax.fill_between(mdot, llm, color="lightgray")
 
 
-            # v_inf = self.obs.get_num_par('v_inf', star_n)
-            # tau_cl = Opt_Depth_Analythis(30, v_inf, 1., 1., mdot_obs[i], 0.20)
-            # tau = tau_cl.anal_eq_b1(1.)
-            # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
 
+            '''=============================OBSERVABELS==============================='''
+            classes  = []
+            classes.append('dum')
+            mdot_obs = []
+            llm_obs  = []
 
-            if self.obs.get_star_class(star_n) not in classes:
+            # from Phys_Math_Labels import Opt_Depth_Analythis
+
+            for star_n in self.obs.stars_n:
+                i = -1
+                mdot_obs = np.append(mdot_obs, self.obs.get_num_par('mdot', star_n))
+                llm_obs = np.append(llm_obs, self.obs.get_num_par(l_or_lm, star_n, yc_val, self.opal_used))
+                eta = self.obs.get_num_par('eta', star_n)
+
+                # print(self.obs.get_num_par('mdot',  star_n), self.obs.get_num_par(l_or_lm, star_n))
+
                 plt.plot(mdot_obs[i], llm_obs[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
-                         color=self.obs.get_class_color(star_n), ls = '',
-                         label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
-                classes.append(self.obs.get_star_class(star_n))
+                         color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
+                ax.annotate('{}'.format(int(star_n)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plot numbers of stars
 
-        print('\t__PLOT: total stars: {}'.format(len(self.obs.stars_n)))
-        print(len(mdot_obs), len(llm_obs))
+                # from Phys_Math_Labels import Opt_Depth_Analythis
+                # v_inf = self.obs.get_num_par('v_inf', star_n)
+                # tau_cl = Opt_Depth_Analythis(30, v_inf, 1., 1., mdot_obs[i], 0.20)
+                # tau = tau_cl.anal_eq_b1(1.)
+                # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
+                #
+                # ax.annotate('{} {}'.format(str(int(tau)), eta), xy=(mdot_obs[i], llm_obs[i]),
+                #             textcoords='data')  # plot numbers of stars
 
-        fit = np.polyfit(mdot_obs, llm_obs, 1)  # fit = set of coeddicients (highest first)
-        f = np.poly1d(fit)
-        fit_x_coord = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):1000j]
-        plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+                if self.obs.get_star_class(star_n) not in classes:
+                    plt.plot(mdot_obs[i], llm_obs[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
+                             color=self.obs.get_class_color(star_n), ls = '',
+                             label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
+                    classes.append(self.obs.get_star_class(star_n))
 
-        plt.ylabel(Labels.lbls(l_or_lm))
-        plt.xlabel(Labels.lbls('mdot'))
-        ax.grid(which='major', alpha=0.2)
+            print('\t__PLOT: total stars: {}'.format(len(self.obs.stars_n)))
+            print(len(mdot_obs), len(llm_obs))
+
+            fit = np.polyfit(mdot_obs, llm_obs, 1)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            fit_x_coord = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):1000j]
+            ax.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+
+            min_mdot, max_mdot = self.obs.get_min_max('mdot')
+            min_llm, max_llm = self.obs.get_min_max(l_or_lm, yc_val, self.opal_used)
+
+            ax.set_xlim(min_mdot-0.2, max_mdot+0.2)
+            ax.set_ylim(min_llm-0.05, max_llm+0.05)
+
+            ax.set_ylabel(Labels.lbls(l_or_lm))
+            ax.set_xlabel(Labels.lbls('mdot'))
+            ax.grid(which='major', alpha=0.2)
+            # ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+
+            print('Yc:{}'.format(yc_val))
+            ax.text(min_mdot, max_llm, 'Yc:{}'.format(yc_val), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
+
         plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
-
-        ax.grid(which='both')
-        ax.grid(which='minor', alpha=0.2)
-        plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
         plot_name = self.plot_dir + 'minMdot_l.pdf'
         plt.savefig(plot_name)
         plt.show()
+
+    def min_mdot_zams(self, l_or_lm, rs, ml_relatin):
+
+
+
+        pass
+
+
+    # def save_yc_llm_mdot_cr(self, l_or_lm='l',yc_prec=0.1, depth=100, plot=True):
+    #
+    #     def interp(x, y, x_grid):
+    #         f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
+    #         return x_grid, f(x_grid)
+    #
+    #     def univar_interp(x, y, new_x):
+    #         # if new_x.min() < x.min():
+    #         #     raise ValueError('new_x.min({}) < x.min({})'.format(new_x.min(), x.min()))
+    #         # if new_x.max() > x.max():
+    #         #     raise ValueError('new_x.min({}) > x.min({})'.format(new_x.max(), x.max()))
+    #         if len(x) != len(y):
+    #             raise ValueError('len(x)[{}] != len(y)[{}]'.format(len(x), len(y)))
+    #         for x_i in x:
+    #             if x_i < x[0]:
+    #                 raise ValueError('Array x is not monotonically increasing. x_i({}) < x[0]({})'.format(x_i, x[0]))
+    #
+    #         f = interpolate.UnivariateSpline(x, y)
+    #
+    #         return f(new_x)
+    #
+    #     def fit_plynomial(x, y, order, depth, new_x=np.empty(0, )):
+    #         '''
+    #         RETURNS f(new_x)
+    #         :param x:
+    #         :param y:
+    #         :param order: 1-4 are supported
+    #         :return:
+    #         '''
+    #         f = None
+    #         lbl = None
+    #
+    #         if new_x == np.empty(0, ):
+    #             new_x = np.mgrid[(x.min()):(x.max()):depth * 1j]
+    #
+    #         if order == 1:
+    #             fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+    #             f = np.poly1d(fit)
+    #             lbl = '({}) + ({}*x)'.format(
+    #                 "%.3f" % f.coefficients[1],
+    #                 "%.3f" % f.coefficients[0]
+    #             )
+    #             # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+    #             # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+    #
+    #         if order == 2:
+    #             fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+    #             f = np.poly1d(fit)
+    #             lbl = '({}) + ({}*x) + ({}*x**2)'.format(
+    #                 "%.3f" % f.coefficients[2],
+    #                 "%.3f" % f.coefficients[1],
+    #                 "%.3f" % f.coefficients[0]
+    #             )
+    #             # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+    #             # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+    #         if order == 3:
+    #             fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+    #             f = np.poly1d(fit)
+    #             lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3)'.format(
+    #                 "%.3f" % f.coefficients[3],
+    #                 "%.3f" % f.coefficients[2],
+    #                 "%.3f" % f.coefficients[1],
+    #                 "%.3f" % f.coefficients[0]
+    #             )
+    #             # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+    #             # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+    #         if order == 4:
+    #             fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+    #             f = np.poly1d(fit)
+    #             lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3) + ({}*x**4)'.format(
+    #                 "%.3f" % f.coefficients[4],
+    #                 "%.3f" % f.coefficients[3],
+    #                 "%.3f" % f.coefficients[2],
+    #                 "%.3f" % f.coefficients[1],
+    #                 "%.3f" % f.coefficients[0]
+    #             )
+    #             # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+    #             # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+    #
+    #         print(lbl)
+    #
+    #         return f(new_x)
+    #
+    #     def common_y(arr1, arr2, arr3):
+    #
+    #         y1 = arr1[1:, 0]
+    #         y2 = arr2[1:, 0]
+    #         y3 = arr3[1:, 0]
+    #
+    #         y_min = np.array([y1.min(), y2.min(), y3.min()]).max()
+    #         y_max = np.array([y1.max(), y2.max(), y3.max()]).min()
+    #
+    #         arr1_cropped = Math.crop_2d_table(arr1, None, None, y_min, y_max)
+    #         arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
+    #         arr3_cropped = Math.crop_2d_table(arr3, None, None, y_min, y_max)
+    #
+    #         return arr1_cropped, arr2_cropped, arr3_cropped
+    #
+    #     def l_lm_mdot_rows(t_lm_rho_opal, lm_l_sp, lm_r_sp, lim_t1, lim_t2):
+    #         lm_op = t_lm_rho_opal[1:, 0]
+    #         t = t_lm_rho_opal[0, 1:]
+    #         rho2d = t_lm_rho_opal[1:, 1:]
+    #         new_l = univar_interp(lm_l_sp[0, :], lm_l_sp[1, :], lm_op)
+    #         new_r = univar_interp(lm_r_sp[0, :], lm_r_sp[1, :], lm_op)
+    #
+    #         if len(lm_op) != len(new_l) or len(lm_op) != len(new_r):
+    #             raise ValueError('len(lm_op)[{}] != len(new_l)[{}] or len(lm_op)[{}] != len(new_r)[{}]'
+    #                              .format(len(lm_op), len(new_l), len(lm_op), len(new_r)))
+    #
+    #         vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+    #         m_dot = Physics.vrho_mdot(vrho, new_r, 'l')
+    #         mins = Math.get_mins_in_every_row(t, new_l, m_dot, 5000, lim_t1, lim_t2)
+    #         mdot_cr = mins[2, :]
+    #
+    #         return new_l, lm_op, mdot_cr
+    #
+    #     def x_y_grids(x_arr, y_arr, depth):
+    #         x_grid = np.mgrid[x_arr.min():x_arr.max(): depth * 1j]
+    #         y_grid = np.mgrid[y_arr.min():y_arr.max(): depth * 1j]
+    #         return x_grid, y_grid
+    #
+    #     t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
+    #
+    #     spfiles_ = SP_file_work(self.sp_files, self.output_dir, self.plot_dir) # FILES OUGHT TO BE LOADED
+    #     min_llm, max_llm = spfiles_.get_min_max(l_or_lm)
+    #     yc, spcls = spfiles_.separate_sp_by_crit_val('Yc', yc_prec)
+    #
+    #     y_grid = np.mgrid[min_llm:max_llm:depth * 1j]
+    #
+    #     mdot2d_pol = np.zeros(len(y_grid))
+    #     mdot2d_int = np.zeros(len(y_grid))
+    #
+    #     fig = plt.figure(figsize=plt.figaspect(1.0))
+    #
+    #     ax1 = fig.add_subplot(221)
+    #     ax1.grid()
+    #     ax1.set_ylabel(Labels.lbls(l_or_lm))
+    #     ax1.set_xlabel(Labels.lbls('mdot'))
+    #     ax1.set_title('INTERPOLATION')
+    #
+    #     ax2 = fig.add_subplot(222)
+    #     ax2.grid()
+    #     ax2.set_ylabel(Labels.lbls(l_or_lm))
+    #     ax2.set_xlabel(Labels.lbls('mdot'))
+    #     ax2.set_title('EXTRAPOLATION')
+    #
+    #     for i in range(len(yc)):
+    #
+    #         # t_l_mdot, t_lm_mdot = self.t_llm_cr_sp(t_k_rho, yc[i], self.opal_used)
+    #
+    #         if l_or_lm == 'l':
+    #             t_llm_mdot = self.t_l_mdot_cr_sp(t_k_rho, yc[i], self.opal_used)
+    #         else:
+    #             t_llm_mdot = self.t_lm_mdot_cr_sp(t_k_rho, yc[i], self.opal_used)
+    #
+    #         # t_llm_mdot = self.t_llm_mdot_crit_sp(spcls[i], t_k_rho, l_or_lm, yc[i], self.opal_used)
+    #         t = t_llm_mdot[0, 1:]
+    #         llm = t_llm_mdot[1:, 0]
+    #         m_dot = t_llm_mdot[1:, 1:]
+    #
+    #         mins = Math.get_mins_in_every_row(t, llm, m_dot, 5000, self.lim_t1, self.lim_t2)
+    #
+    #         # llm = mins[1, :]
+    #         mdot = mins[2, :]
+    #
+    #         # plt.plot(mins[2, :], mins[1, :], '-', color='black')
+    #         # plt.annotate(str("%.2f" % yc[i]), xy=(mins[2, 0], mins[1, 0]), textcoords='data')
+    #
+    #         '''----------------------------POLYNOMIAL EXTRAPOLATION------------------------------------'''
+    #         print('\n\t Yc = {}'.format(yc[i]))
+    #
+    #         llm_pol, mdot_pol = Math.fit_plynomial(llm, mdot, 3, depth, y_grid)
+    #         mdot2d_pol = np.vstack((mdot2d_pol, mdot_pol))
+    #         color = 'C' + str(int(yc[i] * 10) - 1)
+    #         ax2.plot(mdot_pol, llm_pol, '--', color=color)
+    #         ax2.plot(mdot, llm, '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #
+    #         # ax2.annotate(str("%.2f" % yc[i]), xy=(mdot_pol[0], llm_pol[0]), textcoords='data')
+    #
+    #         '''------------------------------INTERPOLATION ONLY---------------------------------------'''
+    #         llm_int, mdot_int = interp(llm, mdot, y_grid)
+    #         mdot2d_int = np.vstack((mdot2d_int, mdot_int))
+    #         ax1.plot(mdot_int, llm_int, '--', color=color)
+    #         ax1.plot(mdot, llm, '-', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #         # ax1.annotate(str("%.2f" % yc[i]), xy=(mdot_int[0], llm_int[0]), textcoords='data')
+    #
+    #     ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #
+    #     mdot2d_int = np.delete(mdot2d_int, 0, 0)
+    #     mdot2d_pol = np.delete(mdot2d_pol, 0, 0)
+    #
+    #     yc_llm_mmdot_cr_pol = Math.combine(yc, y_grid, mdot2d_pol.T)  # changing the x/y
+    #     yc_llm_mmdot_cr_int = Math.combine(yc, y_grid, mdot2d_int.T)  # changing the x/y
+    #
+    #     table_name = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
+    #     Save_Load_tables.save_table(yc_llm_mmdot_cr_pol, self.opal_used, table_name, 'yc', l_or_lm, 'mdot_crit')
+    #
+    #     if plot:
+    #         levels = [-7.0, -6.9, -6.8, -6.7, -6.6, -6.5, -6.4, -6.3, -6.2, -6.1, -6.0, -5.9, -5.8,
+    #                   -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5, -4.4, -4.3,
+    #                   -4.2, -4.1, -4.]
+    #         ax = fig.add_subplot(223)
+    #
+    #         # ax = fig.add_subplot(1, 1, 1)
+    #         ax.set_xlim(yc_llm_mmdot_cr_int[0, 1:].min(), yc_llm_mmdot_cr_int[0, 1:].max())
+    #         ax.set_ylim(yc_llm_mmdot_cr_int[1:, 0].min(), yc_llm_mmdot_cr_int[1:, 0].max())
+    #         ax.set_ylabel(Labels.lbls(l_or_lm))
+    #         ax.set_xlabel(Labels.lbls('Yc'))
+    #
+    #         contour_filled = plt.contourf(yc_llm_mmdot_cr_int[0, 1:], yc_llm_mmdot_cr_int[1:, 0],
+    #                                       yc_llm_mmdot_cr_int[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #         # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #         contour = plt.contour(yc_llm_mmdot_cr_int[0, 1:], yc_llm_mmdot_cr_int[1:, 0], yc_llm_mmdot_cr_int[1:, 1:],
+    #                               levels, colors='k')
+    #
+    #         clb = plt.colorbar(contour_filled)
+    #         clb.ax.set_title(Labels.lbls('mdot'))
+    #
+    #         plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #         # ax.set_title('MASS-LUMINOSITY RELATION')
+    #
+    #         # plt.ylabel(l_or_lm)
+    #         # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #         # plt.savefig(name)
+    #
+    #         ax = fig.add_subplot(224)
+    #
+    #         # ax = fig.add_subplot(1, 1, 1)
+    #         ax.set_xlim(yc_llm_mmdot_cr_pol[0, 1:].min(), yc_llm_mmdot_cr_pol[0, 1:].max())
+    #         ax.set_ylim(yc_llm_mmdot_cr_pol[1:, 0].min(), yc_llm_mmdot_cr_pol[1:, 0].max())
+    #         ax.set_ylabel(Labels.lbls(l_or_lm))
+    #         ax.set_xlabel(Labels.lbls('Yc'))
+    #
+    #         contour_filled = plt.contourf(yc_llm_mmdot_cr_pol[0, 1:], yc_llm_mmdot_cr_pol[1:, 0],
+    #                                       yc_llm_mmdot_cr_pol[1:, 1:], levels,
+    #                                       cmap=plt.get_cmap('RdYlBu_r'))
+    #         # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #         contour = plt.contour(yc_llm_mmdot_cr_pol[0, 1:], yc_llm_mmdot_cr_pol[1:, 0], yc_llm_mmdot_cr_pol[1:, 1:],
+    #                               levels, colors='k')
+    #
+    #         clb = plt.colorbar(contour_filled)
+    #         clb.ax.set_title(Labels.lbls('mdot'))
+    #
+    #         plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #         # ax.set_title('MASS-LUMINOSITY RELATION')
+    #
+    #         # plt.ylabel(l_or_lm)
+    #         # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #
+    #         plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def t_llm_cr_sp(self, t_k_rho, yc_val, opal_used):
+        kap = t_k_rho[1:, 0]
+        t = t_k_rho[0, 1:]
+        rho2d = t_k_rho[1:, 1:]
+        lm_op = Physics.logk_loglm(kap, 1)
+
+        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+        yc = yc_lm_l[0, 1:]
+        lm_sp = yc_lm_l[1:, 0]
+        l2d_sp = yc_lm_l[1:, 1:]
+
+        yc_lm_r = Save_Load_tables.load_table('yc_lm_r', 'yc', 'lm', 'r', opal_used)
+        lm_sp = yc_lm_r[1:, 0]
+        r2d_sp = yc_lm_r[1:, 1:]
+
+        lm1 = np.array([lm_op.min(), lm_sp.min()]).max()
+        lm2 = np.array([lm_op.max(), lm_sp.max()]).min()
+
+        yc_lm_l = Math.crop_2d_table(Math.combine(yc, lm_sp, l2d_sp), None, None, lm1, lm2)
+        yc_lm_r = Math.crop_2d_table(Math.combine(yc, lm_sp, r2d_sp), None, None, lm1, lm2)
+        t_lm_rho = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, lm_op, rho2d)), None, None, lm1, lm2)
+
+        if not yc_val in yc:
+            yc_ind = None
+            raise ValueError('Yc = {} | not in yc from | {} | for {}'.format(yc_val, 'yc_lm_l', opal_used))
+        else:
+            yc_ind = Math.find_nearest_index(yc, yc_val) + 1  # as it starts with zero, which is non physical
+
+        t_op = t_lm_rho[0, 1:]
+        lm_op = t_lm_rho[1:, 0]
+        rho2d = t_lm_rho[1:, 1:]
+        lm_sp = yc_lm_l[1:, 0]
+        l2d = yc_lm_l[1:, yc_ind]
+        r2d = yc_lm_r[1:, yc_ind]
+
+        f = interpolate.UnivariateSpline(lm_sp, l2d)
+        l_ = f(lm_op)
+
+        f = interpolate.UnivariateSpline(lm_sp, r2d)
+        r_ = f(lm_op)
+
+        vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+        m_dot = Physics.vrho_mdot(vrho, r_, 'l')
+
+        return Math.combine(t, l_, m_dot),  Math.combine(t, lm_op, m_dot)
+
+    @staticmethod
+    def t_l_mdot_cr_sp(t_k_rho, yc_val, opal_used):
+        kap = t_k_rho[1:, 0]
+        t   = t_k_rho[0, 1:]
+        rho2d = t_k_rho[1:, 1:]
+        lm_op = Physics.logk_loglm(kap, 1)
+
+        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+        yc = yc_lm_l[0, 1:]
+        lm_sp = yc_lm_l[1:, 0]
+        l2d_sp= yc_lm_l[1:, 1:]
+
+        yc_lm_r = Save_Load_tables.load_table('yc_lm_r', 'yc', 'lm', 'r', opal_used)
+        lm_sp  = yc_lm_r[1:, 0]
+        r2d_sp = yc_lm_r[1:, 1:]
+
+        lm1 = np.array([lm_op.min(), lm_sp.min()]).max()
+        lm2 = np.array([lm_op.max(), lm_sp.max()]).min()
+
+        yc_lm_l = Math.crop_2d_table(Math.combine(yc, lm_sp, l2d_sp), None, None, lm1, lm2)
+        yc_lm_r = Math.crop_2d_table(Math.combine(yc, lm_sp, r2d_sp), None, None, lm1, lm2)
+        t_lm_rho= Math.crop_2d_table( Math.invet_to_ascending_xy(Math.combine(t, lm_op, rho2d)), None, None, lm1, lm2)
+
+        if not yc_val in yc:
+            yc_ind = None
+            raise ValueError('Yc = {} | not in yc from | {} | for {}'.format(yc_val, 'yc_lm_l', opal_used))
+        else:
+            yc_ind = Math.find_nearest_index(yc, yc_val) + 1 # as it starts with zero, which is non physical
+
+
+
+
+        t_op = t_lm_rho[0, 1:]
+        lm_op = t_lm_rho[1:, 0]
+        rho2d = t_lm_rho[1:,1:]
+        lm_sp = yc_lm_l[1:,0]
+        l2d = yc_lm_l[1:, yc_ind]
+        r2d = yc_lm_r[1:, yc_ind]
+
+        f = interpolate.UnivariateSpline(lm_sp, l2d)
+        l_ = f(lm_op)
+
+        f = interpolate.UnivariateSpline(lm_sp, r2d)
+        r_ = f(lm_op)
+
+        vrho  = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+        m_dot = Physics.vrho_mdot(vrho, r_, 'l')
+
+        return Math.combine(t, l_, m_dot)
+
+    @staticmethod
+    def t_lm_mdot_cr_sp(t_k_rho, yc_val, opal_used):
+        kap = t_k_rho[1:, 0]
+        t = t_k_rho[0, 1:]
+        rho2d = t_k_rho[1:, 1:]
+        lm_op = Physics.logk_loglm(kap, 1)
+
+        # yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+        # yc = yc_lm_l[0, 1:]
+        # lm_sp = yc_lm_l[1:, 0]
+        # l2d_sp = yc_lm_l[1:, 1:]
+
+        yc_lm_r = Save_Load_tables.load_table('yc_lm_r', 'yc', 'lm', 'r', opal_used)
+        yc = yc_lm_r[0, 1:]
+        lm_sp = yc_lm_r[1:, 0]
+        r2d_sp = yc_lm_r[1:, 1:]
+
+        lm1 = np.array([lm_op.min(), lm_sp.min()]).max()
+        lm2 = np.array([lm_op.max(), lm_sp.max()]).min()
+
+        # yc_lm_l = Math.crop_2d_table(Math.combine(yc, lm_sp, l2d_sp), None, None, lm1, lm2)
+        yc_lm_r  = Math.crop_2d_table(Math.combine(yc, lm_sp, r2d_sp), None, None, lm1, lm2)
+        t_lm_rho = Math.crop_2d_table(Math.invet_to_ascending_xy(Math.combine(t, lm_op, rho2d)), None, None, lm1, lm2)
+
+        if not yc_val in yc:
+            yc_ind = None
+            raise ValueError('Yc = {} | not in yc from | {} | for {}'.format(yc_val, 'yc_lm_l', opal_used))
+        else:
+            yc_ind = Math.find_nearest_index(yc, yc_val) + 1  # as it starts with zero, which is non physical
+
+
+
+
+        t_op = t_lm_rho[0, 1:]
+        lm_op = t_lm_rho[1:, 0]
+        rho2d = t_lm_rho[1:, 1:]
+        # lm_sp = yc_lm_l[1:, 0]
+        # l2d = yc_lm_l[1:, yc_ind]
+        r2d = yc_lm_r[1:, yc_ind]
+
+        # f = interpolate.UnivariateSpline(lm_sp, l2d)
+        # l_ = f(lm_op)
+
+        f2 = interpolate.UnivariateSpline(lm_sp, r2d)
+        r2_ = f2(lm_op)
+
+        vrho2 = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+        m_dot2 = Physics.vrho_mdot(vrho2, r2_, 'l')
+
+        return Math.combine(t, lm_op, m_dot2)
+
+    # def save_yc_llm_mdot_cr(self, l_or_lm,
+    #                         rs=None, yc_prec = 0.1, depth = 100, plot = True, lim_t1=5.18, lim_t2=None):
+    #
+    #     t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
+    #
+    #     def interp(x, y, x_grid):
+    #         f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
+    #         return x_grid, f(x_grid)
+    #
+    #     if rs == None:
+    #
+    #         spfiles_ = SP_file_work(self.sp_files, self.output_dir, self.plot_dir)
+    #         min_llm, max_llm = spfiles_.get_min_max(l_or_lm)
+    #         yc, spcls = spfiles_.separate_sp_by_crit_val('Yc', yc_prec)
+    #
+    #
+    #         y_grid = np.mgrid[min_llm:max_llm:depth * 1j]
+    #
+    #         mdot2d_pol = np.zeros(len(y_grid))
+    #         mdot2d_int = np.zeros(len(y_grid))
+    #
+    #         fig = plt.figure(figsize=plt.figaspect(1.0))
+    #
+    #         ax1 = fig.add_subplot(221)
+    #         ax1.grid()
+    #         ax1.set_ylabel(Labels.lbls(l_or_lm))
+    #         ax1.set_xlabel(Labels.lbls('mdot'))
+    #         ax1.set_title('INTERPOLATION')
+    #
+    #         ax2 = fig.add_subplot(222)
+    #         ax2.grid()
+    #         ax2.set_ylabel(Labels.lbls(l_or_lm))
+    #         ax2.set_xlabel(Labels.lbls('mdot'))
+    #         ax2.set_title('EXTRAPOLATION')
+    #
+    #         for i in range(len(yc)):
+    #
+    #             t_l_mdot, t_lm_mdot = self.t_llm_cr_sp(t_k_rho, yc[i], self.opal_used)
+    #
+    #             if l_or_lm == 'l':
+    #                 t_llm_mdot = self.t_l_mdot_cr_sp(t_k_rho, yc[i], self.opal_used)
+    #             else:
+    #                 t_llm_mdot = self.t_lm_mdot_cr_sp(t_k_rho, yc[i], self.opal_used)
+    #
+    #
+    #             # t_llm_mdot = self.t_llm_mdot_crit_sp(spcls[i], t_k_rho, l_or_lm, yc[i], self.opal_used)
+    #             t = t_l_mdot[0, 1:]
+    #             l = t_l_mdot[1:, 0]
+    #             lm = t_lm_mdot[1:, 0]
+    #             m_dot = t_l_mdot[1:, 1:]
+    #
+    #             mins = Math.get_mins_in_every_row(t, l, m_dot, 5000, lim_t1, lim_t2)
+    #
+    #
+    #
+    #             # llm = mins[1, :]
+    #             mdot= mins[2, :]
+    #
+    #             # plt.plot(mins[2, :], mins[1, :], '-', color='black')
+    #             # plt.annotate(str("%.2f" % yc[i]), xy=(mins[2, 0], mins[1, 0]), textcoords='data')
+    #
+    #             '''----------------------------POLYNOMIAL EXTRAPOLATION------------------------------------'''
+    #             print('\n\t Yc = {}'.format(yc[i]))
+    #
+    #
+    #             llm_pol, mdot_pol = Math.fit_plynomial(l, mdot, 3, depth, y_grid)
+    #             mdot2d_pol = np.vstack((mdot2d_pol, mdot_pol))
+    #             color = 'C' + str(int(yc[i] * 10) - 1)
+    #             ax2.plot(mdot_pol, llm_pol, '--', color=color)
+    #             ax2.plot(mdot, l, '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #
+    #
+    #             # ax2.annotate(str("%.2f" % yc[i]), xy=(mdot_pol[0], llm_pol[0]), textcoords='data')
+    #
+    #             '''------------------------------INTERPOLATION ONLY---------------------------------------'''
+    #             llm_int, mdot_int = interp(llm, mdot, y_grid)
+    #             mdot2d_int = np.vstack((mdot2d_int, mdot_int))
+    #             ax1.plot(mdot_int, llm_int, '--', color=color)
+    #             ax1.plot(mdot, llm, '-', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #             # ax1.annotate(str("%.2f" % yc[i]), xy=(mdot_int[0], llm_int[0]), textcoords='data')
+    #
+    #         ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #         ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #
+    #         mdot2d_int = np.delete(mdot2d_int, 0, 0)
+    #         mdot2d_pol = np.delete(mdot2d_pol, 0, 0)
+    #
+    #         yc_llm_mmdot_cr_pol = Math.combine(yc, y_grid, mdot2d_pol.T)  # changing the x/y
+    #         yc_llm_mmdot_cr_int = Math.combine(yc, y_grid, mdot2d_int.T)  # changing the x/y
+    #
+    #
+    #         table_name = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
+    #         Save_Load_tables.save_table(yc_llm_mmdot_cr_pol, self.opal_used, table_name, 'yc', l_or_lm, 'mdot_crit')
+    #
+    #
+    #         if plot:
+    #
+    #             levels = [-7.0,-6.9,-6.8,-6.7,-6.6,-6.5, -6.4, -6.3, -6.2, -6.1, -6.0, -5.9, -5.8,
+    #                       -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5, -4.4, -4.3,
+    #                       -4.2, -4.1, -4.]
+    #             ax = fig.add_subplot(223)
+    #
+    #             # ax = fig.add_subplot(1, 1, 1)
+    #             ax.set_xlim(yc_llm_mmdot_cr_int[0,1:].min(), yc_llm_mmdot_cr_int[0,1:].max())
+    #             ax.set_ylim(yc_llm_mmdot_cr_int[1:,0].min(), yc_llm_mmdot_cr_int[1:,0].max())
+    #             ax.set_ylabel(Labels.lbls(l_or_lm))
+    #             ax.set_xlabel(Labels.lbls('Yc'))
+    #
+    #             contour_filled = plt.contourf(yc_llm_mmdot_cr_int[0, 1:], yc_llm_mmdot_cr_int[1:, 0], yc_llm_mmdot_cr_int[1:,1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #             # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #             contour = plt.contour(yc_llm_mmdot_cr_int[0, 1:], yc_llm_mmdot_cr_int[1:, 0], yc_llm_mmdot_cr_int[1:,1:], levels, colors='k')
+    #
+    #             clb = plt.colorbar(contour_filled)
+    #             clb.ax.set_title(Labels.lbls('mdot'))
+    #
+    #             plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #             #ax.set_title('MASS-LUMINOSITY RELATION')
+    #
+    #             # plt.ylabel(l_or_lm)
+    #             # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #             # plt.savefig(name)
+    #
+    #
+    #
+    #
+    #             ax = fig.add_subplot(224)
+    #
+    #             # ax = fig.add_subplot(1, 1, 1)
+    #             ax.set_xlim(yc_llm_mmdot_cr_pol[0, 1:].min(), yc_llm_mmdot_cr_pol[0, 1:].max())
+    #             ax.set_ylim(yc_llm_mmdot_cr_pol[1:, 0].min(), yc_llm_mmdot_cr_pol[1:, 0].max())
+    #             ax.set_ylabel(Labels.lbls(l_or_lm))
+    #             ax.set_xlabel(Labels.lbls('Yc'))
+    #
+    #
+    #             contour_filled = plt.contourf(yc_llm_mmdot_cr_pol[0, 1:], yc_llm_mmdot_cr_pol[1:, 0], yc_llm_mmdot_cr_pol[1:, 1:], levels,
+    #                                           cmap=plt.get_cmap('RdYlBu_r'))
+    #             # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #             contour = plt.contour(yc_llm_mmdot_cr_pol[0, 1:], yc_llm_mmdot_cr_pol[1:, 0], yc_llm_mmdot_cr_pol[1:, 1:], levels, colors='k')
+    #
+    #             clb = plt.colorbar(contour_filled)
+    #             clb.ax.set_title(Labels.lbls('mdot'))
+    #
+    #             plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #             #ax.set_title('MASS-LUMINOSITY RELATION')
+    #
+    #             # plt.ylabel(l_or_lm)
+    #             # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #
+    #
+    #             plt.show()
+
+
+    # def min_mdot_sp(self, l_or_lm, yc_val):
+    #
+    #     name = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
+    #     yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', l_or_lm, 'mdot_crit', self.opal_used)
+    #     yc  = yc_llm_mdot_cr[0, 1:]
+    #     llm = yc_llm_mdot_cr[1:, 0]
+    #     mdot2d= yc_llm_mdot_cr[1:, 1:]
+    #
+    #
+    #
+    #     if yc_val in yc:
+    #         ind = Math.find_nearest_index(yc, yc_val)
+    #         mdot = mdot2d[:, ind]
+    #     else:
+    #         raise ValueError('\tYc = {} not in the list: \n\t{}'.format(yc_val, yc))
+    #
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(1, 1, 1)
+    #     ax.plot(mdot, llm, '-',    color='black')
+    #     ax.fill_between(mdot, llm, color="lightgray")
+    #
+    #     classes  = []
+    #     classes.append('dum')
+    #     mdot_obs = []
+    #     llm_obs  = []
+    #
+    #
+    #     '''=============================OBSERVABELS==============================='''
+    #
+    #     # from Phys_Math_Labels import Opt_Depth_Analythis
+    #
+    #     for star_n in self.obs.stars_n:
+    #         i = -1
+    #         mdot_obs = np.append(mdot_obs, self.obs.get_num_par('mdot', star_n))
+    #         llm_obs = np.append(llm_obs, self.obs.get_num_par(l_or_lm, star_n, yc_val, self.opal_used))
+    #         eta = self.obs.get_num_par('eta', star_n)
+    #
+    #         # print(self.obs.get_num_par('mdot',  star_n), self.obs.get_num_par(l_or_lm, star_n))
+    #
+    #         plt.plot(mdot_obs[i], llm_obs[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
+    #                  color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
+    #         ax.annotate('{} {}'.format(int(star_n), eta), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plot numbers of stars
+    #
+    #
+    #         # v_inf = self.obs.get_num_par('v_inf', star_n)
+    #         # tau_cl = Opt_Depth_Analythis(30, v_inf, 1., 1., mdot_obs[i], 0.20)
+    #         # tau = tau_cl.anal_eq_b1(1.)
+    #         # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
+    #
+    #
+    #         if self.obs.get_star_class(star_n) not in classes:
+    #             plt.plot(mdot_obs[i], llm_obs[i], marker=self.obs.get_clss_marker(star_n), markersize='9',
+    #                      color=self.obs.get_class_color(star_n), ls = '',
+    #                      label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
+    #             classes.append(self.obs.get_star_class(star_n))
+    #
+    #     print('\t__PLOT: total stars: {}'.format(len(self.obs.stars_n)))
+    #     print(len(mdot_obs), len(llm_obs))
+    #
+    #     fit = np.polyfit(mdot_obs, llm_obs, 1)  # fit = set of coeddicients (highest first)
+    #     f = np.poly1d(fit)
+    #     fit_x_coord = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):1000j]
+    #     plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+    #
+    #     min_mdot, max_mdot = self.obs.get_min_max('mdot')
+    #     min_llm, max_llm = self.obs.get_min_max(l_or_lm, yc_val, self.opal_used)
+    #
+    #     ax.set_xlim(min_mdot, max_mdot)
+    #     ax.set_ylim(min_llm, max_llm)
+    #
+    #     ax.set_ylabel(Labels.lbls(l_or_lm))
+    #     ax.set_xlabel(Labels.lbls('mdot'))
+    #     ax.grid(which='major', alpha=0.2)
+    #     ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+    #
+    #     ax.grid(which='both')
+    #     ax.grid(which='minor', alpha=0.2)
+    #     plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
+    #     plot_name = self.plot_dir + 'minMdot_l.pdf'
+    #     plt.savefig(plot_name)
+    #     plt.show()
+
 
 #================================================3D=====================================================================
 #

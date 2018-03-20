@@ -26,6 +26,7 @@ from Phys_Math_Labels import Math
 from Phys_Math_Labels import Physics
 from Phys_Math_Labels import Constants
 from Phys_Math_Labels import Labels
+from Phys_Math_Labels import Plots
 
 from OPAL import Read_Table
 from OPAL import Row_Analyze
@@ -267,10 +268,12 @@ class Creation:
 
 class SP_file_work():
 
-    def __init__(self, sp_files, out_dir, plot_dir):
+    def __init__(self, sp_files, yc_precision, opal_used, out_dir, plot_dir):
         self.sp_files = sp_files
         self.out_dir = out_dir
         self.plot_dir = plot_dir
+        self.opal_used = opal_used
+        self.yc_prec = yc_precision
 
         self.spmdl = []
         for file in self.sp_files:
@@ -314,7 +317,7 @@ class SP_file_work():
 
         return yc_arr, set_of_files
 
-    def save_y_yc_z_relation(self, y_v_n, z_v_n, opal_used, save, plot=False, yc_prec=0.1, depth=100):
+    def save_y_yc_z_relation(self, y_v_n, z_v_n, save, plot=False, yc_prec=0.1, depth=100):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', yc_prec)
 
@@ -399,7 +402,7 @@ class SP_file_work():
                 levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35,  4.4, 4.45,
                           4.5, 4.55,  4.6, 4.65,  4.7, 4.75, 4.8, 4.85,  4.9, 4.95, 5.0]
             if z_v_n == 't':
-                levels = [5.15, 5.16,5.17,5.18,5.19,5.20,5.21,5.22,5.23,5.24,5.25,5.26,5.27,5.28,5.29,5.30]
+                levels = [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
 
 
             ax = fig.add_subplot(223)
@@ -456,7 +459,7 @@ class SP_file_work():
         # yc_llm_m_pol
 
     @staticmethod
-    def yc_x__to__y__sp(yc_value, x_v_n, y_v_n, x_inp, opal_used, dimension=0):
+    def yc_x__to__y__sp(yc_value, x_v_n, y_v_n, x_inp, dimension=0):
         '''
         LOADS the table with given v_ns and extract the row with given Yc and interpolateds the y_value, for x_val given
         :param yc_value:
@@ -516,59 +519,751 @@ class SP_file_work():
 
             return x_arr_f, y_arr_f
 
+    # @staticmethod
+    # def l_y_to_m(log_l, yc_value, dimension=0):
+    #     '''
+    #     RETURNS l, m (if l dimension = 0) and l_arr, m_arr (if dimension = 1)
+    #     :param log_l:
+    #     :param yc_value:
+    #     :param dimension:
+    #     :return:
+    #     '''
+    #     # from FilesWork import Save_Load_tables
+    #
+    #     yc_l_m = Save_Load_tables.load_table('yc_l_m', 'yc', 'l', 'm', opal_used)
+    #     l_arr = yc_l_m[1:, 0]
+    #     yc_arr= yc_l_m[0, 1:]
+    #     m2d = yc_l_m[1:, 1:]
+    #
+    #     # yc_value = np.float("%.3f" % yc_value)
+    #
+    #     if yc_value in yc_arr:
+    #         ind_yc = Math.find_nearest_index(yc_arr, yc_value)
+    #     else:
+    #         raise ValueError('Given yc_arr({}) is not in available yc_arr:({})'.format(yc_value, yc_arr))
+    #
+    #     if dimension == 0:
+    #         if log_l >= l_arr.min() and log_l <= l_arr.max():
+    #             m_arr = m2d[:, ind_yc]
+    #             # lm_arr = []
+    #             # for i in range(len(m_arr)):
+    #             #     lm_arr = np.append(lm_arr, [l_arr[i], m_arr[i]])
+    #             #
+    #             # lm_arr_sort = np.sort(lm_arr.view('float64, float64'), order=['f0'], axis=0).view(np.float)
+    #             # lm_arr_shaped = np.reshape(lm_arr_sort, (len(m_arr), 2))
+    #
+    #             f = interpolate.UnivariateSpline(l_arr, m_arr)
+    #             m = f(log_l)
+    #             # print(log_l, m)
+    #
+    #             return log_l, m
+    #         else:
+    #             raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
+    #     if dimension == 1:
+    #         m_arr_f = []
+    #         l_arr_f = []
+    #         for i in range(len(log_l)):
+    #             if log_l[i] >= l_arr.min() and log_l[i] <= l_arr.max():
+    #                 f = interpolate.UnivariateSpline(l_arr, m2d[ind_yc, :])
+    #                 m_arr_f = np.append(m_arr_f, f(log_l[i]))
+    #                 l_arr_f = np.append(l_arr_f, log_l[i])
+    #             else:
+    #                 raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
+    #
+    #         return l_arr_f, m_arr_f
+
+    # def sp_get_r_lt_table2(self, v_n, l_or_lm, plot=True, ref_t_llm_vrho=np.empty([])):
+    #     '''
+    #
+    #     :param l_or_lm:
+    #     :param depth:
+    #     :param plot:
+    #     :param t_llm_vrho:
+    #     :return:
+    #     '''
+    #     if not ref_t_llm_vrho.any():
+    #         print('\t__ No *ref_t_llm_vrho* is provided. Loading {} interp. opacity table.'.format(self.opal_used))
+    #         t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.out_dir)
+    #         table = Physics.t_kap_rho_to_t_llm_rho(t_k_rho, l_or_lm)
+    #     else:
+    #         table = ref_t_llm_vrho
+    #
+    #     t_ref = table[0, 1:]
+    #     llm_ref=table[1:, 0]
+    #     # rho_ref=table[1:, 1:]
+    #
+    #
+    #     '''=======================================ESTABLISHING=LIMITS================================================'''
+    #
+    #     t_mins = []
+    #     t_maxs = []
+    #
+    #     for i in range(len(self.sp_files)): # as every sp.file has different number of t - do it one by one
+    #
+    #         t = self.spmdl[i].get_sonic_cols('t')                     # Sonic
+    #         t = np.append(t, self.spmdl[i].get_crit_value('t'))       # critical
+    #
+    #         t_mins = np.append(t_mins, t.min())
+    #         t_maxs = np.append(t_maxs, t.max())
+    #
+    #     t_min = t_mins.max()
+    #     t_max = t_maxs.min()
+    #
+    #     print('\t__ SP files t limits: ({}, {})'.format(t_min, t_max))
+    #     print('\t__REF table t limits: ({}, {})'.format(t_ref.min(), t_ref.max()))
+    #
+    #     it1 = Math.find_nearest_index(t_ref, t_min)       # Lower t limit index in t_ref
+    #     it2 = Math.find_nearest_index(t_ref, t_max)       # Upper t limit index in t_ref
+    #     t_grid = t_ref[it1:it2]
+    #
+    #     print('\t__     Final t limits: ({}, {}) with {} elements'.format(t_ref[it1], t_ref[it2], len(t_grid)))
+    #
+    #
+    #     '''=========================INTERPOLATING=ALONG=T=ROW=TO=HAVE=EQUAL=N=OF=ENTRIES============================='''
+    #
+    #     llm_r_rows = np.empty(1 + len(t_ref[it1:it2]))
+    #
+    #     for i in range(len(self.sp_files)):
+    #
+    #         if l_or_lm == 'l':
+    #             llm = self.spmdl[i].get_crit_value('l')
+    #         else:
+    #             llm = Physics.loglm(self.spmdl[i].get_crit_value('l'), self.spmdl[i].get_crit_value('m'), False)
+    #
+    #
+    #         r = self.spmdl[i].get_sonic_cols(v_n)                     # get sonic
+    #         if v_n == 'r': r = np.append(r, self.spmdl[i].get_crit_value('r'))       # get Critical
+    #
+    #         t = self.spmdl[i].get_sonic_cols('t')                                     # Sonic
+    #         if v_n == 'r': t = np.append(t, self.spmdl[i].get_crit_value('t'))        # critical
+    #
+    #         r_t = []        # Dictionary for sorting
+    #         for i in range(len(r)):
+    #             r_t = np.append(r_t, [r[i], t[i]])
+    #
+    #         r_t_sort = np.sort(r_t.view('float64, float64'), order=['f1'], axis=0).view(np.float)
+    #         r_t_reshaped = np.reshape(r_t_sort, (len(r), 2)) # insure that the t values are rising along the t_r arr.
+    #
+    #         r_sort = r_t_reshaped[:,0]
+    #         t_sort = r_t_reshaped[:,1]
+    #
+    #         f = interpolate.InterpolatedUnivariateSpline(t_sort, r_sort)
+    #
+    #         l_r_row = np.array([llm])
+    #         l_r_row = np.append(l_r_row, f(t_grid))
+    #         llm_r_rows = np.vstack((llm_r_rows, l_r_row))
+    #
+    #     llm_r_rows = np.delete(llm_r_rows, 0, 0)
+    #
+    #     llm_r_rows_sort = llm_r_rows[llm_r_rows[:,0].argsort()] # UNTESTED sorting function
+    #
+    #     t_llm_r = Math.combine(t_grid, llm_r_rows_sort[:,0], llm_r_rows_sort[:,1:]) # intermediate result
+    #
+    #     '''======================================INTERPOLATING=EVERY=COLUMN=========================================='''
+    #
+    #
+    #     l      = t_llm_r[1:, 0]
+    #     t      = t_llm_r[0, 1:]
+    #     r      = t_llm_r[1:, 1:]
+    #     il1    = Math.find_nearest_index(llm_ref, l.min())
+    #     il2    = Math.find_nearest_index(llm_ref, l.max())
+    #
+    #     print('\t__ SP files l limits: ({}, {})'.format(l.min(), l.max()))
+    #     print('\t__REF table t limits: ({}, {})'.format(llm_ref.min(), llm_ref.max()))
+    #
+    #     l_grid = llm_ref[il1:il2]
+    #
+    #     print('\t__     Final l limits: ({}, {}) with {} elements'.format(llm_ref[il1], llm_ref[il2], len(l_grid)))
+    #
+    #     r_final = np.empty((len(l_grid),len(t)))
+    #     for i in range(len(t)):
+    #         f = interpolate.InterpolatedUnivariateSpline(l, r[:, i])
+    #         r_final[:, i] = f(l_grid)
+    #
+    #     t_llm_r = Math.combine(t, l_grid, r_final)
+    #
+    #     if plot:
+    #         plt.figure()
+    #         # ax = fig.add_subplot(1, 1, 1)
+    #         plt.xlim(t_llm_r[0,1:].min(), t_llm_r[0,1:].max())
+    #         plt.ylim(t_llm_r[1:,0].min(), t_llm_r[1:,0].max())
+    #         plt.ylabel(Labels.lbls(l_or_lm))
+    #         plt.xlabel(Labels.lbls('ts'))
+    #
+    #         levels = []
+    #         if v_n == 'k':   levels = [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95] # FOR log Kappa
+    #         if v_n == 'rho': levels = [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5,  -5, -4.5, -4]
+    #         if v_n == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6, 1.65, 1.7,
+    #                                    1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.10, 2.15, 2.20]
+    #
+    #         contour_filled = plt.contourf(t_llm_r[0, 1:], t_llm_r[1:, 0], t_llm_r[1:,1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #         plt.colorbar(contour_filled, label=Labels.lbls(v_n))
+    #         contour = plt.contour(t_llm_r[0, 1:], t_llm_r[1:, 0], t_llm_r[1:,1:], levels, colors='k')
+    #         plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #         plt.title('SONIC HR DIAGRAM')
+    #
+    #         # plt.ylabel(l_or_lm)
+    #         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #         # plt.savefig(name)
+    #         plt.show()
+    #
+    #     return t_llm_r
+
+    # --- --- --- | ---
+    # --- --- --- | ---
+    # --- --- --- | ---
+
+
+
 
     @staticmethod
-    def l_y_to_m(log_l, yc_value, opal_used, dimension=0):
+    def x_y_z(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit = True):
         '''
-        RETURNS l, m (if l dimension = 0) and l_arr, m_arr (if dimension = 1)
-        :param log_l:
-        :param yc_value:
-        :param dimension:
+        cls = set of classes of sp. files with the same Yc.
+        :param cls:
         :return:
         '''
-        # from FilesWork import Save_Load_tables
 
-        yc_l_m = Save_Load_tables.load_table('yc_l_m', 'yc', 'l', 'm', opal_used)
-        l_arr = yc_l_m[1:, 0]
-        yc_arr= yc_l_m[0, 1:]
-        m2d = yc_l_m[1:, 1:]
+        y_zg = np.zeros(len(x_grid) + 1)  # +1 for y-value (l,lm,m,Yc)
 
-        # yc_value = np.float("%.3f" % yc_value)
+        for cl in cls:  # INTERPOLATING EVERY ROW to achive 'depth' number of points
+            x = cl.get_sonic_cols(x_v_n)
+            y = cl.get_crit_value(y_v_n)  # Y should be unique value for a given Yc (like m, l/lm, or Yc)
+            z = cl.get_sonic_cols(z_v_n)
 
-        if yc_value in yc_arr:
-            ind_yc = Math.find_nearest_index(yc_arr, yc_value)
+            if append_crit:
+                x = np.append(x, cl.get_crit_value(x_v_n))
+                z = np.append(z, cl.get_crit_value(z_v_n))
+            xi, zi = Math.x_y_z_sort(x, z)
+
+            z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+            y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
+
+            # plt.plot(xi, zi, '.', color='red')                # FOR interplation analysis (how good is the fit)
+            # plt.plot(x_grid, z_grid, '-', color='red')
+
+        y_zg = np.delete(y_zg, 0, 0)
+        y = y_zg[:, 0]
+        zi = y_zg[:, 1:]
+
+        z_grid2 = np.zeros(len(y_grid))
+        for i in range(len(x_grid)):  # INTERPOLATING EVERY COLUMN to achive 'depth' number of points
+            z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:, i])(y_grid)))
+        z_grid2 = np.delete(z_grid2, 0, 0)
+
+        x_y_z_final = Math.combine(x_grid, y_grid, z_grid2.T)
+
+        return x_y_z_final
+
+    @staticmethod
+    def x_y_limits(cls, x_v_n, y_v_n, min_or_max = 'min', append_crit = True):
+        x_mins = []
+        y_mins = []
+        x_maxs = []
+        y_maxs = []
+        for cl in cls:
+            x = cl.get_sonic_cols(x_v_n)
+            y = cl.get_sonic_cols(y_v_n)
+            if append_crit:
+                x = np.append(x, cl.get_crit_value(x_v_n))
+                y = np.append(y, cl.get_crit_value(y_v_n))
+            x_mins = np.append(x_mins, x.min())
+            y_mins = np.append(y_mins, y.min())
+            x_maxs = np.append(x_maxs, x.max())
+            y_maxs = np.append(y_maxs, y.max())
+        if min_or_max == 'min':
+            return x_mins.max(), x_maxs.min(), y_mins.min(), y_maxs.max()
+        if min_or_max == 'max':
+            return x_mins.min(), x_maxs.max(), y_mins.min(), y_maxs.max()
         else:
-            raise ValueError('Given yc_arr({}) is not in available yc_arr:({})'.format(yc_value, yc_arr))
+            raise NameError('min_or_max can be only: [{}, or {}] given: {}'.format('min', 'max', min_or_max))
 
-        if dimension == 0:
-            if log_l >= l_arr.min() and log_l <= l_arr.max():
-                m_arr = m2d[:, ind_yc]
-                # lm_arr = []
-                # for i in range(len(m_arr)):
-                #     lm_arr = np.append(lm_arr, [l_arr[i], m_arr[i]])
-                #
-                # lm_arr_sort = np.sort(lm_arr.view('float64, float64'), order=['f0'], axis=0).view(np.float)
-                # lm_arr_shaped = np.reshape(lm_arr_sort, (len(m_arr), 2))
+    def plot_x_y_z_for_yc(self, x_v_n, y_v_n, z_v_n, yc_val, depth, min_or_max = 'min', append_crit = True):
 
-                f = interpolate.UnivariateSpline(l_arr, m_arr)
-                m = f(log_l)
-                # print(log_l, m)
+        yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+        if yc_val in yc:
+            yc_index = Math.find_nearest_index(yc, yc_val)
+        else:
+            raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
 
-                return log_l, m
-            else:
-                raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
-        if dimension == 1:
-            m_arr_f = []
-            l_arr_f = []
-            for i in range(len(log_l)):
-                if log_l[i] >= l_arr.min() and log_l[i] <= l_arr.max():
-                    f = interpolate.UnivariateSpline(l_arr, m2d[ind_yc, :])
-                    m_arr_f = np.append(m_arr_f, f(log_l[i]))
-                    l_arr_f = np.append(l_arr_f, log_l[i])
-                else:
-                    raise ValueError('Given l({}) not in available range of l:({}, {})'.format(log_l, l_arr.min, l_arr.max))
 
-            return l_arr_f, m_arr_f
+        x1, x2, y1, y2 = self.x_y_limits(cls[yc_index], x_v_n, y_v_n, min_or_max, append_crit)
+        x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
+        y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
+
+
+        x_y_z = self.x_y_z(cls[yc_index],x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
+        Plots.plot_color_table(x_y_z, x_v_n, y_v_n, z_v_n,)
+
+    # --- --- ---
+
+    @staticmethod
+    def lm_l(lm, yc_lm_l, yc_val):
+        '''
+        Give it lm (value of array) and yc_lm_l relation from the file, --> l (value or array)
+        :param lm:
+        :param yc_lm_l:
+        :param yc_val:
+        :return:
+        '''
+
+        def prec2(var):
+            var = "%.2f" % var
+            return np.float(var)
+
+        yc = yc_lm_l[0, 1:]
+        lm_ = yc_lm_l[1:, 0]
+        l2d = yc_lm_l[1:, 1:]
+
+        if not yc_val in yc:
+            raise ValueError('Yc:{} not in Yc array from <yc_lm_l> relation ({})'.format(yc_val, yc))
+
+        if prec2(lm.min()) < prec2(lm_.min()):
+            raise ValueError('lm.min({}) < lm_.min({})'.format(lm.min(), lm_.min()))
+        if prec2(lm.max()) > prec2(lm_.max()):
+            raise ValueError('lm.max({}) > lm_.max({})'.format(lm.max(), lm_.max()))
+
+        i_yc = Math.find_nearest_index(yc, yc_val)
+        l    = interpolate.InterpolatedUnivariateSpline(lm_, l2d[:, i_yc])(lm)
+
+        return l
+
+    def get_t_llm_rho_crop_for_yc(self, cls, t_lm_rho, yc_val, y_v_n, min_max = 'min', opal_used = None, append_crit = True):
+
+        # t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', opal_used)
+        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+        t_lm_rho_com, yc_lm_l_com = Math.common_y(t_lm_rho, yc_lm_l)
+
+        if y_v_n == 'l':
+            l = self.lm_l(t_lm_rho_com[1:, 0], yc_lm_l, yc_val)
+
+            t_l_rho = Math.combine(t_lm_rho_com[0, 1:], l, t_lm_rho_com[1:, 1:])
+
+            x1, x2, y1, y2 = self.x_y_limits(cls, 't', y_v_n, min_max, append_crit)
+            t_l_rho_crop = Math.crop_2d_table2(t_l_rho, x1, x2, y1, y2)  # taking absolut limits
+
+            return t_l_rho_crop
+
+        if y_v_n == 'lm':
+            x1, x2, y1, y2 = self.x_y_limits(cls, 't', y_v_n, min_max, append_crit)
+            t_lm_rho_crop = Math.crop_2d_table2(t_lm_rho_com, x1, x2, y1, y2)
+
+            return t_lm_rho_crop
+
+    def get_t_llm_mdot_for_yc(self, cls, t_lm_rho, yc_val, y_v_n, min_max = 'min', opal_used = None, append_crit = True):
+
+        t_llm_rho = self.get_t_llm_rho_crop_for_yc(cls, t_lm_rho, yc_val, y_v_n, min_max, opal_used, append_crit)
+
+        t_llm_r = self.x_y_z(cls, 't', y_v_n, 'r', t_llm_rho[0, 1:], t_llm_rho[1:, 0], append_crit)
+
+        rho2d= t_llm_rho[1:, 1:]
+        r2d  = t_llm_r[1:, 1:]
+        t    = t_llm_r[0, 1:]
+        llm  = t_llm_r[1:, 0]
+
+        vro = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+        mdot= Physics.vrho_mdot(vro, r2d,'tl')
+        return Math.combine(t, llm, mdot)
+    def plot_t_llm_mdot_for_yc(self, yc_val, l_or_lm, min_max = 'min', append_crit = True):
+
+        yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+        if yc_val in yc:
+            yc_index = Math.find_nearest_index(yc, yc_val)
+        else:
+            raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
+
+        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', self.opal_used)
+        t_llm_mdot = self.get_t_llm_mdot_for_yc(cls[yc_index], t_lm_rho, yc[yc_index], l_or_lm, min_max, self.opal_used, append_crit)
+
+        Plots.plot_color_table(t_llm_mdot, 't', l_or_lm, 'mdot')
+
+    def get_t_llm_mdot_for_yc_const_r(self, cls, t_lm_rho, yc_val, rs, y_v_n, min_max = 'min', opal_used = None, append_crit = True):
+
+        t_llm_rho = self.get_t_llm_rho_crop_for_yc(cls, t_lm_rho, yc_val, y_v_n, min_max, opal_used, append_crit)
+
+        # t_llm_r = self.x_y_z(cls, 't', y_v_n, 'r', t_llm_rho[0, 1:], t_llm_rho[1:, 0], append_crit)
+
+        rho2d= t_llm_rho[1:, 1:]
+        t = t_llm_rho[0, 1:]
+        llm =t_llm_rho[1:, 0]
+        # r2d  = t_llm_r[1:, 1:]
+        # t    = t_llm_r[0, 1:]
+        # llm  = t_llm_r[1:, 0]
+
+        vro = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+        mdot= Physics.vrho_mdot(vro, rs, '')
+        return Math.combine(t, llm, mdot)
+    def plot_t_llm_mdot_for_yc_const_r(self, yc_val, rs, l_or_lm, min_max = 'min', append_crit = True):
+
+        yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+        if yc_val in yc:
+            yc_index = Math.find_nearest_index(yc, yc_val)
+        else:
+            raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
+
+        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', self.opal_used)
+        t_llm_mdot = self.get_t_llm_mdot_for_yc_const_r(cls[yc_index], t_lm_rho, yc[yc_index], rs, l_or_lm, min_max, self.opal_used, append_crit)
+
+        Plots.plot_color_table(t_llm_mdot, 't', l_or_lm, 'mdot', 'Rs:{}'.format(rs))
+
+
+
+
+    # def save_y_yc_z_relation_sp(self, x_v_n, y_v_n, z_v_n, save, plot=False, depth=100):
+    #     append_crit = True
+    #     if not y_v_n in ['m', 'l', 'lm', 'Yc']:
+    #         raise NameError('y_v_n must be one of [{}] , give:{}'.format(['m', 'l', 'lm', 'Yc'], y_v_n))
+    #
+    #     def x_y_z_sort(x_arr, y_arr, z_arr=None, sort_by_012=0):
+    #         '''
+    #         RETURNS x_arr, y_arr, (z_arr) sorted as a matrix by a row, given 'sort_by_012'
+    #         :param x_arr:
+    #         :param y_arr:
+    #         :param z_arr:
+    #         :param sort_by_012:
+    #         :return:
+    #         '''
+    #
+    #         if z_arr == None and sort_by_012 < 2:
+    #             if len(x_arr) != len(y_arr):
+    #                 raise ValueError('len(x)[{}]!= len(y)[{}]'.format(len(x_arr), len(y_arr)))
+    #
+    #             x_y_arr = []
+    #             for i in range(len(x_arr)):
+    #                 x_y_arr = np.append(x_y_arr, [x_arr[i], y_arr[i]])
+    #
+    #             x_y_sort = np.sort(x_y_arr.view('float64, float64'), order=['f{}'.format(sort_by_012)], axis=0).view(np.float)
+    #             x_y_arr_shaped = np.reshape(x_y_sort, (int(len(x_y_sort) / 2), 2))
+    #             return x_y_arr_shaped[:,0], x_y_arr_shaped[:,1]
+    #
+    #         if z_arr != None:
+    #             if len(x_arr) != len(y_arr) or len(x_arr)!=len(z_arr):
+    #                 raise ValueError('len(x)[{}]!= len(y)[{}]!=len(z_arr)[{}]'.format(len(x_arr), len(y_arr), len(z_arr)))
+    #
+    #             x_y_z_arr = []
+    #             for i in range(len(x_arr)):
+    #                 x_y_z_arr = np.append(x_y_z_arr, [x_arr[i], y_arr[i], z_arr[i]])
+    #
+    #             x_y_z_sort = np.sort(x_y_z_arr.view('float64, float64, float64'), order=['f{}'.format(sort_by_012)], axis=0).view(
+    #                 np.float)
+    #             x_y_z_arr_shaped = np.reshape(x_y_z_sort, (int(len(x_y_z_sort) / 3), 3))
+    #             return x_y_z_arr_shaped[:, 0], x_y_z_arr_shaped[:, 1], x_y_z_arr_shaped[:, 2]
+    #
+    #     def x_y_limits(cls, min_or_max):
+    #         x_mins = []
+    #         y_mins = []
+    #         x_maxs = []
+    #         y_maxs = []
+    #         for cl in cls:
+    #             x = cl.get_sonic_cols(x_v_n)
+    #             y = cl.get_sonic_cols(y_v_n)
+    #             if append_crit:
+    #                 x = np.append(x, cl.get_crit_value(x_v_n))
+    #                 y = np.append(y, cl.get_crit_value(y_v_n))
+    #             x_mins = np.append(x_mins, x.min())
+    #             y_mins = np.append(y_mins, y.min())
+    #             x_maxs = np.append(x_maxs, x.max())
+    #             y_maxs = np.append(y_maxs, y.max())
+    #         if min_or_max == 'min':
+    #             return x_mins.max(), x_maxs.min(), y_mins.min(), y_maxs.max()
+    #         if min_or_max == 'max':
+    #             return x_mins.min(), x_maxs.max(), y_mins.min(), y_maxs.max()
+    #         else:
+    #             raise NameError('min_or_max can be only: [{}, or {}] given: {}'.format('min', 'max', min_or_max))
+    #
+    #     def common_y(arr1, arr2):
+    #
+    #         y1 = arr1[1:, 0]
+    #         y2 = arr2[1:, 0]
+    #
+    #         y_min = np.array([y1.min(), y2.min()]).max()
+    #         y_max = np.array([y1.max(), y2.max()]).min()
+    #
+    #         arr1_cropped = Math.crop_2d_table(arr1, None, None, y_min, y_max)
+    #         arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
+    #
+    #         return arr1_cropped, arr2_cropped
+    #
+    #     def lm_l(lm, yc_lm_l, yc_val):
+    #
+    #         yc = yc_lm_l[0,  1:]
+    #         lm_= yc_lm_l[1:,  0]
+    #         l2d= yc_lm_l[1:, 1:]
+    #
+    #         if not yc_val in yc:
+    #             raise ValueError('Yc:{} not in Yc array from <yc_lm_l> relation ({})'.format(yc_val, yc))
+    #
+    #         if lm.min() < lm_.min():
+    #             raise ValueError('lm.min({}) < lm_.min({})'.format(lm.min(), lm_.min()))
+    #         if lm.max() > lm_.max():
+    #             raise ValueError('lm.max({}) > lm_.max({})'.format(lm.max(), lm_.max()))
+    #
+    #         i_yc = Math.find_nearest_index(yc, yc_val)
+    #         l = interpolate.InterpolatedUnivariateSpline(lm_, l2d[:, i_yc])(lm)
+    #
+    #         return l
+    #
+    #     def set_t_lm_grids_opal(yc_val, cls, min_max, opal_used = None):
+    #
+    #         t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', opal_used)
+    #         yc_lm_l  = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l',   opal_used)
+    #         t_lm_rho_com, yc_lm_l_com = common_y(t_lm_rho, yc_lm_l)
+    #
+    #         if y_v_n == 'l':
+    #
+    #             l = lm_l(t_lm_rho_com[1:, 0], yc_lm_l, yc_val)
+    #             t_l_rho = Math.combine(t_lm_rho_com[0, 1:], l, t_lm_rho_com[1:, 1:])
+    #
+    #             x1, x2, y1, y2 = x_y_limits(cls, min_max)
+    #             t_l_rho_crop = Math.crop_2d_table2(t_l_rho, x1, x2, y1, y2) # taking absolut limits
+    #
+    #             return t_l_rho_crop
+    #
+    #         if y_v_n == 'lm':
+    #             x1, x2, y1, y2 = x_y_limits(cls, min_max)
+    #             t_lm_rho_crop = Math.crop_2d_table(t_lm_rho_com, x1, x2, y1, y2)
+    #
+    #             return t_lm_rho_crop
+    #
+    #
+    #     def set_xgrid_ygrid(cls, min_max):
+    #         x1, x2, y1, y2 = x_y_limits(cls, min_max)
+    #         x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
+    #         y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
+    #         return x_grid, y_grid
+    #
+    #
+    #
+    #     yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+    #
+    #     t_llm_rho = set_t_lm_grids_opal(1, cls[0], 'min', self.opal_used)
+    #     Plots.plot_color_table(t_llm_rho, x_v_n, y_v_n, 'rho')
+    #     x_grid = t_llm_rho[0, 1:]
+    #     y_grid = t_llm_rho[1:, 0]
+    #
+    #     def x_y_z(cls, x_grid, y_grid):
+    #         '''
+    #         cls = set of classes of sp. files with the same Yc.
+    #         :param cls:
+    #         :return:
+    #         '''
+    #
+    #         y_zg = np.zeros(len(x_grid)+1)     # +1 for y-value (l,lm,m,Yc)
+    #
+    #         for cl in cls:                    # INTERPOLATING EVERY ROW to achive 'depth' number of points
+    #             x =  cl.get_sonic_cols(x_v_n)
+    #             y =  cl.get_crit_value(y_v_n) # Y should be unique value for a given Yc (like m, l/lm, or Yc)
+    #             z =  cl.get_sonic_cols(z_v_n)
+    #
+    #             if append_crit:
+    #                 x = np.append(x, cl.get_crit_value(x_v_n))
+    #                 z = np.append(z, cl.get_crit_value(z_v_n))
+    #             xi, zi = x_y_z_sort(x, z)
+    #
+    #             z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+    #             y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
+    #
+    #             plt.plot(xi, zi, '.', color='red')
+    #             plt.plot(x_grid, z_grid, '-', color='red')
+    #
+    #         y_zg = np.delete(y_zg, 0, 0)
+    #         y = y_zg[:,0]
+    #         zi = y_zg[:, 1:]
+    #
+    #         z_grid2 = np.zeros(len(y_grid))
+    #         for i in range(len(x_grid)):   # INTERPOLATING EVERY COLUMN to achive 'depth' number of points
+    #             z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:,i])(y_grid) ))
+    #         z_grid2 = np.delete(z_grid2, 0, 0)
+    #
+    #         x_y_z_final = Math.combine(x_grid, y_grid, z_grid2.T)
+    #
+    #         from Phys_Math_Labels import Plots
+    #         Plots.plot_color_table(x_y_z_final, x_v_n, y_v_n, z_v_n)
+    #
+    #         plt.show()
+    #         print('a')
+    #         return x_y_z_final
+    #
+    #     x_y_z = x_y_z(cls[0], x_grid, y_grid)
+    #
+    #
+    #
+    #     print('a')
+    #     # for i in range(len(yc)):
+    #     #     x_y_z(cls[i])
+    #
+    #
+    #
+    #
+    #             # x_y_z = []
+    #             # for j in range(len(y)):
+    #             #     x_y_z = np.append(x_y_z, [x[j], y[j], z[j]])
+    #             #
+    #             # x_y_z_sort = np.sort(x_y_z.view('float64, float64, float64'), order=['f0'], axis=0).view(np.float)
+    #             # x_y_z_shaped = np.reshape(x_y_z_sort, (int(len(x_y_z_sort) / 3), 3))
+    #             #
+    #             # x_grid = np.mgrid[x_y_z_shaped[0, 0]:x_y_z_shaped[-1, 0]:depth*1j]
+    #             # f = interpolate.InterpolatedUnivariateSpline(x_y_z_shaped[:,0],x_y_z_shaped[:,2]) # follows the data
+    #             # z_grid = f(x_grid)
+    #             #
+    #             # y_xi_zi = []
+    #             # for j in range(len(y)):
+    #             #     y_xi_zi = np.append(y_xi_zi, [y[j], ])
+    #             #
+    #             #
+    #             # plt.plot(x_y_z_shaped[:,0],x_y_z_shaped[:,1], '.', color='red')
+    #             # # plt.plot(x_grid, z_grid, '-', color='red')
+    #             # plt.show()
+    #             # print('B')
+    #
+    #         # yc_x_y_z = np.append(yc_x_y_z, x_y_z_shaped)
+    #
+    #
+    #     # yc_x_y_z = np.reshape(yc_x_y_z, (len(yc), int(len(x_y_z_sort) / 3), 3))
+    #
+    #
+    #     # print('a')
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #     # y_ = []
+    #     # for i in range(len(self.sp_files)):
+    #     #     y_ = np.append(y_, self.spmdl[i].get_crit_value(y_v_n))
+    #     # y_grid = np.mgrid[y_.min():y_.max():depth*1j]
+    #     #
+    #     # z2d_pol = np.zeros(len(y_grid))
+    #     # z2d_int = np.zeros(len(y_grid))
+    #     #
+    #     #
+    #     # fig = plt.figure(figsize=plt.figaspect(1.0))
+    #     #
+    #     # ax1 = fig.add_subplot(221)
+    #     # ax1.grid()
+    #     # ax1.set_ylabel(Labels.lbls(z_v_n))
+    #     # ax1.set_xlabel(Labels.lbls(y_v_n))
+    #     # ax1.set_title('INTERPOLATION')
+    #     #
+    #     # ax2 = fig.add_subplot(222)
+    #     # ax2.grid()
+    #     # ax2.set_ylabel(Labels.lbls(y_v_n))
+    #     # ax2.set_xlabel(Labels.lbls(z_v_n))
+    #     # ax2.set_title('EXTRAPOLATION')
+    #     #
+    #     # for i in range(len(yc)):
+    #     #     y_z = []
+    #     #     for cl in cls[i]:
+    #     #         y_z = np.append(y_z, [cl.get_crit_value(y_v_n), cl.get_crit_value(z_v_n)])
+    #     #     y_z_sort = np.sort(y_z.view('float64, float64'), order=['f0'], axis=0).view(np.float)
+    #     #     y_z_shaped = np.reshape(y_z_sort, (int(len(y_z_sort) / 2), 2))
+    #     #
+    #     #     '''----------------------------POLYNOMIAL EXTRAPOLATION------------------------------------'''
+    #     #     print('\n\t Yc = {}'.format(yc[i]))
+    #     #     y_pol, z_pol = Math.fit_plynomial(y_z_shaped[:, 0], y_z_shaped[:, 1], 3, depth, y_grid)
+    #     #     z2d_pol = np.vstack((z2d_pol, z_pol))
+    #     #     color = 'C' + str(int(yc[i] * 10)-1)
+    #     #     ax2.plot(y_pol, z_pol, '--', color=color)
+    #     #     ax2.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #     #
+    #     #     '''------------------------------INTERPOLATION ONLY---------------------------------------'''
+    #     #     y_int, z_int = interp(y_z_shaped[:, 0], y_z_shaped[:, 1], y_grid)
+    #     #     z2d_int = np.vstack((z2d_int, z_int))
+    #     #     ax1.plot(y_int, z_int, '--', color=color)
+    #     #     ax1.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #     #
+    #     # ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     # ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     #
+    #     # z2d_int = np.delete(z2d_int, 0, 0)
+    #     # z2d_pol = np.delete(z2d_pol, 0, 0)
+    #     #
+    #     # yc_llm_m_pol = Math.combine(yc, y_grid, z2d_pol.T)  # changing the x/y
+    #     # yc_llm_m_int = Math.combine(yc, y_grid, z2d_int.T)  # changing the x/y
+    #     #
+    #     # table_name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
+    #     # if save == 'int':
+    #     #     Save_Load_tables.save_table(yc_llm_m_int, opal_used, table_name, 'yc', y_v_n, z_v_n)
+    #     # if save == 'pol':
+    #     #     Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
+    #     #
+    #     # # Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
+    #     #
+    #     # if plot:
+    #     #
+    #     #     levels = []
+    #     #
+    #     #     if z_v_n == 'r':
+    #     #         levels = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
+    #     #     if z_v_n == 'm':
+    #     #         levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+    #     #     if z_v_n == 'mdot':
+    #     #         levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
+    #     #     if z_v_n == 'l':
+    #     #         levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
+    #     #     if z_v_n == 'lm':
+    #     #         levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35,  4.4, 4.45,
+    #     #                   4.5, 4.55,  4.6, 4.65,  4.7, 4.75, 4.8, 4.85,  4.9, 4.95, 5.0]
+    #     #     if z_v_n == 't':
+    #     #         levels = [5.15, 5.16,5.17,5.18,5.19,5.20,5.21,5.22,5.23,5.24,5.25,5.26,5.27,5.28,5.29,5.30]
+    #     #
+    #     #
+    #     #     ax = fig.add_subplot(223)
+    #     #
+    #     #     # ax = fig.add_subplot(1, 1, 1)
+    #     #     ax.set_xlim(yc_llm_m_int[0,1:].min(), yc_llm_m_int[0,1:].max())
+    #     #     ax.set_ylim(yc_llm_m_int[1:,0].min(), yc_llm_m_int[1:,0].max())
+    #     #     ax.set_ylabel(Labels.lbls(y_v_n))
+    #     #     ax.set_xlabel(Labels.lbls('Yc'))
+    #     #
+    #     #     contour_filled = plt.contourf(yc_llm_m_int[0, 1:], yc_llm_m_int[1:, 0], yc_llm_m_int[1:,1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #     #     # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #     #     contour = plt.contour(yc_llm_m_int[0, 1:], yc_llm_m_int[1:, 0], yc_llm_m_int[1:,1:], levels, colors='k')
+    #     #
+    #     #     clb = plt.colorbar(contour_filled)
+    #     #     clb.ax.set_title(Labels.lbls(z_v_n))
+    #     #
+    #     #     plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #     #     #ax.set_title('MASS-LUMINOSITY RELATION')
+    #     #
+    #     #     # plt.ylabel(l_or_lm)
+    #     #     # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     #     # plt.savefig(name)
+    #     #
+    #     #
+    #     #
+    #     #
+    #     #     ax = fig.add_subplot(224)
+    #     #
+    #     #     # ax = fig.add_subplot(1, 1, 1)
+    #     #     ax.set_xlim(yc_llm_m_pol[0, 1:].min(), yc_llm_m_pol[0, 1:].max())
+    #     #     ax.set_ylim(yc_llm_m_pol[1:, 0].min(), yc_llm_m_pol[1:, 0].max())
+    #     #     ax.set_ylabel(Labels.lbls(y_v_n))
+    #     #     ax.set_xlabel(Labels.lbls('Yc'))
+    #     #
+    #     #
+    #     #     contour_filled = plt.contourf(yc_llm_m_pol[0, 1:], yc_llm_m_pol[1:, 0], yc_llm_m_pol[1:, 1:], levels,
+    #     #                                   cmap=plt.get_cmap('RdYlBu_r'))
+    #     #     # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #     #     contour = plt.contour(yc_llm_m_pol[0, 1:], yc_llm_m_pol[1:, 0], yc_llm_m_pol[1:, 1:], levels, colors='k')
+    #     #
+    #     #     clb = plt.colorbar(contour_filled)
+    #     #     clb.ax.set_title(Labels.lbls(z_v_n))
+    #     #
+    #     #     plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #     #     #ax.set_title('MASS-LUMINOSITY RELATION')
+    #     #
+    #     #     # plt.ylabel(l_or_lm)
+    #     #     # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     #
+    #     #
+    #     #     plt.show()
+    #
+    #     # yc_llm_m_pol
+
+
 
     # def save_ly_m_or_r_relation_old(self, obs_filename, y_coord, plot = False, yc_prec = 0.3, depth = 100):
     #

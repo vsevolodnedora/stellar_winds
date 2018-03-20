@@ -1152,114 +1152,114 @@ class Combine:
     #
     #     # return -859.098 + 489.056*x - 92.827*x**2 + 5.882*x**3        # FROM SONIC POINT ESTIMATES
 
-    def plot_t_l_mdot(self, l_or_lm, rs, plot_obs, plot_nums, lim_t1 = None, lim_t2 = None):
-
-        # ---------------------LOADING-INTERPOLATED-TABLE---------------------------
-
-        t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
-        t_llm_rho = Physics.t_kap_rho_to_t_llm_rho(t_k_rho, l_or_lm)
-
-
-
-        #---------------------Getting KAPPA[], T[], RHO2D[]-------------------------
-
-        if rs == 0: # here in *t_llm_r* and in *t_llm_rho*  t, and llm are equivalent
-            t_llm_r = self.sp_get_r_lt_table2('r', l_or_lm, True, t_llm_rho)
-            t   = t_llm_r[0, 1:]
-            llm = t_llm_r[1:,0]
-            rs  = t_llm_r[1:,1:]
-
-            t_llm_rho = Math.crop_2d_table(t_llm_rho, t.min(), t.max(), llm.min(), llm.max())
-            rho = t_llm_rho[1:, 1:]
-
-            vrho  = Physics.get_vrho(t, rho, 2) # MU assumed constant!
-            m_dot = Physics.vrho_mdot(vrho, rs, 'tl')
-
-        else:
-            t = t_llm_rho[0, 1:]
-            llm = t_llm_rho[1:,0]
-            rho = t_llm_rho[1:, 1:]
-
-            vrho = Physics.get_vrho(t, rho, 2)
-            m_dot = Physics.vrho_mdot(vrho, rs, '')
-
-
-        #-------------------------------------------POLT-Ts-LM-MODT-COUTUR------------------------------------
-
-        name = self.plot_dir + 'rs_lm_minMdot_plot.pdf'
-
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-        plt.xlim(t.min(), t.max())
-        plt.ylim(llm.min(), llm.max())
-        plt.ylabel(Labels.lbls(l_or_lm))
-        plt.xlabel(Labels.lbls('ts'))
-        levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
-        contour_filled = plt.contourf(t, llm, m_dot, levels, cmap=plt.get_cmap('RdYlBu_r'))
-        plt.colorbar(contour_filled, label=Labels.lbls('mdot'))
-        contour = plt.contour(t, llm, m_dot, levels, colors='k')
-        plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
-        plt.title('SONIC HR DIAGRAM')
-
-
-        # plt.ylabel(l_or_lm)
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plt.savefig(name)
-
-        #--------------------------------------------------PLOT-MINS----------------------------------------------------
-
-        # plt.plot(mins[0, :], mins[1, :], '-.', color='red', label='min_Mdot (rs: {} )'.format(r_s_))
-
-        #-----------------------------------------------PLOT-OBSERVABLES------------------------------------------------
-        if plot_obs:
-            classes = []
-            classes.append('dum')
-            x = []
-            y = []
-            for star_n in self.obs.stars_n:
-                xyz = self.obs.get_xyz_from_yz(star_n, l_or_lm, 'mdot', t, llm, m_dot, lim_t1, lim_t2)
-                if xyz.any():
-                    x = np.append(x, xyz[0, 0])
-                    y = np.append(y, xyz[1, 0])
-                    for i in range(len(xyz[0,:])):
-                        plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
-                        ax.annotate(int(star_n), xy=(xyz[0,i], xyz[1,i]),
-                                    textcoords='data')  # plot numbers of stars
-                        if self.obs.get_star_class(star_n) not in classes:
-                            plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='', label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
-                            classes.append(self.obs.get_star_class(star_n))
-
-            fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
-            f = np.poly1d(fit)
-            fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
-            plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
-
-        #--------------------------------------------------_NUMERICALS--------------------------------------------------
-        if plot_nums:
-            for i in range(len(self.sm_files)):
-                ts_llm_mdot = self.mdl[i].get_xyz_from_yz(i, 'sp', l_or_lm, 'mdot', t , llm, m_dot, lim_t1, lim_t2)
-                # lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
-
-                if ts_llm_mdot.any():
-                    # lbl = 'i:{}, lm:{}, {}:{}'.format(i, "%.2f" % ts_llm_mdot[2, -1], num_var_plot, "%.2f" % lbl1)
-                    plt.plot(ts_llm_mdot[0, :], ts_llm_mdot[1,:], marker='x', color='C' + str(Math.get_0_to_max([i],9)[i]), ls='')  # plot color dots)))
-                    ax.annotate(str("%.2f" % ts_llm_mdot[2, -1]), xy=(ts_llm_mdot[0, -1], ts_llm_mdot[1,-1]), textcoords='data')
-
-            for i in range(len(self.sm_files)):
-                x_coord = self.mdl[i].get_cond_value('t', 'sp')
-                y_coord = self.mdl[i].get_cond_value(l_or_lm, 'sp')
-                # lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
-                # lbl2 = self.mdl[i].get_cond_value('He4', 'core')
-
-                # lbl = 'i:{}, Yc:{}, {}:{}'.format(i, "%.2f" % lbl2, num_var_plot, "%.2f" % lbl1)
-                plt.plot(x_coord, y_coord, marker='X', color='C' + str(Math.get_0_to_max([i], 9)[i]),
-                         ls='')  # plot color dots)))
-                ax.annotate(str(int(i)), xy=(x_coord, y_coord), textcoords='data')
-
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plt.gca().invert_xaxis()
-        plt.savefig(name)
-        plt.show()
+    # def plot_t_l_mdot(self, l_or_lm, rs, plot_obs, plot_nums, lim_t1 = None, lim_t2 = None):
+    #
+    #     # ---------------------LOADING-INTERPOLATED-TABLE---------------------------
+    #
+    #     t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
+    #     t_llm_rho = Physics.t_kap_rho_to_t_llm_rho(t_k_rho, l_or_lm)
+    #
+    #
+    #
+    #     #---------------------Getting KAPPA[], T[], RHO2D[]-------------------------
+    #
+    #     if rs == 0: # here in *t_llm_r* and in *t_llm_rho*  t, and llm are equivalent
+    #         t_llm_r = self.sp_get_r_lt_table2('r', l_or_lm, True, t_llm_rho)
+    #         t   = t_llm_r[0, 1:]
+    #         llm = t_llm_r[1:,0]
+    #         rs  = t_llm_r[1:,1:]
+    #
+    #         t_llm_rho = Math.crop_2d_table(t_llm_rho, t.min(), t.max(), llm.min(), llm.max())
+    #         rho = t_llm_rho[1:, 1:]
+    #
+    #         vrho  = Physics.get_vrho(t, rho, 2) # MU assumed constant!
+    #         m_dot = Physics.vrho_mdot(vrho, rs, 'tl')
+    #
+    #     else:
+    #         t = t_llm_rho[0, 1:]
+    #         llm = t_llm_rho[1:,0]
+    #         rho = t_llm_rho[1:, 1:]
+    #
+    #         vrho = Physics.get_vrho(t, rho, 2)
+    #         m_dot = Physics.vrho_mdot(vrho, rs, '')
+    #
+    #
+    #     #-------------------------------------------POLT-Ts-LM-MODT-COUTUR------------------------------------
+    #
+    #     name = self.plot_dir + 'rs_lm_minMdot_plot.pdf'
+    #
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(1, 1, 1)
+    #     plt.xlim(t.min(), t.max())
+    #     plt.ylim(llm.min(), llm.max())
+    #     plt.ylabel(Labels.lbls(l_or_lm))
+    #     plt.xlabel(Labels.lbls('ts'))
+    #     levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
+    #     contour_filled = plt.contourf(t, llm, m_dot, levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #     plt.colorbar(contour_filled, label=Labels.lbls('mdot'))
+    #     contour = plt.contour(t, llm, m_dot, levels, colors='k')
+    #     plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
+    #     plt.title('SONIC HR DIAGRAM')
+    #
+    #
+    #     # plt.ylabel(l_or_lm)
+    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     plt.savefig(name)
+    #
+    #     #--------------------------------------------------PLOT-MINS----------------------------------------------------
+    #
+    #     # plt.plot(mins[0, :], mins[1, :], '-.', color='red', label='min_Mdot (rs: {} )'.format(r_s_))
+    #
+    #     #-----------------------------------------------PLOT-OBSERVABLES------------------------------------------------
+    #     if plot_obs:
+    #         classes = []
+    #         classes.append('dum')
+    #         x = []
+    #         y = []
+    #         for star_n in self.obs.stars_n:
+    #             xyz = self.obs.get_xyz_from_yz(star_n, l_or_lm, 'mdot', t, llm, m_dot, lim_t1, lim_t2)
+    #             if xyz.any():
+    #                 x = np.append(x, xyz[0, 0])
+    #                 y = np.append(y, xyz[1, 0])
+    #                 for i in range(len(xyz[0,:])):
+    #                     plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
+    #                     ax.annotate(int(star_n), xy=(xyz[0,i], xyz[1,i]),
+    #                                 textcoords='data')  # plot numbers of stars
+    #                     if self.obs.get_star_class(star_n) not in classes:
+    #                         plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='', label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
+    #                         classes.append(self.obs.get_star_class(star_n))
+    #
+    #         fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
+    #         f = np.poly1d(fit)
+    #         fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
+    #         plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+    #
+    #     #--------------------------------------------------_NUMERICALS--------------------------------------------------
+    #     if plot_nums:
+    #         for i in range(len(self.sm_files)):
+    #             ts_llm_mdot = self.mdl[i].get_xyz_from_yz(i, 'sp', l_or_lm, 'mdot', t , llm, m_dot, lim_t1, lim_t2)
+    #             # lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
+    #
+    #             if ts_llm_mdot.any():
+    #                 # lbl = 'i:{}, lm:{}, {}:{}'.format(i, "%.2f" % ts_llm_mdot[2, -1], num_var_plot, "%.2f" % lbl1)
+    #                 plt.plot(ts_llm_mdot[0, :], ts_llm_mdot[1,:], marker='x', color='C' + str(Math.get_0_to_max([i],9)[i]), ls='')  # plot color dots)))
+    #                 ax.annotate(str("%.2f" % ts_llm_mdot[2, -1]), xy=(ts_llm_mdot[0, -1], ts_llm_mdot[1,-1]), textcoords='data')
+    #
+    #         for i in range(len(self.sm_files)):
+    #             x_coord = self.mdl[i].get_cond_value('t', 'sp')
+    #             y_coord = self.mdl[i].get_cond_value(l_or_lm, 'sp')
+    #             # lbl1 = self.mdl[i].get_cond_value(num_var_plot, 'sp')
+    #             # lbl2 = self.mdl[i].get_cond_value('He4', 'core')
+    #
+    #             # lbl = 'i:{}, Yc:{}, {}:{}'.format(i, "%.2f" % lbl2, num_var_plot, "%.2f" % lbl1)
+    #             plt.plot(x_coord, y_coord, marker='X', color='C' + str(Math.get_0_to_max([i], 9)[i]),
+    #                      ls='')  # plot color dots)))
+    #             ax.annotate(str(int(i)), xy=(x_coord, y_coord), textcoords='data')
+    #
+    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     plt.gca().invert_xaxis()
+    #     plt.savefig(name)
+    #     plt.show()
 
 
 
@@ -1654,7 +1654,6 @@ class Crit_Mdot:
             mdot_int_l  = np.vstack((mdot_int_l,  interp(l,  mdot, l_grid)))
             mdot_int_lm = np.vstack((mdot_int_lm, interp(lm, mdot, lm_grid)))
 
-
         mdot_poly_l  = np.delete(mdot_poly_l,  0, 0)
         mdot_poly_lm = np.delete(mdot_poly_lm, 0, 0)
         mdot_int_l   = np.delete(mdot_int_l,   0, 0)
@@ -1837,13 +1836,6 @@ class Crit_Mdot:
         plot_name = self.plot_dir + 'minMdot_l.pdf'
         plt.savefig(plot_name)
         plt.show()
-
-    def min_mdot_zams(self, l_or_lm, rs, ml_relatin):
-
-
-
-        pass
-
 
     # def save_yc_llm_mdot_cr(self, l_or_lm='l',yc_prec=0.1, depth=100, plot=True):
     #
@@ -2097,9 +2089,426 @@ class Crit_Mdot:
     #
     #         plt.show()
 
+class Sonic_HRD:
+
+    output_dir = '../data/output/'
+    plot_dir = '../data/plots/'
+
+    opal_used = ''
+    sp_files = []
+
+    obs_files =  ''
+
+    def __init__(self):
+        pass
+
+    def set_files(self, lim_t1, lim_t2):
+
+        self.lim_t1 = lim_t1
+        self.lim_t2 = lim_t2
+        self.spmdl=[]
+        for file in self.sp_files:
+            self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
+
+        # self.nums = Num_Models(smfls, plotfls)
+        self.obs = Read_Observables(self.obs_files)
 
 
 
+    # def save_y_yc_z_relation_sp(self, x_v_n, y_v_n, z_v_n, save, plot=False, yc_prec=0.1, depth=100):
+    #
+    #     def x_y_z_sort(x_arr, y_arr, z_arr=None, sort_by_012=0):
+    #         '''
+    #         RETURNS x_arr, y_arr, (z_arr) sorted as a matrix by a row, given 'sort_by_012'
+    #         :param x_arr:
+    #         :param y_arr:
+    #         :param z_arr:
+    #         :param sort_by_012:
+    #         :return:
+    #         '''
+    #
+    #         if z_arr == None and sort_by_012 < 2:
+    #             if len(x_arr) != len(y_arr):
+    #                 raise ValueError('len(x)[{}]!= len(y)[{}]'.format(len(x_arr), len(y_arr)))
+    #
+    #             x_y_arr = []
+    #             for i in range(len(x_arr)):
+    #                 x_y_arr = np.append(x_y_arr, [x_arr[i], y_arr[i]])
+    #
+    #             x_y_sort = np.sort(x_y_arr.view('float64, float64'), order=['f{}'.format(sort_by_012)], axis=0).view(np.float)
+    #             x_y_arr_shaped = np.reshape(x_y_sort, (int(len(x_y_sort) / 2), 2))
+    #             return x_y_arr_shaped[:,0], x_y_arr_shaped[:,1]
+    #
+    #         if z_arr != None:
+    #             if len(x_arr) != len(y_arr) or len(x_arr)!=len(z_arr):
+    #                 raise ValueError('len(x)[{}]!= len(y)[{}]!=len(z_arr)[{}]'.format(len(x_arr), len(y_arr), len(z_arr)))
+    #
+    #             x_y_z_arr = []
+    #             for i in range(len(x_arr)):
+    #                 x_y_z_arr = np.append(x_y_z_arr, [x_arr[i], y_arr[i], z_arr[i]])
+    #
+    #             x_y_z_sort = np.sort(x_y_z_arr.view('float64, float64, float64'), order=['f{}'.format(sort_by_012)], axis=0).view(
+    #                 np.float)
+    #             x_y_z_arr_shaped = np.reshape(x_y_z_sort, (int(len(x_y_z_sort) / 3), 3))
+    #             return x_y_z_arr_shaped[:, 0], x_y_z_arr_shaped[:, 1], x_y_z_arr_shaped[:, 2]
+    #
+    #     if not y_v_n in ['m', 'l', 'lm', 'Yc']:
+    #         raise NameError('y_v_n must be one of [{}] , give:{}'.format(['m', 'l', 'lm', 'Yc'], y_v_n))
+    #
+    #     append_crit = True
+    #
+    #     yc, cls = self.separate_sp_by_crit_val('Yc', yc_prec)
+    #
+    #     def x_y_limits(cls, min_or_max):
+    #         x_mins = []
+    #         y_mins = []
+    #         x_maxs = []
+    #         y_maxs = []
+    #         for cl in cls:
+    #             x = cl.get_sonic_cols(x_v_n)
+    #             y = cl.get_sonic_cols(y_v_n)
+    #             if append_crit:
+    #                 x = np.append(x, cl.get_crit_value(x_v_n))
+    #                 y = np.append(y, cl.get_crit_value(y_v_n))
+    #             x_mins = np.append(x_mins, x.min())
+    #             y_mins = np.append(y_mins, y.min())
+    #             x_maxs = np.append(x_maxs, x.max())
+    #             y_maxs = np.append(y_maxs, y.max())
+    #         if min_or_max == 'min':
+    #             return x_mins.max(), x_maxs.min(), y_mins.max(), y_maxs.min()
+    #         if min_or_max == 'max':
+    #             return x_mins.min(), x_maxs.max(), y_mins.min(), y_maxs.max()
+    #         else:
+    #             raise NameError('min_or_max can be only: [{}, or {}] given: {}'.format('min', 'max', min_or_max))
+    #
+    #
+    #
+    #     def set_xgrid_ygrid(yc_val, cls, use_opal_ml_rel=True, opal_used = None):
+    #         if use_opal_ml_rel:
+    #
+    #             t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', opal_used)
+    #
+    #             y_grid = None
+    #             x_grid = None
+    #         else:
+    #             x1, x2, y1, y2 = x_y_limits(cls, 'max')
+    #             x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
+    #             y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
+    #         return x_grid, y_grid
+    #
+    #     def x_y_z(cls):
+    #         '''
+    #         cls = set of classes of sp. files with the same Yc.
+    #         :param cls:
+    #         :return:
+    #         '''
+    #
+    #         x1, x2, y1, y2 = x_y_limits(cls, 'max')
+    #         x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
+    #         y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
+    #
+    #         y_zg = np.zeros(len(x_grid)+1)     # +1 for y-value (l,lm,m,Yc)
+    #
+    #         for cl in cls:                    # INTERPOLATING EVERY ROW to achive 'depth' number of points
+    #             x =  cl.get_sonic_cols(x_v_n)
+    #             y =  cl.get_crit_value(y_v_n) # Y should be unique value for a given Yc (like m, l/lm, or Yc)
+    #             z =  cl.get_sonic_cols(z_v_n)
+    #
+    #             if append_crit:
+    #                 x = np.append(x, cl.get_crit_value(x_v_n))
+    #                 z = np.append(z, cl.get_crit_value(z_v_n))
+    #             xi, zi = x_y_z_sort(x, z)
+    #
+    #             z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+    #             y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
+    #
+    #             plt.plot(xi, zi, '.', color='red')
+    #             plt.plot(x_grid, z_grid, '-', color='red')
+    #
+    #         y_zg = np.delete(y_zg, 0, 0)
+    #         y = y_zg[:,0]
+    #         zi = y_zg[:, 1:]
+    #
+    #         z_grid2 = np.zeros(len(y_grid))
+    #         for i in range(len(x_grid)):   # INTERPOLATING EVERY COLUMN to achive 'depth' number of points
+    #             z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:,i])(y_grid) ))
+    #         z_grid2 = np.delete(z_grid2, 0, 0)
+    #
+    #         x_y_z_final = Math.combine(x_grid, y_grid, z_grid2.T)
+    #
+    #         from Phys_Math_Labels import Plots
+    #         Plots.plot_color_table(x_y_z_final, x_v_n, y_v_n, z_v_n)
+    #
+    #         plt.show()
+    #         print('a')
+    #
+    #     x_y_z(cls[0])
+    #
+    #
+    #     # for i in range(len(yc)):
+    #     #     x_y_z(cls[i])
+    #
+    #
+    #
+    #
+    #             # x_y_z = []
+    #             # for j in range(len(y)):
+    #             #     x_y_z = np.append(x_y_z, [x[j], y[j], z[j]])
+    #             #
+    #             # x_y_z_sort = np.sort(x_y_z.view('float64, float64, float64'), order=['f0'], axis=0).view(np.float)
+    #             # x_y_z_shaped = np.reshape(x_y_z_sort, (int(len(x_y_z_sort) / 3), 3))
+    #             #
+    #             # x_grid = np.mgrid[x_y_z_shaped[0, 0]:x_y_z_shaped[-1, 0]:depth*1j]
+    #             # f = interpolate.InterpolatedUnivariateSpline(x_y_z_shaped[:,0],x_y_z_shaped[:,2]) # follows the data
+    #             # z_grid = f(x_grid)
+    #             #
+    #             # y_xi_zi = []
+    #             # for j in range(len(y)):
+    #             #     y_xi_zi = np.append(y_xi_zi, [y[j], ])
+    #             #
+    #             #
+    #             # plt.plot(x_y_z_shaped[:,0],x_y_z_shaped[:,1], '.', color='red')
+    #             # # plt.plot(x_grid, z_grid, '-', color='red')
+    #             # plt.show()
+    #             # print('B')
+    #
+    #         # yc_x_y_z = np.append(yc_x_y_z, x_y_z_shaped)
+    #
+    #
+    #     # yc_x_y_z = np.reshape(yc_x_y_z, (len(yc), int(len(x_y_z_sort) / 3), 3))
+    #
+    #
+    #     # print('a')
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #     # y_ = []
+    #     # for i in range(len(self.sp_files)):
+    #     #     y_ = np.append(y_, self.spmdl[i].get_crit_value(y_v_n))
+    #     # y_grid = np.mgrid[y_.min():y_.max():depth*1j]
+    #     #
+    #     # z2d_pol = np.zeros(len(y_grid))
+    #     # z2d_int = np.zeros(len(y_grid))
+    #     #
+    #     #
+    #     # fig = plt.figure(figsize=plt.figaspect(1.0))
+    #     #
+    #     # ax1 = fig.add_subplot(221)
+    #     # ax1.grid()
+    #     # ax1.set_ylabel(Labels.lbls(z_v_n))
+    #     # ax1.set_xlabel(Labels.lbls(y_v_n))
+    #     # ax1.set_title('INTERPOLATION')
+    #     #
+    #     # ax2 = fig.add_subplot(222)
+    #     # ax2.grid()
+    #     # ax2.set_ylabel(Labels.lbls(y_v_n))
+    #     # ax2.set_xlabel(Labels.lbls(z_v_n))
+    #     # ax2.set_title('EXTRAPOLATION')
+    #     #
+    #     # for i in range(len(yc)):
+    #     #     y_z = []
+    #     #     for cl in cls[i]:
+    #     #         y_z = np.append(y_z, [cl.get_crit_value(y_v_n), cl.get_crit_value(z_v_n)])
+    #     #     y_z_sort = np.sort(y_z.view('float64, float64'), order=['f0'], axis=0).view(np.float)
+    #     #     y_z_shaped = np.reshape(y_z_sort, (int(len(y_z_sort) / 2), 2))
+    #     #
+    #     #     '''----------------------------POLYNOMIAL EXTRAPOLATION------------------------------------'''
+    #     #     print('\n\t Yc = {}'.format(yc[i]))
+    #     #     y_pol, z_pol = Math.fit_plynomial(y_z_shaped[:, 0], y_z_shaped[:, 1], 3, depth, y_grid)
+    #     #     z2d_pol = np.vstack((z2d_pol, z_pol))
+    #     #     color = 'C' + str(int(yc[i] * 10)-1)
+    #     #     ax2.plot(y_pol, z_pol, '--', color=color)
+    #     #     ax2.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #     #
+    #     #     '''------------------------------INTERPOLATION ONLY---------------------------------------'''
+    #     #     y_int, z_int = interp(y_z_shaped[:, 0], y_z_shaped[:, 1], y_grid)
+    #     #     z2d_int = np.vstack((z2d_int, z_int))
+    #     #     ax1.plot(y_int, z_int, '--', color=color)
+    #     #     ax1.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
+    #     #
+    #     # ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     # ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     #
+    #     # z2d_int = np.delete(z2d_int, 0, 0)
+    #     # z2d_pol = np.delete(z2d_pol, 0, 0)
+    #     #
+    #     # yc_llm_m_pol = Math.combine(yc, y_grid, z2d_pol.T)  # changing the x/y
+    #     # yc_llm_m_int = Math.combine(yc, y_grid, z2d_int.T)  # changing the x/y
+    #     #
+    #     # table_name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
+    #     # if save == 'int':
+    #     #     Save_Load_tables.save_table(yc_llm_m_int, opal_used, table_name, 'yc', y_v_n, z_v_n)
+    #     # if save == 'pol':
+    #     #     Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
+    #     #
+    #     # # Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
+    #     #
+    #     # if plot:
+    #     #
+    #     #     levels = []
+    #     #
+    #     #     if z_v_n == 'r':
+    #     #         levels = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
+    #     #     if z_v_n == 'm':
+    #     #         levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+    #     #     if z_v_n == 'mdot':
+    #     #         levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
+    #     #     if z_v_n == 'l':
+    #     #         levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
+    #     #     if z_v_n == 'lm':
+    #     #         levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35,  4.4, 4.45,
+    #     #                   4.5, 4.55,  4.6, 4.65,  4.7, 4.75, 4.8, 4.85,  4.9, 4.95, 5.0]
+    #     #     if z_v_n == 't':
+    #     #         levels = [5.15, 5.16,5.17,5.18,5.19,5.20,5.21,5.22,5.23,5.24,5.25,5.26,5.27,5.28,5.29,5.30]
+    #     #
+    #     #
+    #     #     ax = fig.add_subplot(223)
+    #     #
+    #     #     # ax = fig.add_subplot(1, 1, 1)
+    #     #     ax.set_xlim(yc_llm_m_int[0,1:].min(), yc_llm_m_int[0,1:].max())
+    #     #     ax.set_ylim(yc_llm_m_int[1:,0].min(), yc_llm_m_int[1:,0].max())
+    #     #     ax.set_ylabel(Labels.lbls(y_v_n))
+    #     #     ax.set_xlabel(Labels.lbls('Yc'))
+    #     #
+    #     #     contour_filled = plt.contourf(yc_llm_m_int[0, 1:], yc_llm_m_int[1:, 0], yc_llm_m_int[1:,1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #     #     # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #     #     contour = plt.contour(yc_llm_m_int[0, 1:], yc_llm_m_int[1:, 0], yc_llm_m_int[1:,1:], levels, colors='k')
+    #     #
+    #     #     clb = plt.colorbar(contour_filled)
+    #     #     clb.ax.set_title(Labels.lbls(z_v_n))
+    #     #
+    #     #     plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #     #     #ax.set_title('MASS-LUMINOSITY RELATION')
+    #     #
+    #     #     # plt.ylabel(l_or_lm)
+    #     #     # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     #     # plt.savefig(name)
+    #     #
+    #     #
+    #     #
+    #     #
+    #     #     ax = fig.add_subplot(224)
+    #     #
+    #     #     # ax = fig.add_subplot(1, 1, 1)
+    #     #     ax.set_xlim(yc_llm_m_pol[0, 1:].min(), yc_llm_m_pol[0, 1:].max())
+    #     #     ax.set_ylim(yc_llm_m_pol[1:, 0].min(), yc_llm_m_pol[1:, 0].max())
+    #     #     ax.set_ylabel(Labels.lbls(y_v_n))
+    #     #     ax.set_xlabel(Labels.lbls('Yc'))
+    #     #
+    #     #
+    #     #     contour_filled = plt.contourf(yc_llm_m_pol[0, 1:], yc_llm_m_pol[1:, 0], yc_llm_m_pol[1:, 1:], levels,
+    #     #                                   cmap=plt.get_cmap('RdYlBu_r'))
+    #     #     # plt.colorbar(contour_filled, label=Labels.lbls('m'))
+    #     #     contour = plt.contour(yc_llm_m_pol[0, 1:], yc_llm_m_pol[1:, 0], yc_llm_m_pol[1:, 1:], levels, colors='k')
+    #     #
+    #     #     clb = plt.colorbar(contour_filled)
+    #     #     clb.ax.set_title(Labels.lbls(z_v_n))
+    #     #
+    #     #     plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+    #     #     #ax.set_title('MASS-LUMINOSITY RELATION')
+    #     #
+    #     #     # plt.ylabel(l_or_lm)
+    #     #     # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     #
+    #     #
+    #     #     plt.show()
+    #
+    #     # yc_llm_m_pol
+    #
+    #
+    # def plot_t_l_mdot(self, l_or_lm, rs, plot_obs, plot_nums, lim_t1 = None, lim_t2 = None):
+    #
+    #     # ---------------------LOADING-INTERPOLATED-TABLE---------------------------
+    #
+    #     t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
+    #     t_llm_rho = t_kap_rho_to_t_llm_rho(t_k_rho, l_or_lm)
+    #
+    #
+    #
+    #     #---------------------Getting KAPPA[], T[], RHO2D[]-------------------------
+    #
+    #     if rs == 0: # here in *t_llm_r* and in *t_llm_rho*  t, and llm are equivalent
+    #         t_llm_r = self.sp_get_r_lt_table2('r', l_or_lm, True, t_llm_rho)
+    #         t   = t_llm_r[0, 1:]
+    #         llm = t_llm_r[1:,0]
+    #         rs  = t_llm_r[1:,1:]
+    #
+    #         t_llm_rho = Math.crop_2d_table(t_llm_rho, t.min(), t.max(), llm.min(), llm.max())
+    #         rho = t_llm_rho[1:, 1:]
+    #
+    #         vrho  = Physics.get_vrho(t, rho, 2) # MU assumed constant!
+    #         m_dot = Physics.vrho_mdot(vrho, rs, 'tl')
+    #
+    #     else:
+    #         t = t_llm_rho[0, 1:]
+    #         llm = t_llm_rho[1:,0]
+    #         rho = t_llm_rho[1:, 1:]
+    #
+    #         vrho = Physics.get_vrho(t, rho, 2)
+    #         m_dot = Physics.vrho_mdot(vrho, rs, '')
+    #
+    #
+    #     #-------------------------------------------POLT-Ts-LM-MODT-COUTUR------------------------------------
+    #
+    #     name = self.plot_dir + 'rs_lm_minMdot_plot.pdf'
+    #
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(1, 1, 1)
+    #     plt.xlim(t.min(), t.max())
+    #     plt.ylim(llm.min(), llm.max())
+    #     plt.ylabel(Labels.lbls(l_or_lm))
+    #     plt.xlabel(Labels.lbls('ts'))
+    #     levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
+    #     contour_filled = plt.contourf(t, llm, m_dot, levels, cmap=plt.get_cmap('RdYlBu_r'))
+    #     plt.colorbar(contour_filled, label=Labels.lbls('mdot'))
+    #     contour = plt.contour(t, llm, m_dot, levels, colors='k')
+    #     plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
+    #     plt.title('SONIC HR DIAGRAM')
+    #
+    #
+    #     # plt.ylabel(l_or_lm)
+    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     plt.savefig(name)
+    #
+    #     #--------------------------------------------------PLOT-MINS----------------------------------------------------
+    #
+    #     # plt.plot(mins[0, :], mins[1, :], '-.', color='red', label='min_Mdot (rs: {} )'.format(r_s_))
+    #
+    #     #-----------------------------------------------PLOT-OBSERVABLES------------------------------------------------
+    #     if plot_obs:
+    #         classes = []
+    #         classes.append('dum')
+    #         x = []
+    #         y = []
+    #         for star_n in self.obs.stars_n:
+    #             xyz = self.obs.get_xyz_from_yz(star_n, l_or_lm, 'mdot', t, llm, m_dot, lim_t1, lim_t2)
+    #             if xyz.any():
+    #                 x = np.append(x, xyz[0, 0])
+    #                 y = np.append(y, xyz[1, 0])
+    #                 for i in range(len(xyz[0,:])):
+    #                     plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
+    #                     ax.annotate(int(star_n), xy=(xyz[0,i], xyz[1,i]),
+    #                                 textcoords='data')  # plot numbers of stars
+    #                     if self.obs.get_star_class(star_n) not in classes:
+    #                         plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='', label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
+    #                         classes.append(self.obs.get_star_class(star_n))
+    #
+    #         fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
+    #         f = np.poly1d(fit)
+    #         fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
+    #         plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+    #
+    #     #--------------------------------------------------_NUMERICALS--------------------------------------------------
+    #
+    #
+    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #     plt.gca().invert_xaxis()
+    #     plt.savefig(name)
+    #     plt.show()
 
 
 

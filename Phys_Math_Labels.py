@@ -552,6 +552,58 @@ class Math:
         return Math.combine(x,y,z)
 
     @staticmethod
+    def crop_2d_table2(table, x1, x2, y1, y2):
+        x = table[0, 1:]
+        y = table[1:, 0]
+        z = table[1:, 1:]
+
+        if x1 != None:
+            if x[0] > x[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(x[0], x[-1]))
+            if x1 > x[-1]:
+                raise ValueError('x1({}) > x[-1]({})'.format(x1, x[-1]))
+
+
+            ix1 = Math.find_nearest_index(x, x1)
+            x = x[ix1:]
+            z = z[:, ix1:]
+
+        if x2 != None:
+            if x[0] > x[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(x[0], x[-1]))
+            if x2 < x[0]:
+                raise ValueError('x2({}) < x[0]({})'.format(x2, x[0]))
+
+            ix2 = Math.find_nearest_index(x, x2)
+            x = x[:ix2 + 1]
+            z = z[:, :ix2 + 1]
+
+        if y1 != None:
+            if y[0] > y[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(y[0], y[-1]))
+            if y1 > y[-1]:
+                raise ValueError('y1({}) > y[-1]({})'.format(y1, y[-1]))
+
+
+            iy1 = Math.find_nearest_index(y, y1)
+            y = y[iy1:]
+            z = z[iy1:, :]
+
+        if y2 != None:
+
+            if y2 < y[0]:
+                raise ValueError('y1({}) < y[0]({})'.format(y2, y[0]))
+            if y[0] > y[-1]:
+                raise ValueError('x[0]({}) > x[-1]({}) Consider inverting the axis'.format(y[0], y[-1]))
+
+            iy2 = Math.find_nearest_index(y, y2)
+            y = y[:iy2 + 1]
+            z = z[:iy2 + 1, :]
+
+        print(x.shape, y.shape, z.shape)
+        return Math.combine(x, y, z)
+
+    @staticmethod
     def fit_plynomial(x, y, order, depth, new_x = np.empty(0, )):
         '''
         RETURNS f(new_x)
@@ -619,6 +671,58 @@ class Math:
         print(lbl)
 
         return new_x, f(new_x)
+
+    @staticmethod
+    def x_y_z_sort(x_arr, y_arr, z_arr=None, sort_by_012=0):
+        '''
+        RETURNS x_arr, y_arr, (z_arr) sorted as a matrix by a row, given 'sort_by_012'
+        :param x_arr:
+        :param y_arr:
+        :param z_arr:
+        :param sort_by_012:
+        :return:
+        '''
+
+        if z_arr == None and sort_by_012 < 2:
+            if len(x_arr) != len(y_arr):
+                raise ValueError('len(x)[{}]!= len(y)[{}]'.format(len(x_arr), len(y_arr)))
+
+            x_y_arr = []
+            for i in range(len(x_arr)):
+                x_y_arr = np.append(x_y_arr, [x_arr[i], y_arr[i]])
+
+            x_y_sort = np.sort(x_y_arr.view('float64, float64'), order=['f{}'.format(sort_by_012)], axis=0).view(
+                np.float)
+            x_y_arr_shaped = np.reshape(x_y_sort, (int(len(x_y_sort) / 2), 2))
+            return x_y_arr_shaped[:, 0], x_y_arr_shaped[:, 1]
+
+        if z_arr != None:
+            if len(x_arr) != len(y_arr) or len(x_arr) != len(z_arr):
+                raise ValueError('len(x)[{}]!= len(y)[{}]!=len(z_arr)[{}]'.format(len(x_arr), len(y_arr), len(z_arr)))
+
+            x_y_z_arr = []
+            for i in range(len(x_arr)):
+                x_y_z_arr = np.append(x_y_z_arr, [x_arr[i], y_arr[i], z_arr[i]])
+
+            x_y_z_sort = np.sort(x_y_z_arr.view('float64, float64, float64'), order=['f{}'.format(sort_by_012)],
+                                 axis=0).view(
+                np.float)
+            x_y_z_arr_shaped = np.reshape(x_y_z_sort, (int(len(x_y_z_sort) / 3), 3))
+            return x_y_z_arr_shaped[:, 0], x_y_z_arr_shaped[:, 1], x_y_z_arr_shaped[:, 2]
+
+    @staticmethod
+    def common_y(arr1, arr2):
+
+        y1 = arr1[1:, 0]
+        y2 = arr2[1:, 0]
+
+        y_min = np.array([y1.min(), y2.min()]).max()
+        y_max = np.array([y1.max(), y2.max()]).min()
+
+        arr1_cropped = Math.crop_2d_table(arr1, None, None, y_min, y_max)
+        arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
+
+        return arr1_cropped, arr2_cropped
 
 class Physics:
     def __init__(self):
@@ -768,6 +872,8 @@ class Physics:
         print('\t__Provided T limits ({},{}), and kappa limits ({}, {})'.format(t1, t2, k1, k2))
         return [k1, k2]
 
+
+    # --- --- --- --- --- --- --- MDOT --- --- --- --- --- --- ---
     @staticmethod
     def vrho_formula(t,rho,mu):
         # assuming that mu is a constant!
@@ -938,6 +1044,8 @@ class Physics:
             return m_dot
         else:
             sys.exit('\t__Error. Wrong number of dimensions. Use 0,1,2. Given: {} | mdot_rho |'.format(dimensions))
+    # --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
 
     @staticmethod
     def mean_free_path(rho, kap):
@@ -1200,19 +1308,61 @@ class Physics:
         c2 = 0.055467
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
 
+
+class Plots:
+    def __init__(self):
+        pass
+
     @staticmethod
-    def t_kap_rho_to_t_llm_rho(table, l_or_lm):
+    def plot_color_table(table, v_n_x, v_n_y, v_n_z, label = None):
 
-        kap   = table[1:, 0]
-        t   =   table[0, 1:]
-        rho2d = table[1:, 1:]
+        plt.figure()
 
-        if l_or_lm == 'l':
-            l_lm_arr  = Physics.lm_to_l(Physics.logk_loglm(kap, True)) # Kappa -> L/M -> L
-        else:
-            l_lm_arr = Physics.logk_loglm(kap, 1)
+        if label != None:
+            print('TEXT')
+            plt.text(table[0, 1:].min(), table[1:, 0].min(), label, style='italic')
+            # bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10}
+            # plt.text(2, 0.65, r'$\cos(2 \pi t) \exp(-t)$')
 
-        return Math.invet_to_ascending_xy(Math.combine(t, l_lm_arr, rho2d))
+        # ax = fig.add_subplot(1, 1, 1)
+        plt.xlim(table[0, 1:].min(), table[0, 1:].max())
+        plt.ylim(table[1:, 0].min(), table[1:, 0].max())
+        plt.ylabel(Labels.lbls(v_n_y))
+        plt.xlabel(Labels.lbls(v_n_x))
+
+        levels = []
+        if v_n_z == 'r':
+            levels = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
+        if v_n_z == 'm':
+            levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+        if v_n_z == 'mdot':
+            levels = [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5, -3.25, -3.]
+            # levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
+        if v_n_z == 'l':
+            levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
+        if v_n_z == 'lm':
+            levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35, 4.4, 4.45,
+                      4.5, 4.55, 4.6, 4.65, 4.7, 4.75, 4.8, 4.85, 4.9, 4.95, 5.0]
+        if v_n_z == 't':
+            levels = [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
+
+        if v_n_z == 'k':   levels = [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+        if v_n_z == 'rho': levels = [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
+        # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
+        #                            1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.10, 2.15, 2.20]
+
+        contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+        plt.colorbar(contour_filled, label=Labels.lbls(v_n_z))
+        contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
+        plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+        plt.title('SONIC HR DIAGRAM')
+
+
+        # plt.ylabel(l_or_lm)
+        # plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        # plt.savefig(name)
+        plt.show()
+
 
 # class Opt_Depth_Analythis():
 #
@@ -1247,7 +1397,6 @@ class Opt_Depth_Analythis():
         self.mdot = 10**mdot              #
 
         self.v0vinf = self.v0/self.v_inf
-
 
     def eff_kappa(self, r, k_sp, beta, v_inf, v_esc_rs, rs):
         '''
@@ -1289,6 +1438,8 @@ class Opt_Depth_Analythis():
 
         plt.plot(r, k)
         plt.show()
+
+
 
 class Labels:
     def __init__(self):

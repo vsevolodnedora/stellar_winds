@@ -89,6 +89,7 @@ tst_opal_file = ''
 
 
 smfiles = get_files(sse_locaton + 'ga_z0008/', ['test_sp_tau30/'], [], 'sm.data')
+
 # lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
 # gal_ml_relation = '../data/output/l_yc_m_gal_wne.data'
 
@@ -190,7 +191,7 @@ def set_sp_oopal_obs(gal_or_lmc):
         obsfile = tst_obs_file
     # raise NameError('Wrong name: {}'.format(gal_or_lmc))
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-set_sp_oopal_obs('tst')
+set_sp_oopal_obs('lmc')
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''=================================================NEW=TABLE========================================================'''
 
@@ -242,8 +243,12 @@ from FilesWork import Creation
 # make.save_t_llm_mdot(1.,'l','',1.34)
 
 from FilesWork import SP_file_work
-# spcls = SP_file_work(spfiles, output_dir, plot_dir)
+spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
 # spcls.save_y_yc_z_relation('lm', 't', opalfile, 'pol', True)
+# spcls.plot_x_y_z_for_yc('t', 'lm', 'r', 1., 100, 'min', True)
+spcls.plot_t_llm_mdot_for_yc(0.5, 'l', 'min', True)
+# spcls.plot_t_llm_mdot_for_yc_const_r(1.,1.,'l', 'min', True)
+# spcls.save_y_yc_z_relation_sp('t', 'lm', 'r', 'pol', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
 
@@ -452,6 +457,6 @@ from main_methods import Crit_Mdot
 # for i in range(1,11):
 #     print('cp y{}/fy{}.bin1 y{}/sp/;'.format(i,i,i))
 
-for i in range(10,31):
-    for j in range(1,11):
-        print('cp run_mass_loss.py {}sm/y{}/sp/'.format(i,j))
+# for i in range(10,31):
+#     for j in range(1,11):
+#         print('cp run_mass_loss.py {}sm/y{}/sp/'.format(i,j))

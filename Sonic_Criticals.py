@@ -1120,26 +1120,39 @@ class Read_Tau:
         plt.ylabel('tau')
         plt.show()
 
-        # mdot_t = []
-        # for i in range(len(self.sm_files)):
-        #     mdot =  self.smmdl[i].get_col('mdot')[-1]
-        #     r    =  self.smmdl[i].get_col('r')[-1]
-        #     mdot_t = np.append(mdot_t, [mdot, r])
-        #
-        # mdot_t_shape  = np.sort(mdot_t.view('f8, f8'), order=['f0'], axis=0).view(np.float)
-        # mdot_t_sorted = np.reshape(mdot_t_shape, (len(self.sm_files), 2))
+        mdot_t = []
+        for i in range(len(self.sm_files)):
+            mdot =  self.smmdl[i].get_col('mdot')[-1]
+            r    =  self.smmdl[i].get_col('r')
+            u    =  self.smmdl[i].get_col('u')
+
+            plt.plot(r, u, '.', color='gray')
+            mdot_t = np.append(mdot_t, [mdot, r[-1], u[-1]])
+
+        mdot_t_shape  = np.sort(mdot_t.view('f8, f8, f8'), order=['f0'], axis=0).view(np.float)
+        mdot_t_sorted = np.reshape(mdot_t_shape, (len(self.sm_files), 3))
 
 
 
-        # sp_file = np.loadtxt('../data/sp_files/20z0008/SP_ga_z0008_20sm_y10.data')
-        #
-        # plt.plot(mdot_t_sorted[:,0], mdot_t_sorted[:,1], '.', color = 'black')
-        # plt.plot(sp_file[1:,3], sp_file[1:,4], '-', color = 'red')
+        sp_file = np.loadtxt('../data/sp_files/20z0008/SP_ga_z0008_20sm_y10.data')
+
+
+        plt.plot(mdot_t_sorted[:,1], mdot_t_sorted[:,2], 'x', color = 'black')
+        plt.plot(sp_file[1:,3], sp_file[1:,4], '-', color = 'red')
         # plt.axvline(x=-4.88096)
-        # plt.grid()
+        plt.grid()
         # plt.title('M:20sm Yc:0.993 SP_BEC sm.data')
-        # # plt.legend()
-        # plt.xlabel(Labels.lbls('mdot'))
-        # plt.ylabel(Labels.lbls('r'))
-        # plt.show()
+        # plt.legend()
+        plt.xlabel(Labels.lbls('mdot'))
+        plt.ylabel(Labels.lbls('r'))
+        plt.show()
 
+        print('plot: {}, sm: {}'.format(len(self.plt_files), len(self.sm_files)))
+
+    def tau_crit(self):
+        mdot_tau = []
+        for i in range(len(self.plt_files)):
+            mdot = self.plotmdl[i].mdot_[-1]
+            tau = self.plotmdl[i].tauatR[-1]
+            windform_24 = self.plotmdl[i].windform_24[-1]
+            mdot_tau = np.append(mdot_tau, [mdot, tau, windform_24])

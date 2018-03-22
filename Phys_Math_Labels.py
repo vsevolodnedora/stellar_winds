@@ -148,11 +148,12 @@ class Math:
         return colors
 
     @staticmethod
-    def combine(x, y, xy):
+    def combine(x, y, xy, corner_val = None):
         '''creates a 2d array  1st raw    [0, 1:]-- x -- density      (log)
                                1st column [1:, 0] -- y -- lemperature (log)
                                Matrix     [1:,1:] -- xy --Opacity     (log)
-           0th element in 1st raw (column) - meaningless - to be cut (as above)
+           0th element in 1st raw (column) - can be used a corner value
+
         '''
         x = np.array(x)
         y = np.array(y)
@@ -168,6 +169,9 @@ class Math:
         res = np.insert(xy, 0, x, axis=0)
         new_y = np.insert(y, 0, 0, axis=0)  # inserting a 0 to a first column of a
         res = np.insert(res, 0, new_y, axis=1)
+
+        if corner_val != None:
+            res[0, 0] = corner_val
 
         return res
 
@@ -673,7 +677,7 @@ class Math:
         return new_x, f(new_x)
 
     @staticmethod
-    def x_y_z_sort(x_arr, y_arr, z_arr=None, sort_by_012=0):
+    def x_y_z_sort(x_arr, y_arr, z_arr=np.empty(1,), sort_by_012=0):
         '''
         RETURNS x_arr, y_arr, (z_arr) sorted as a matrix by a row, given 'sort_by_012'
         :param x_arr:
@@ -683,7 +687,7 @@ class Math:
         :return:
         '''
 
-        if z_arr == None and sort_by_012 < 2:
+        if not z_arr.any() and sort_by_012 < 2:
             if len(x_arr) != len(y_arr):
                 raise ValueError('len(x)[{}]!= len(y)[{}]'.format(len(x_arr), len(y_arr)))
 
@@ -696,7 +700,7 @@ class Math:
             x_y_arr_shaped = np.reshape(x_y_sort, (int(len(x_y_sort) / 2), 2))
             return x_y_arr_shaped[:, 0], x_y_arr_shaped[:, 1]
 
-        if z_arr != None:
+        if z_arr.any():
             if len(x_arr) != len(y_arr) or len(x_arr) != len(z_arr):
                 raise ValueError('len(x)[{}]!= len(y)[{}]!=len(z_arr)[{}]'.format(len(x_arr), len(y_arr), len(z_arr)))
 
@@ -1245,6 +1249,7 @@ class Physics:
 
         return np.vstack(( np.array(int_star_x_coord), y_fill, z_fill))
 
+    # --- --- --- LANGER --- --- ---
     @staticmethod
     def lm_to_l_langer(log_lm):
         '''
@@ -1307,7 +1312,17 @@ class Physics:
         b2 = -0.053868
         c2 = 0.055467
         return (-a2 -(b2 -1)*log_l - c2*(log_l**2) )
+    # --- --- --- ---- ---- --- ---
 
+    @staticmethod
+    def ind_of_yc(yc_arr, yc_val):
+
+        if not yc_val in yc_arr:
+            raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc_val, yc_arr))
+        else:
+            yc_ind = Math.find_nearest_index(yc_arr, yc_val)
+
+        return yc_ind
 
 class Plots:
     def __init__(self):
@@ -1362,6 +1377,100 @@ class Plots:
         # plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         # plt.savefig(name)
         plt.show()
+
+    @staticmethod
+    def plot_color_background(ax, table, v_n_x, v_n_y, v_n_z, label = None):
+
+
+
+        if label != None:
+            print('TEXT')
+
+            # ax.text(table[0, 1:].min(), table[1:, 0].min(), s=label)
+            # bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10}
+            # plt.text(2, 0.65, r'$\cos(2 \pi t) \exp(-t)$')
+
+        # ax = fig.add_subplot(1, 1, 1)
+        ax.set_xlim(table[0, 1:].min(), table[0, 1:].max())
+        ax.set_ylim(table[1:, 0].min(), table[1:, 0].max())
+        ax.set_ylabel(Labels.lbls(v_n_y))
+        ax.set_xlabel(Labels.lbls(v_n_x))
+
+        levels = []
+        if v_n_z == 'r':
+            levels = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
+        if v_n_z == 'm':
+            levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+        if v_n_z == 'mdot':
+            levels = [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5, -3.25, -3.]
+            # levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
+        if v_n_z == 'l':
+            levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
+        if v_n_z == 'lm':
+            levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35, 4.4, 4.45,
+                      4.5, 4.55, 4.6, 4.65, 4.7, 4.75, 4.8, 4.85, 4.9, 4.95, 5.0]
+        if v_n_z == 't':
+            levels = [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
+
+        if v_n_z == 'k':   levels = [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+        if v_n_z == 'rho': levels = [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
+        # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
+        #                            1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.10, 2.15, 2.20]
+
+        contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+        clb = plt.colorbar(contour_filled)
+        clb.ax.set_title(Labels.lbls(v_n_z))
+
+        # ax.colorbar(contour_filled, label=Labels.lbls(v_n_z))
+        contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
+        ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+        ax.set_title('SONIC HR DIAGRAM')
+
+
+        # plt.ylabel(l_or_lm)
+        # plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        # plt.savefig(name)
+        # plt.show()
+
+    @staticmethod
+    def plot_obs(ax, t_llm_mdot, obs_cls, v_n_x, l_or_lm, v_n_z, lim_t1 = None, lim_t2 = None):
+
+        if lim_t1 == None: lim_t1 = t_llm_mdot[0, 1:].min()
+        if lim_t2 == None: lim_t2 = t_llm_mdot[0, 1:].max()
+
+        yc_val = t_llm_mdot[0, 0]
+
+        classes = []
+        classes.append('dum')
+        x = []
+        y = []
+        for star_n in obs_cls.stars_n:
+            xyz = obs_cls.get_xyz_from_yz(yc_val, star_n, l_or_lm, 'mdot',
+                                          t_llm_mdot[0,1:], t_llm_mdot[1:,0], t_llm_mdot[1:,1:], lim_t1, lim_t2)
+
+            if xyz.any():
+                x = np.append(x, xyz[0, 0])
+                y = np.append(y, xyz[1, 0])
+                llm1, llm2 = obs_cls.get_star_llm_evol_err(star_n, l_or_lm, yc_val, 1.0, 0.5)
+                # print('Star {}, {} range: ({}, {})'.format(star_n,l_or_lm, llm1, llm2))
+
+                for i in range(len(xyz[0, :])):
+                    ax.errorbar(xyz[0, i], xyz[1, i], yerr=[[llm1], [llm2]], fmt='--o')
+                    plt.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                             color=obs_cls.get_class_color(star_n), ls='')  # plot color dots)))
+                    ax.annotate(int(star_n), xy=(xyz[0, i], xyz[1, i]),
+                                textcoords='data')  # plot numbers of stars
+
+                    if obs_cls.get_star_class(star_n) not in classes:
+                        plt.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                                 color=obs_cls.get_class_color(star_n), ls='',
+                                 label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
+                        classes.append(obs_cls.get_star_class(star_n))
+
+        fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
+        f = np.poly1d(fit)
+        fit_x_coord = np.mgrid[(x.min() - 1):(x.max() + 1):1000j]
+        plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
 
 
 # class Opt_Depth_Analythis():

@@ -30,6 +30,7 @@ from Phys_Math_Labels import Math
 from Phys_Math_Labels import Physics
 from Phys_Math_Labels import Constants
 from Phys_Math_Labels import Labels
+from Phys_Math_Labels import Plots
 
 from OPAL import Read_Table
 from OPAL import Row_Analyze
@@ -1741,10 +1742,10 @@ class Crit_Mdot:
 
     def min_mdot_sp_set(self, l_or_lm, yc_vals):
 
-        name = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
+        name  = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
         yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', l_or_lm, 'mdot_crit', self.opal_used)
-        yc  = yc_llm_mdot_cr[0, 1:]
-        llm = yc_llm_mdot_cr[1:, 0]
+        yc    = yc_llm_mdot_cr[0, 1:]
+        llm   = yc_llm_mdot_cr[1:, 0]
         mdot2d= yc_llm_mdot_cr[1:, 1:]
 
         for i in range(len(yc_vals)):
@@ -2111,7 +2112,7 @@ class Sonic_HRD:
             self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
 
         # self.nums = Num_Models(smfls, plotfls)
-        self.obs = Read_Observables(self.obs_files)
+        self.obs = Read_Observables(self.obs_files, self.opal_used)
 
 
 
@@ -2512,11 +2513,21 @@ class Sonic_HRD:
 
 
 
+    def plot_sonic_hrd(self, yc_val, l_or_lm):
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_{}_mdot'.format(l_or_lm),
+                                                       'yc', 't', l_or_lm, 'mdot')
 
 
+        yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
+        t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
 
 
+        fig = plt.figure(figsize=plt.figaspect(0.8))
+        ax = fig.add_subplot(111) # , projection='3d'
+        Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', 'Yc:{}'.format(yc_val))
+        Plots.plot_obs(ax, t_llm_mdot, self.obs, 't', l_or_lm, 'mdot')
 
+        plt.show()
 
     def t_llm_cr_sp(self, t_k_rho, yc_val, opal_used):
         kap = t_k_rho[1:, 0]

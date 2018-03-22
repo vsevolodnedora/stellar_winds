@@ -134,6 +134,133 @@ class Save_Load_tables:
 
         return np.array(file_table, dtype='float64') #[x1, x2, y1, y2, n1, n2]
 
+    @staticmethod
+    def save_3d_table(d3array, opal_used, name, t_name, x_name, y_name, z_name, output_dir = '../data/output/'):
+        i = 0
+
+        part = opal_used.split('/')[-1]
+        full_name = output_dir + name + '_' + part  # dir/t_k_rho_table8.data
+
+        # np.savetxt(full_name, d2arr, '%.4f', '  ', '\n',
+        #            '\nINTERPOLATED OPAL {} TABLE for {} relation'.format(part, name), '',
+        #            '# {} | {} | {} | {} |'
+        #            .format(opal_used, x_name, y_name, z_name))
+
+        with open(full_name, 'w') as outfile:
+            # I'm writing a header here just for the sake of readability
+            # Any line starting with "#" will be ignored by numpy.loadtxt
+            # outfile.write('# Array shape: {0}\n'.format(d3array.shape))
+            outfile.write(
+                '# {} | {} | {} | {} | {} | {} | \n'.format(d3array.shape, t_name, x_name, y_name, z_name, opal_used))
+
+            # Iterating through a ndimensional array produces slices along
+            # the last axis. This is equivalent to data[i,:,:] in this case
+            for data_slice in d3array:
+                # The formatting string indicates that I'm writing out
+                # the values in left-justified columns 7 characters in width
+                # with 2 decimal places.
+                np.savetxt(outfile, data_slice, '%.4f', '  ', '\n',
+                           '\n# {}:{} | {} | {} | {} | {}\n'.format(t_name, data_slice[0,0], x_name, y_name, z_name, opal_used), '',
+                           '')
+                # np.savetxt(outfile, data_slice, fmt='%-7.2f')
+
+                # Writing out a break to indicate different slices...
+                # outfile.write('# \n')
+                i = i + 1
+
+    @staticmethod
+    def load_3d_table(opal_used, name, t_name, x_name, y_name, z_name, output_dir='../data/output/'):
+        '''
+                            RETURS a 3d table
+        :param opal_used:
+        :param name:
+        :param t_name:
+        :param x_name:
+        :param y_name:
+        :param z_name:
+        :param output_dir:
+        :return:
+        '''
+
+
+        part = opal_used.split('/')[-1]
+        full_name = output_dir + name + '_' + part
+
+        with open(full_name, 'r') as f: # reads only first line (to save time)
+            first_line = f.readline()
+
+
+        first_line = first_line.split('# ')[1] # get rid of '# '
+        r_shape = first_line.split(' | ')[0]
+        r_t_v_n = first_line.split(' | ')[1]
+        r_x_v_n = first_line.split(' | ')[2]
+        r_y_v_n = first_line.split(' | ')[3]
+        r_z_v_n = first_line.split(' | ')[4]
+        r_opal  = first_line.split(' | ')[5]
+
+        # --- Checks for opal (metallicity) and x,y,z,t, var_names.
+
+        if r_opal != opal_used:
+            raise NameError('Read OPAL <{}> not the same is opal_used <{}>'.format(r_opal, opal_used))
+        if t_name != r_t_v_n:
+            raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(t_name, r_t_v_n))
+        if x_name != r_x_v_n:
+            raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(x_name, r_x_v_n))
+        if y_name != r_y_v_n:
+            raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(y_name, r_y_v_n))
+        if z_name != r_z_v_n:
+            raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(z_name, r_z_v_n))
+
+        # --- --- Actual load of a table (as a 2d array) --- --- ---
+
+        d2_table = np.loadtxt(full_name)
+
+        # --- --- Reshaping the 2d arrays into 3d Array --- --- ---
+
+        from ast import literal_eval as make_tuple # to convert str(n, n, n) into a tuple(n, n, n)
+        shape = make_tuple(r_shape)
+
+        d3_table = d2_table.reshape(shape)
+
+        print('\t__Table {} is read succesfully. Shape is {}'.format(full_name, d3_table.shape))
+
+        return d3_table
+        # print(d2_table.reshape(shape))
+
+
+        # with open(full_name, 'r') as fullfile:
+        #     for line in fullfile:
+        #         if line.split(' ')[0] == '#':
+        #             check_table_name(line)
+        #             n_of_tables = n_of_tables + 1
+
+
+
+
+        # f = open(full_name, 'r').readlines()
+        # print(f[2])
+        # boxes = f[0].split('|')
+        #
+        # # print(boxes)
+        # # r_table = boxes[0].split()[-1]
+        # # r_x_name = boxes[1].split()[0]
+        # # x1 = boxes[1].split()[1]
+        # # x2 = boxes[1].split()[2]
+        # # r_y_name = boxes[2].split()[0]
+        # # y1 = boxes[2].split()[1]
+        # # y2 = boxes[2].split()[2]
+        # # r_z_name = boxes[3].split()[0]
+        # # n1 = boxes[4].split()[-1]
+        # # n2 = boxes[5].split()[-1]
+        #
+        # r_table  = boxes[0].split()[-1]
+        # r_x_name = boxes[1].split()[-1]
+        # r_y_name = boxes[2].split()[-1]
+        # r_z_name = boxes[3].split()[-1]
+        #
+        # f.clear()
+
+
 class Creation:
 
     def __init__(self, opal_name, t1, t2, n_interp = 1000, load_lim_cases = False,
@@ -317,6 +444,58 @@ class SP_file_work():
 
         return yc_arr, set_of_files
 
+    def separate_sp_by_fname_mass(self):
+        '''
+        Separation is based on file name an _10sm_ part in that name, where 10 is the value.
+        :return: m_arr[:], m_files[:,:] one row for one m
+        '''
+
+        # m_files = []
+        m_arr = np.array([str(0)])
+        fls = []
+        for i in range(len(self.sp_files)):
+            cut_dirs = self.sp_files[i].split('/')[-1]
+            cut_extension = cut_dirs.split('.')[0]
+            parts = cut_extension.split('_')
+
+            for j in range(len(parts)):
+                if len(parts[j].split('sm')) > 1:
+                    m = parts[j].split('sm')[0]
+                    # fls.append(self.sp_files[i])
+                    if not m in m_arr:
+                        m_arr = np.append(m_arr, m)
+                        # m_files = np.append(m_files, fls)
+                        # fls = []
+                    # print(parts[j])
+
+        print('__Initial Masses, read from file name are: {}'.format(m_arr))
+
+        m_files = []
+        for j in range(len(m_arr)):
+            piece = str(m_arr[j])+'sm' # 10sm ...
+
+
+            for i in range(len(self.sp_files)):
+                cut_dirs = self.sp_files[i].split('/')[-1]
+                cut_extension = cut_dirs.split('.')[0]
+                parts = cut_extension.split('_')
+
+
+                if piece in parts:
+                    # files.append(self.sp_files[i])
+                    m_files = np.append(m_files,  self.spmdl[i])
+
+        m_arr = np.delete(m_arr, 0, 0)
+        print(len(m_files), len(m_arr))
+
+        m_files = np.reshape(m_files, (len(m_arr), int(len(m_files)/len(m_arr)) ))
+
+
+
+        return m_arr, m_files
+
+
+
     def save_y_yc_z_relation(self, y_v_n, z_v_n, save, plot=False, yc_prec=0.1, depth=100):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', yc_prec)
@@ -380,9 +559,9 @@ class SP_file_work():
 
         table_name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
         if save == 'int':
-            Save_Load_tables.save_table(yc_llm_m_int, opal_used, table_name, 'yc', y_v_n, z_v_n)
+            Save_Load_tables.save_table(yc_llm_m_int, self.opal_used, table_name, 'yc', y_v_n, z_v_n)
         if save == 'pol':
-            Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
+            Save_Load_tables.save_table(yc_llm_m_pol, self.opal_used, table_name, 'yc', y_v_n, z_v_n)
 
         # Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
 
@@ -458,8 +637,60 @@ class SP_file_work():
 
         # yc_llm_m_pol
 
+
+
+    def save_x_y_yc_evol_relation(self, y_v_tmp, z_v_n_tmp):
+        '''
+        Retruns EVOLUTION: 'Yc:[0,1:]  |  y_v_n(ZAMS vales):[1:,0]  |  z_v_n(zams->last Yc)
+        :param z_v_n_tmp:
+        :param y_v_tmp:
+        :return:
+        '''
+
+        m_arr, cls = self.separate_sp_by_fname_mass()
+
+        # print(m_files2d.shape)
+
+        x_all = np.zeros(len(cls[0, :]))
+        y_all = np.zeros(len(cls[0, :]))
+        yc_all= np.zeros(len(cls[0, :]))
+        for i in range(len(m_arr)):
+
+            z2d = []
+            y = []
+            yc = []
+
+            for cl in cls[i,:]:
+                z2d = np.append(z2d, cl.get_crit_value(z_v_n_tmp))
+                y = np.append(y, cl.get_crit_value(y_v_tmp))
+                yc = np.append(yc, np.float("%.1f" % cl.get_crit_value('Yc')) )
+                yc, z2d, y = Math.x_y_z_sort(yc, z2d, y)
+
+            x_all = np.vstack((x_all, z2d))
+            y_all = np.vstack((y_all, y))
+            yc_all = np.vstack((yc_all, yc))
+
+            plt.plot(yc, z2d, '-', color = 'C'+str(Math.get_0_to_max([i],9)[i]))
+
+        plt.grid()
+        plt.xlabel(Labels.lbls('Yc'))
+        plt.ylabel(Labels.lbls(z_v_n_tmp))
+        plt.show()
+
+        x_all = np.delete(x_all, 0, 0)
+        y_all = np.delete(y_all, 0, 0)
+        yc_all = np.delete(yc_all, 0, 0)
+
+
+        y_arr = np.array(["%.2f" % val for val in y_all[:,-1]])
+        res = Math.combine(yc_all[0,:], y_arr, x_all)
+
+        Save_Load_tables.save_table(res, self.opal_used, 'evol_yc_{}_{}'.format(y_v_tmp, z_v_n_tmp),
+                                    'evol_yc', y_v_tmp, z_v_n_tmp)
+
+
     @staticmethod
-    def yc_x__to__y__sp(yc_value, x_v_n, y_v_n, x_inp, dimension=0):
+    def yc_x__to__y__sp(yc_value, x_v_n, y_v_n, x_inp, opal_used, dimension=0):
         '''
         LOADS the table with given v_ns and extract the row with given Yc and interpolateds the y_value, for x_val given
         :param yc_value:
@@ -713,6 +944,7 @@ class SP_file_work():
     # --- --- --- | ---
     # --- --- --- | ---
 
+    # def save_yc_m_l
 
 
 
@@ -863,7 +1095,7 @@ class SP_file_work():
 
         vro = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
         mdot= Physics.vrho_mdot(vro, r2d,'tl')
-        return Math.combine(t, llm, mdot)
+        return Math.combine(t, llm, mdot, yc_val)
     def plot_t_llm_mdot_for_yc(self, yc_val, l_or_lm, min_max = 'min', append_crit = True):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
@@ -892,7 +1124,7 @@ class SP_file_work():
 
         vro = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
         mdot= Physics.vrho_mdot(vro, rs, '')
-        return Math.combine(t, llm, mdot)
+        return Math.combine(t, llm, mdot, yc_val)
     def plot_t_llm_mdot_for_yc_const_r(self, yc_val, rs, l_or_lm, min_max = 'min', append_crit = True):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
@@ -906,7 +1138,60 @@ class SP_file_work():
 
         Plots.plot_color_table(t_llm_mdot, 't', l_or_lm, 'mdot', 'Rs:{}'.format(rs))
 
+    @staticmethod
+    def get_square(table, depth):
+        '''
+        Performs row by row and column bu column interpolation of a table to get a square matrix with required depth
+        :param table:
+        :param depth:
+        :return:
+        '''
+        x = table[0, 1:]
+        y = table[1:, 0]
+        z = table[1:,1:]
 
+        z1 = np.zeros(depth)
+        x_grid = np.mgrid[x.min():x.max():depth*1j]
+        for i in range(len(y)):
+            tmp = interpolate.InterpolatedUnivariateSpline(x, z[i, :])(x_grid)
+            z1 = np.vstack((z1, tmp))
+
+        z1 = np.delete(z1, 0, 0)
+
+        z2 = np.zeros((depth))
+        y_grid = np.mgrid[y.min():y.max():depth*1j]
+        for i in range(depth):
+            tmp = interpolate.InterpolatedUnivariateSpline(y, z1[:, i])(y_grid)
+            z2 = np.vstack((z2, tmp))
+
+
+        z2 = np.delete(z2, 0, 0)
+        return Math.combine(x_grid, y_grid, z2.T)
+
+    def save_t_llm_mdot(self, l_or_lm, depth_square = 500, min_max = 'min', append_crit = True):
+
+        yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', self.opal_used)
+
+
+        # yc_t_llm_mdot = np.array([[[k*j*i for k in np.arange(0, 5, 1)] for j in np.arange(0, 5, 1)] for i in np.arange(0, 5, 1)])
+        yc_t_llm_mdot = []
+        for i in range(len(yc)):
+            print('\n<--- --- --- Yc:{} --- --- --->\n'.format(yc[i]))
+            tmp1 = self.get_t_llm_mdot_for_yc(cls[i], t_lm_rho, yc[i], l_or_lm, min_max, self.opal_used, append_crit)
+            tmp2 = self.get_square(tmp1, depth_square)
+            tmp2[0, 0] = yc[i] # appending the yc value as a [0, 0] in the array.
+            print(tmp2.shape)
+            yc_t_llm_mdot = np.append(yc_t_llm_mdot, tmp2)
+
+        yc_t_llm_mdot = np.reshape(yc_t_llm_mdot, (len(yc), depth_square+1, depth_square+1))
+        print('\t__Saving the yc_t_{}_mdot table for. Shape:{}'.format(l_or_lm, yc_t_llm_mdot.shape))
+
+
+
+        Save_Load_tables.save_3d_table(yc_t_llm_mdot, self.opal_used, 'yc_t_{}_mdot'.format(l_or_lm), 'yc', 't', l_or_lm, 'mdot', self.out_dir)
+
+        # print(Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_l_mdot', 'yc', 't', 'l', 'mdot', self.out_dir))
 
 
     # def save_y_yc_z_relation_sp(self, x_v_n, y_v_n, z_v_n, save, plot=False, depth=100):
@@ -1435,7 +1720,7 @@ class SP_file_work():
 
 class Read_Observables:
 
-    def __init__(self, observ_name, m_l_rel_yc = None, clump_used=4, clump_req=4):
+    def __init__(self, observ_name, opal_used, clump_used=4, clump_req=4):
         '''
 
         :param observ_name:
@@ -1448,7 +1733,7 @@ class Read_Observables:
         self.clump = clump_used
         self.new_clump = clump_req
 
-        self.m_l_rel_yc = m_l_rel_yc
+        self.opal_used = opal_used
 
         self.table = []
         with open(observ_name, 'r') as f:
@@ -1546,7 +1831,7 @@ class Read_Observables:
         return value
 
     #---------------------------------------------PUBLIC FUNCTIONS---------------------------------------
-    def get_num_par(self, v_n, star_n, yc_val = None, opal_used = None):
+    def get_num_par(self, v_n, star_n, yc_val = None):
         '''
 
         :param v_n:
@@ -1559,7 +1844,7 @@ class Read_Observables:
             # print('\__ Yc: {}'.format(yc_val))
             l = self.get_num_par_from_table('l', star_n)
             if yc_val >= 0 and yc_val <= 1.:
-                l, lm = SP_file_work.yc_x__to__y__sp(yc_val, 'l', 'lm', l, opal_used, 0)
+                l, lm = SP_file_work.yc_x__to__y__sp(yc_val, 'l', 'lm', l, self.opal_used, 0)
                 return lm
 
             if yc_val == -1 or yc_val == 'langer':
@@ -1574,19 +1859,19 @@ class Read_Observables:
 
         return self.get_num_par_from_table(v_n, star_n)
 
-    def get_min_max(self, v_n, yc = None, opal_used = None):
+    def get_min_max(self, v_n, yc = None):
         arr = []
         for star_n in self.stars_n:
-            arr = np.append(arr, self.get_num_par(v_n, star_n, yc, opal_used))
+            arr = np.append(arr, self.get_num_par(v_n, star_n, yc))
         return arr.min(), arr.max()
 
-    def get_xyz_from_yz(self,model_n, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
+    def get_xyz_from_yz(self, yc_val, model_n, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
 
         if y_name == z_name:
             raise NameError('y_name and z_name are the same : {}'.format(z_name))
 
-        star_y = self.get_num_par(y_name, model_n)
-        star_z = self.get_num_par(z_name, model_n)
+        star_y = self.get_num_par(y_name, model_n, yc_val)
+        star_z = self.get_num_par(z_name, model_n, yc_val)
 
         if star_z == None or star_y == None:
             raise ValueError('star_y:{} or star_z:{} not defined'.format(star_y,star_z))
@@ -1668,6 +1953,37 @@ class Read_Observables:
             return 'd'  # diamond
 
         raise NameError('Class {} is not defined'.format(cls))
+
+    def get_star_llm_evol_err(self, star_n, l_or_lm, yc_assumed, yc1, yc2):
+        if yc1 <= yc2:
+            raise ValueError('yc1({}) <= yc2({}) (should be > )'.format(yc1, yc2))
+
+        if l_or_lm == 'l':
+            yc_m_l = Save_Load_tables.load_table('evol_yc_m_l', 'evol_yc', 'm', 'l', self.opal_used)
+            star_l = self.get_num_par('l', star_n, yc_assumed)
+            l = yc_m_l[1:, 1:]
+
+            yc_ind  = Physics.ind_of_yc(yc_m_l[0,1:], yc_assumed)
+            yc1_ind = Physics.ind_of_yc(yc_m_l[0,1:], yc1)
+            yc2_ind = Physics.ind_of_yc(yc_m_l[0, 1:], yc2)
+
+            yc_assumed_l_row = l[yc_ind, :]
+            yc1_l_row = l[yc1_ind, :]
+            yc2_l_row = l[yc2_ind, :]
+
+            # if star_l >= yc_assumed_l_row.min() and star_l <= yc_assumed_l_row.max():
+            f = interpolate.InterpolatedUnivariateSpline(yc_assumed_l_row, yc1_l_row)
+            l1 = np.float(f([star_l]))
+            f = interpolate.InterpolatedUnivariateSpline(yc_assumed_l_row, yc2_l_row)
+            l2 = np.float(f([star_l]))
+            # else:
+            #     l1 = star_l
+            #     l2 = star_l
+
+            print('\t__STAR: {} | l: {} (+{} -{})'.format(star_n, star_l, np.abs(star_l-l1), np.abs(star_l-l2)))
+
+            return np.abs(star_l-l2), np.abs(star_l-l1),
+
 
 class Read_Plot_file:
 
@@ -2010,7 +2326,7 @@ class Read_SM_data_file:
         return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T)
 
 
-    def get_xyz_from_yz(self,model_i, condition, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
+    def get_xyz_from_yz(self, model_i, condition, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
         i_req = self.ind_from_condition(condition)
 
         star_y = None

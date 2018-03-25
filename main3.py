@@ -9,6 +9,7 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from os import listdir
+import matplotlib.patches as patches
 
 import os
 from Plots_Obs_treat import Errors
@@ -245,12 +246,12 @@ from FilesWork import Creation
 from FilesWork import SP_file_work
 spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
 # spcls.separate_sp_by_fname()
-# spcls.save_y_yc_z_relation('l', 'lm', 'pol', True)
-# spcls.save_x_y_yc_evol_relation('m', 'l')
+# spcls.save_y_yc_z_relation('lm', 'r', 'pol', True)
+# spcls.save_x_y_yc_evol_relation('m', 'lm')
 # spcls.plot_x_y_z_for_yc('t', 'lm', 'r', 1., 100, 'min', True)
 # spcls.plot_t_llm_mdot_for_yc(0.5, 'l', 'min', True)
-# spcls.save_t_llm_mdot('l', 500, 'min', True)
-# spcls.plot_t_llm_mdot_for_yc_const_r(1., 1.,'l', 'min', True)
+# spcls.save_t_llm_mdot('lm', 500, 'min', True)
+# spcls.plot_t_llm_mdot_for_yc_const_r(1., 1.,'lm', 'min', True)
 # spcls.save_y_yc_z_relation_sp('t', 'lm', 'r', 'pol', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
@@ -286,15 +287,15 @@ comb.plot_files = plotfiles
 # comb.min_mdot_sp('lm', 1.)
 
 from main_methods import Crit_Mdot
-# mdot = Crit_Mdot()
-# mdot.sp_files = spfiles
-# mdot.opal_used = opalfile
-# mdot.obs_files = obsfile
-# mdot.set_files(5.18, None)
+mdot = Crit_Mdot()
+mdot.sp_files = spfiles
+mdot.opal_used = opalfile
+mdot.obs_files = obsfile
+mdot.set_files(5.18, None)
 
 # mdot.save_yc_llm_mdot_cr()
 
-# mdot.min_mdot_sp_set('l', [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1])
+mdot.min_mdot_sp_set('lm', [0.5], 1.0, 0.1)
 
 from main_methods import Sonic_HRD
 shrd = Sonic_HRD()
@@ -303,10 +304,11 @@ shrd.sp_files = select_sp_files(spfiles, [], [], [])
 shrd.sm_files = smfiles
 shrd.obs_files = obsfile
 shrd.plot_files = plotfiles
+
 shrd.set_files(5.18, None)
 
-shrd.plot_sonic_hrd(0.8, 'l')
-
+# shrd.plot_sonic_hrd(0.5, 'lm', 1.0, 0.1)
+# shrd.test()
 
 '''===========================================================3D====================================================='''
 #
@@ -471,4 +473,5 @@ shrd.plot_sonic_hrd(0.8, 'l')
 
 # for i in range(10,31):
 #     for j in range(1,11):
-#         print('cp run_mass_loss.py {}sm/y{}/sp/'.format(i,j))
+#         print('cp ../ga_z0008/{}sm/y{}/fy{}.bin1 {}sm/y{}/sp'.format(i,j,j,  i,j))
+        # print('cp -r sp {}sm/y{}/sp/'.format(i,j))

@@ -1954,35 +1954,145 @@ class Read_Observables:
 
         raise NameError('Class {} is not defined'.format(cls))
 
-    def get_star_llm_evol_err(self, star_n, l_or_lm, yc_assumed, yc1, yc2):
+    def get_star_lm_err(self, star_n, yc_assumed, yc1, yc2):
+        '''
+        Assuming the same l, but different L -> L/M relations for different Yc, retruns (lm-lm1), (lm-lm2)
+        :param star_n:
+        :param yc_assumed:
+        :param yc1: ZAMS ( or high Yc)
+        :param yc2: END  ( or Low  Yc)
+        :return:
+        '''
         if yc1 <= yc2:
             raise ValueError('yc1({}) <= yc2({}) (should be > )'.format(yc1, yc2))
 
-        if l_or_lm == 'l':
-            yc_m_l = Save_Load_tables.load_table('evol_yc_m_l', 'evol_yc', 'm', 'l', self.opal_used)
-            star_l = self.get_num_par('l', star_n, yc_assumed)
-            l = yc_m_l[1:, 1:]
+        lm1 = self.get_num_par('lm', star_n, yc1) # Getting lm at different Yc (assiming the same l, but
+        lm2 = self.get_num_par('lm', star_n, yc2)
+        lm  = self.get_num_par('lm', star_n, yc_assumed)
 
-            yc_ind  = Physics.ind_of_yc(yc_m_l[0,1:], yc_assumed)
-            yc1_ind = Physics.ind_of_yc(yc_m_l[0,1:], yc1)
-            yc2_ind = Physics.ind_of_yc(yc_m_l[0, 1:], yc2)
+        print('\t__STAR: {} | {} : {} (+{} -{})'.format(star_n, 'L/M', lm, "%.2f" % np.abs(lm - lm1),
+                                                        "%.2f" % np.abs(lm - lm2)))
 
-            yc_assumed_l_row = l[yc_ind, :]
-            yc1_l_row = l[yc1_ind, :]
-            yc2_l_row = l[yc2_ind, :]
+        return np.abs(lm - lm1), np.abs(lm - lm2)
 
-            # if star_l >= yc_assumed_l_row.min() and star_l <= yc_assumed_l_row.max():
-            f = interpolate.InterpolatedUnivariateSpline(yc_assumed_l_row, yc1_l_row)
-            l1 = np.float(f([star_l]))
-            f = interpolate.InterpolatedUnivariateSpline(yc_assumed_l_row, yc2_l_row)
-            l2 = np.float(f([star_l]))
-            # else:
-            #     l1 = star_l
-            #     l2 = star_l
+    def get_star_ts_err(self, star_n, t_llm_mdot, yc_assumed, yc1, yc2, lim_t1, lim_t2):
 
-            print('\t__STAR: {} | l: {} (+{} -{})'.format(star_n, star_l, np.abs(star_l-l1), np.abs(star_l-l2)))
+        if yc1 <= yc2:
+            raise ValueError('yc1({}) <= yc2({}) (should be > )'.format(yc1, yc2))
 
-            return np.abs(star_l-l2), np.abs(star_l-l1),
+        # lm1 = self.get_num_par('lm', star_n, yc1)  # Getting lm at different Yc (assiming the same l, but
+        # lm2 = self.get_num_par('lm', star_n, yc2)
+        # lm  = self.get_num_par('lm', star_n, yc_assumed)
+        #
+        # mdot = self.get_num_par('mdot', star_n, yc_assumed)
+
+        ts = None
+
+        xyz = self.get_xyz_from_yz(yc_assumed, star_n, 'lm', 'mdot',
+                                      t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lim_t1, lim_t2)
+        if xyz.any():
+            if len(xyz[0, :]) > 1:
+                raise ValueError('Multiple coordinates for star: {} | Yc: {}'.format(star_n, yc_assumed))
+            else:
+                ts = xyz[0, 0] # xyz[0, :] ALL X coordinates
+
+        ts1 = 0
+        xyz1 = self.get_xyz_from_yz(yc1, star_n, 'lm', 'mdot',
+                                   t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lim_t1, lim_t2)
+        if xyz1.any():
+            if len(xyz1[0, :]) > 1:
+                raise ValueError('Multiple coordinates for star: {} | Yc: {}'.format(star_n, yc_assumed))
+            else:
+                ts1 = xyz1[0, 0]  # xyz[0, :] ALL X coordinates
+
+        ts2 = 0
+        xyz2 = self.get_xyz_from_yz(yc2, star_n, 'lm', 'mdot',
+                                   t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lim_t1, lim_t2)
+        if xyz2.any():
+            if len(xyz2[0, :]) > 1:
+                raise ValueError('Multiple coordinates for star: {} | Yc: {}'.format(star_n, yc_assumed))
+            else:
+                ts2 = xyz2[0, 0]  # xyz[0, :] ALL X coordinates
+
+        print('\t__STAR: {} | {} : {} (+{} -{})'.format(star_n, 'Ts', ts, "%.2f" % np.abs(ts - ts1),
+                                                        "%.2f" % np.abs(ts - ts2)))
+
+        return np.abs(ts - ts1), np.abs(ts - ts2)
+
+    # def get_star_lm_evol_err(self, star_n, l_or_lm, yc_assumed, yc1, yc2):
+    #
+    #     if l_or_lm == 'l':
+    #         yc_m_llm = Save_Load_tables.load_table('evol_yc_m_l', 'evol_yc', 'm', 'l', self.opal_used)
+    #         star_llm = self.get_num_par('l', star_n, yc_assumed)
+    #     else:
+    #         yc_m_llm = Save_Load_tables.load_table('evol_yc_m_lm', 'evol_yc', 'm', 'lm', self.opal_used)
+    #         star_llm = self.get_num_par('lm', star_n, yc_assumed)
+    #
+    #     llm = yc_m_llm[1:, 1:]
+    #
+    #     yc_ind  = Physics.ind_of_yc(yc_m_llm[0, 1:], yc_assumed)
+    #     yc1_ind = Physics.ind_of_yc(yc_m_llm[0, 1:], yc1)
+    #     yc2_ind = Physics.ind_of_yc(yc_m_llm[0, 1:], yc2)
+    #
+    #     yc_assumed_llm_row = llm[:, yc_ind]
+    #     yc1_llm_row = llm[:, yc1_ind]
+    #     yc2_llm_row = llm[:, yc2_ind]
+    #
+    #     f = interpolate.InterpolatedUnivariateSpline(yc_assumed_llm_row, yc1_llm_row)
+    #     llm1 = np.float(f([star_llm]))
+    #     f = interpolate.InterpolatedUnivariateSpline(yc_assumed_llm_row, yc2_llm_row)
+    #     llm2 = np.float(f([star_llm]))
+    #
+    #     print('\t__STAR: {} | {} : {} (+{} -{})'.format(star_n, l_or_lm, star_llm, "%.2f"%np.abs(star_llm - llm1),
+    #                                                     "%.2f" %np.abs(star_llm - llm2)))
+    #
+    #     return np.abs(star_llm - llm2), np.abs(star_llm - llm1),
+
+    # def get_star_mdot_err(self, star_n, l_or_lm, yc_assumed, yc1, yc2, l_mdot_rescription = 'nugis'):
+    #
+    #     def get_z(opal_used):
+    #         z_lmc = 0.008
+    #         table_lmc = 'table_x.data'
+    #         z_gal = 0.02
+    #         table_gal = 'table8.data'
+    #
+    #         if opal_used.split('/')[-1] == table_lmc:
+    #             return z_lmc
+    #         if opal_used.split('/')[-1] == table_gal:
+    #             return z_gal
+    #
+    #     if yc1 <= yc2:
+    #         raise ValueError('yc1({}) <= yc2({}) (should be > )'.format(yc1, yc2))
+    #
+    #     if l_or_lm == 'l':
+    #         llm1_, llm2_ = self.get_star_llm_evol_err(star_n, l_or_lm, yc_assumed, yc1, yc2)
+    #         star_llm = self.get_num_par('l', star_n, yc_assumed)
+    #         llm1 = llm1_ + star_llm  # absolute value of llm at Yc1 and Yc2
+    #         llm2 = llm2_ + star_llm
+    #
+    #         mdot1 = Physics.l_mdot_prescriptions(llm1, 10 ** get_z(self.opal_used), l_mdot_rescription)
+    #         mdot2 = Physics.l_mdot_prescriptions(llm2, 10 ** get_z(self.opal_used), l_mdot_rescription)
+    #
+    #         star_mdot = self.get_num_par('mdot', star_n, yc_assumed)
+    #
+    #         print('\t__STAR: {} | Mdot : {} (+{} -{})'.format(star_n, star_mdot, "%.2f"%np.abs(star_mdot - mdot1),
+    #                                                           "%.2f" %np.abs(star_mdot - mdot2)))
+    #
+    #         return np.abs(star_mdot - mdot1), np.abs(star_mdot - mdot2)
+    #
+    #     # llm1_, llm2_ = self.get_star_llm_evol_err(star_n, l_or_lm, yc_assumed, yc1, yc2)
+    #     #
+    #     # if l_or_lm == 'l':
+    #     #     star_llm = self.get_num_par('l', star_n, yc_assumed)
+    #     # else:
+    #     #     star_llm = self.get_num_par('lm', star_n, yc_assumed)
+    #     #
+    #     # llm1 = llm1_ + star_llm # absolute value of llm at Yc1 and Yc2
+    #     # llm2 = llm2_ + star_llm
+    #     #
+    #     # mdot1 = Physics.l_mdot_prescriptions(llm1, 10 * get_z(self.opal_used), l_mdot_rescription)
+    #     # mdot2 = Physics.l_mdot_prescriptions(llm2, 10 * get_z(self.opal_used), l_mdot_rescription)
+
 
 
 class Read_Plot_file:

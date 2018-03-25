@@ -19,6 +19,7 @@ from scipy.optimize import fmin
 # import scipy.ndimage
 # from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 # from scipy.interpolate import griddata
 # import os
 #-----------------------------------------------------------------------------------------------------------------------
@@ -677,7 +678,7 @@ class Math:
         return new_x, f(new_x)
 
     @staticmethod
-    def x_y_z_sort(x_arr, y_arr, z_arr=np.empty(1,), sort_by_012=0):
+    def x_y_z_sort(x_arr, y_arr, z_arr=np.empty(0,), sort_by_012=0):
         '''
         RETURNS x_arr, y_arr, (z_arr) sorted as a matrix by a row, given 'sort_by_012'
         :param x_arr:
@@ -727,6 +728,76 @@ class Math:
         arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
 
         return arr1_cropped, arr2_cropped
+
+    @staticmethod
+    def extrapolate(table, x_left, x_right, y_down, y_up, depth, pol_order):
+        '''
+        Performs row by row and column by column interpolation, using polynomial of order 'pol_order'
+        x_left-y_up are in percentage to extrapolate in a direction left-up. (if None or 0 returns same array)
+        :param table:
+        :param x_left:  in % to extend left
+        :param x_right: in % to right
+        :param y_down:  in % to down
+        :param y_up:    in % to up
+        :return:
+        '''
+
+        if x_left == None and x_right == None and y_down == None and y_up == None:
+            return table
+
+        x = table[0, 1:]
+        y = table[1:, 0]
+        z = table[1:,1:]
+
+        if x_left != None:
+            x1 = x.min() - (x_left * (x.max() - x.min()) / 100)     #
+        else:
+            x1 = x.min()
+
+        if x_right != None:
+            x2 = x.max() + (x_right * (x.max() - x.min()) / 100)    #
+        else:
+            x2 = x.max()
+
+        if y_down != None:
+            y1 = y.min() - (y_down * (y.max() - y.min()) / 100)     #
+        else:
+            y1 = y.min()
+
+        if y_up != None:
+            y2 = y.max() + (y_up * (y.max() - y.min()) / 100)       #
+        else:
+            y2 = y.max()
+
+
+        def int_pol(x_arr, y_arr, x_grid):
+
+            if x_grid.min() == x_arr.min() and x_arr.max() == x_grid.max():
+                return interpolate.InterpolatedUnivariateSpline(x_arr, y_arr)(x_grid)
+            else:
+                new_x, new_y = Math.fit_plynomial(x_arr, y_arr, pol_order, depth, x_grid)
+                return new_y
+
+
+        x_grid = np.mgrid[x1:x2:depth*1j]
+        z_y = np.zeros(len(x_grid))
+        for i in range(len(y)):
+            z_y = np.vstack((z_y, int_pol(x, z[i, :], x_grid)))
+
+        z_y = np.delete(z_y, 0, 0)
+
+        y_grid = np.mgrid[y1:y2:depth*1j]
+        z_x = np.zeros(len(y_grid))
+        for i in range(len(x_grid)):
+            z_x = np.vstack((z_x, int_pol(y, z_y[:, i], y_grid)))
+
+        z_x = np.delete(z_x, 0, 0).T
+
+        res = Math.combine(x_grid, y_grid, z_x)
+        res[0, 0] = table[0, 0]
+
+        return res
+
 
 class Physics:
     def __init__(self):
@@ -1324,6 +1395,47 @@ class Physics:
 
         return yc_ind
 
+    # --- --- --- --- MASS LOSS PRESCRIPTIONS --- --- ---
+
+    @staticmethod
+    def l_mdot_prescriptions(log_l, log_z, author):
+
+        def nugis_lamers(log_l, log_z):
+            '''
+            L -> mdot, evolution, Nugis & Lamers 2000 with (z-dependance from Vink & Koter 2005)
+            :param z:
+            :return:
+            '''
+            return 1.63 * log_l + 0.86 * np.log10(log_z) - 13.6
+
+        def yoon(log_l, log_z):
+            '''
+            L -> Mdot Yoon 2017
+            :param log_l:
+            :param z:
+            :return:
+            '''
+            return 1.18 * log_l + 0.60 * np.log10(log_z) - 11.32
+
+        def my(log_l, log_z):
+            if log_z == 10 ** 0.02:
+                return 7.87*log_l - 48.18
+
+        # --- --- --- --- --- --- ---
+
+
+
+        if author in ['nugis', 'lamers', 'nugis and lamers']:
+            return nugis_lamers(log_l, log_z)
+        if author == 'yoon':
+            return yoon(log_l, log_z)
+        if author == 'my':
+            return my(log_l, log_z)
+
+
+
+    # --- --- --- --- --- --- --- --- --- -- --- --- ----
+
 class Plots:
     def __init__(self):
         pass
@@ -1433,12 +1545,96 @@ class Plots:
         # plt.show()
 
     @staticmethod
-    def plot_obs(ax, t_llm_mdot, obs_cls, v_n_x, l_or_lm, v_n_z, lim_t1 = None, lim_t2 = None):
+    def plot_obs_mdot_llm(ax, obs_cls, l_or_lm, yc_val, yc1, yc2):
+        '''
+
+        :param ax:
+        :param obs_cls:
+        :param l_or_lm:
+        :param yc_val:
+        :param yc1:
+        :param yc2:
+        :return:
+        '''
+        classes = []
+        classes.append('dum')
+        mdot_obs = []
+        llm_obs = []
+
+        # from Phys_Math_Labels import Opt_Depth_Analythis
+
+        for star_n in obs_cls.stars_n:
+            i = -1
+            mdot_obs = np.append(mdot_obs, obs_cls.get_num_par('mdot', star_n))
+            llm_obs = np.append(llm_obs, obs_cls.get_num_par(l_or_lm, star_n, yc_val))
+            eta = obs_cls.get_num_par('eta', star_n)
+
+            if yc1 != None and yc2 != None and l_or_lm == 'lm':
+
+                llm1, llm2 = obs_cls.get_star_lm_err(star_n, yc_val, yc1, yc2)
+                    # obs_cls.get_star_llm_evol_err(star_n, l_or_lm, yc_val, 1.0, 0.1)                  # ERRORS L/LM
+                # mdot1, mdot2 = obs_cls.get_star_mdot_err(star_n, l_or_lm, yc_val, 1.0, 0.1, 'nugis')           # ERRORS Mdot
+
+                ax.errorbar(mdot_obs[i], llm_obs[i], yerr=[[llm1],  [llm2]], fmt='--.', color=obs_cls.get_class_color(star_n))
+
+
+            plt.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                     color=obs_cls.get_class_color(star_n), ls='')  # plot color dots)))
+            ax.annotate('{}'.format(int(star_n)), xy=(mdot_obs[i], llm_obs[i]),
+                        textcoords='data')  # plot numbers of stars
+
+            # from Phys_Math_Labels import Opt_Depth_Analythis
+            # v_inf = self.obs.get_num_par('v_inf', star_n)
+            # tau_cl = Opt_Depth_Analythis(30, v_inf, 1., 1., mdot_obs[i], 0.20)
+            # tau = tau_cl.anal_eq_b1(1.)
+            # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
+            #
+            # ax.annotate('{} {}'.format(str(int(tau)), eta), xy=(mdot_obs[i], llm_obs[i]),
+            #             textcoords='data')  # plot numbers of stars
+
+            if obs_cls.get_star_class(star_n) not in classes:
+                plt.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                         color=obs_cls.get_class_color(star_n), ls='',
+                         label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
+                classes.append(obs_cls.get_star_class(star_n))
+
+        print('\t__PLOT: total stars: {}'.format(len(obs_cls.stars_n)))
+        print(len(mdot_obs), len(llm_obs))
+
+        # fit = np.polyfit(mdot_obs, llm_obs, 1)  # fit = set of coeddicients (highest first)
+        # f = np.poly1d(fit)
+        # fit_x_coord = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):1000j]
+
+        x_coord, y_coord = Math.fit_plynomial(mdot_obs, llm_obs, 1, 100)
+        ax.plot(x_coord, y_coord, '-.', color='blue')
+
+        min_mdot, max_mdot = obs_cls.get_min_max('mdot')
+        min_llm, max_llm = obs_cls.get_min_max(l_or_lm, yc_val)
+
+        ax.set_xlim(min_mdot - 0.2, max_mdot + 0.2)
+        ax.set_ylim(min_llm - 0.05, max_llm + 0.05)
+
+        ax.set_ylabel(Labels.lbls(l_or_lm))
+        ax.set_xlabel(Labels.lbls('mdot'))
+        ax.grid(which='major', alpha=0.2)
+        # ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+
+        print('Yc:{}'.format(yc_val))
+        ax.text(min_mdot, max_llm, 'Yc:{}'.format(yc_val), style='italic',
+                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
+
+        # l_grid = np.mgrid[5.2:6.:100j]
+        # ax.plot(Physics.l_mdot_prescriptions(l_grid, ), l_grid, '-.', color='orange', label='Nugis & Lamers 2000')
+        #
+        # ax.plot(Physics.yoon(l_grid, 10 ** 0.02), l_grid, '-.', color='green', label='Yoon 2017')
+
+    @staticmethod
+    def plot_obs_t_llm_mdot_int(ax, t_llm_mdot, obs_cls, l_or_lm, yc1 = None, yc2 = None, lim_t1 = None, lim_t2 = None):
 
         if lim_t1 == None: lim_t1 = t_llm_mdot[0, 1:].min()
         if lim_t2 == None: lim_t2 = t_llm_mdot[0, 1:].max()
 
-        yc_val = t_llm_mdot[0, 0]
+        yc_val = t_llm_mdot[0, 0] #
 
         classes = []
         classes.append('dum')
@@ -1451,11 +1647,11 @@ class Plots:
             if xyz.any():
                 x = np.append(x, xyz[0, 0])
                 y = np.append(y, xyz[1, 0])
-                llm1, llm2 = obs_cls.get_star_llm_evol_err(star_n, l_or_lm, yc_val, 1.0, 0.5)
+
                 # print('Star {}, {} range: ({}, {})'.format(star_n,l_or_lm, llm1, llm2))
 
                 for i in range(len(xyz[0, :])):
-                    ax.errorbar(xyz[0, i], xyz[1, i], yerr=[[llm1], [llm2]], fmt='--o')
+
                     plt.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
                              color=obs_cls.get_class_color(star_n), ls='')  # plot color dots)))
                     ax.annotate(int(star_n), xy=(xyz[0, i], xyz[1, i]),
@@ -1467,12 +1663,30 @@ class Plots:
                                  label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
                         classes.append(obs_cls.get_star_class(star_n))
 
+                    if yc1 != None and yc2 != None and l_or_lm == 'lm':
+                        lm1, lm2 = obs_cls.get_star_lm_err(star_n, yc_val, yc1, yc2)
+                        ts1, ts2 = obs_cls.get_star_ts_err(star_n, t_llm_mdot, yc_val, yc1, yc2, lim_t1, lim_t2)
+
+                        ax.add_patch(patches.Rectangle((xyz[0, i] - ts1, xyz[1, i] - lm1), ts2 + ts1, lm2 + lm1,
+                                                       alpha=.5, color=obs_cls.get_class_color(star_n)))
+
+
+                        # ax.errorbar(xyz[0, i], xyz[1, i], yerr=[[lm1], [lm2]], fmt='--.', color = obs_cls.get_class_color(star_n))
+                        # ax.errorbar(xyz[0, i], xyz[1, i], xerr=[[ts1], [ts2]], fmt='--.', color=obs_cls.get_class_color(star_n))
+
+
+
         fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
         f = np.poly1d(fit)
         fit_x_coord = np.mgrid[(x.min() - 1):(x.max() + 1):1000j]
         plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
 
+        ax.text(0.9, 0.9,'Yc:{}'.format(yc_val), style='italic',
+                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center', verticalalignment='center', transform = ax.transAxes)
 
+        # ax.text(x.max(), y.max(), 'Yc:{}'.format(yc_val), style='italic',
+        #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
+        ax.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
 # class Opt_Depth_Analythis():
 #
 #

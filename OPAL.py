@@ -1010,7 +1010,7 @@ class OPAL_Interpol(Read_Table):
 
         # Errors.is_a_bigger_b(t1, t2,    '|CheckInputData|', True, 't1 > t2 - must be t1 < t2')
         if t1 > t2:
-            sys.exit('\t__Error! t1({})>t2({}) |OPAL_Interpol|check_t_rho_limits|'.format(t1,t2))
+            raise ValueError('\t__Error! t1({})>t2({}) |OPAL_Interpol|check_t_rho_limits|'.format(t1,t2))
 
         Errors.is_a_bigger_b(self.t[0], t1,  '|CheckInputData|', True, 't1 < t_min in the table')
         Errors.is_a_bigger_b(t2, self.t[-1], '|CheckInputData|', True, 'ERROR: t2 > t_max in the table')
@@ -1025,18 +1025,18 @@ class OPAL_Interpol(Read_Table):
 
         # Errors.is_a_bigger_b(rho1, rho2,         '|CheckInputData|', True, 'rho1 > rho2, must be rho1 < rho2')
         if rho1 > rho2:
-            sys.exit('\t___Error. rho1({}) > rho2({}) in | OPAL_Interpol | check_t_rho_limits|'.format(rho1,rho2))
+            raise ValueError('\t___Error. rho1({}) > rho2({}) in | OPAL_Interpol | check_t_rho_limits|'.format(rho1,rho2))
 
         if self.rho2d[j, 0] > rho1:
-            sys.exit('\t__Error:  rho1 ({}) < rho[0] ({}) |check_t_rho_limits|'.format(rho1, self.rho2d[j, 0]))
+            raise ValueError('\t__Error:  rho1 ({}) < rho[0] ({}) |check_t_rho_limits|'.format(rho1, self.rho2d[j, 0]))
 
         if self.rho2d[i, -1] < rho2:
-            sys.exit('\t__Error:  rho2 ({}) > rho[-1] ({}) |check_t_rho_limits|'.format(rho2, self.rho2d[i, -1]))
+            raise ValueError('\t__Error:  rho2 ({}) > rho[-1] ({}) |check_t_rho_limits|'.format(rho2, self.rho2d[i, -1]))
 
         Errors.is_arr_shape(self.rho2d, self.kappa2d.shape,    '|CheckInputData|', True, 'shapes of rho and opal are different')
         Errors.is_arrsize_eq_m(self.t, len(self.kappa2d[:, ]), '|CheckInputData|', True, 'length of t and n of raws in Opal are different')
 
-        print('\t__Note: Overall: min_ro:', self.rho2d.min(), ' max_rho: ', self.rho2d.max())
+        print('\t__Note: Overall: min_ro:', self.rho2d.min(),  ' max_rho: ', self.rho2d.max())
         print('\t__Note: Min_ro in T area:', self.rho2d[j, 0], ' max_rho in T area: ', self.rho2d[i, len(self.rho2d[i, :]) - 1])
 
         return np.array([t1, t2, rho1, rho2])

@@ -611,7 +611,7 @@ class Math:
     @staticmethod
     def fit_plynomial(x, y, order, depth, new_x = np.empty(0, )):
         '''
-        RETURNS f(new_x)
+        RETURNS new_x, f(new_x)
         :param x:
         :param y:
         :param order: 1-4 are supported
@@ -1471,7 +1471,8 @@ class Plots:
             levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35, 4.4, 4.45,
                       4.5, 4.55, 4.6, 4.65, 4.7, 4.75, 4.8, 4.85, 4.9, 4.95, 5.0]
         if v_n_z == 't':
-            levels = [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
+            levels = [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30,
+                      5.31, 5.32, 5.33, 5.34, 5.35, 5.36, 5.37, 5.38, 5.39, 5.40]
 
         if v_n_z == 'k':   levels = [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
         if v_n_z == 'rho': levels = [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
@@ -1687,6 +1688,9 @@ class Plots:
         # ax.text(x.max(), y.max(), 'Yc:{}'.format(yc_val), style='italic',
         #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
         ax.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
+
+
+
 # class Opt_Depth_Analythis():
 #
 #

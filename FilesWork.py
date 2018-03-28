@@ -260,7 +260,6 @@ class Save_Load_tables:
         #
         # f.clear()
 
-
 class Creation:
 
     def __init__(self, opal_name, t1, t2, n_interp = 1000, load_lim_cases = False,
@@ -494,8 +493,6 @@ class SP_file_work():
 
         return m_arr, m_files
 
-
-
     def save_y_yc_z_relation(self, y_v_n, z_v_n, save, plot=False, yc_prec=0.1, depth=100):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', yc_prec)
@@ -637,8 +634,6 @@ class SP_file_work():
 
         # yc_llm_m_pol
 
-
-
     def save_x_y_yc_evol_relation(self, y_v_tmp, z_v_n_tmp):
         '''
         Retruns EVOLUTION: 'Yc:[0,1:]  |  y_v_n(ZAMS vales):[1:,0]  |  z_v_n(zams->last Yc)
@@ -687,7 +682,6 @@ class SP_file_work():
 
         Save_Load_tables.save_table(res, self.opal_used, 'evol_yc_{}_{}'.format(y_v_tmp, z_v_n_tmp),
                                     'evol_yc', y_v_tmp, z_v_n_tmp)
-
 
     @staticmethod
     def yc_x__to__y__sp(yc_value, x_v_n, y_v_n, x_inp, opal_used, dimension=0):
@@ -945,11 +939,8 @@ class SP_file_work():
     # --- --- --- | ---
 
     # def save_yc_m_l
-
-
-
     @staticmethod
-    def x_y_z(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit = True):
+    def x_y_z(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit=True):
         '''
         cls = set of classes of sp. files with the same Yc.
         :param cls:
@@ -969,9 +960,11 @@ class SP_file_work():
             xi, zi = Math.x_y_z_sort(x, z)
 
             z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+            # z_grid = interpolate.interp1d(xi, zi, kind='cubic', bounds_error=False)(x_grid)
+
             y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
 
-            # plt.plot(xi, zi, '.', color='red')                # FOR interplation analysis (how good is the fit)
+            # plt.plot(xi, zi, '.', color='red')  # FOR interplation analysis (how good is the fit)
             # plt.plot(x_grid, z_grid, '-', color='red')
 
         y_zg = np.delete(y_zg, 0, 0)
@@ -981,9 +974,55 @@ class SP_file_work():
         z_grid2 = np.zeros(len(y_grid))
         for i in range(len(x_grid)):  # INTERPOLATING EVERY COLUMN to achive 'depth' number of points
             z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:, i])(y_grid)))
+            # z_grid2 = np.vstack((z_grid2, interpolate.interp1d(y, zi[:, i], kind='cubic', bounds_error=False)(y_grid)))
         z_grid2 = np.delete(z_grid2, 0, 0)
 
         x_y_z_final = Math.combine(x_grid, y_grid, z_grid2.T)
+
+        return x_y_z_final
+
+    @staticmethod
+    def x_y_z2d(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit = True):
+        '''
+        cls = set of classes of sp. files with the same Yc.
+        :param cls:
+        :return:
+        '''
+
+        y_zg = np.zeros(len(x_grid) + 1)  # +1 for y-value (l,lm,m,Yc)
+
+        for cl in cls:  # INTERPOLATING EVERY ROW to achive 'depth' number of points
+            x = cl.get_sonic_cols(x_v_n)
+            y = cl.get_crit_value(y_v_n)  # Y should be unique value for a given Yc (like m, l/lm, or Yc)
+            z = cl.get_sonic_cols(z_v_n)
+
+            if append_crit:
+                x = np.append(x, cl.get_crit_value(x_v_n))
+                z = np.append(z, cl.get_crit_value(z_v_n))
+            xi, zi = Math.x_y_z_sort(x, z)
+
+            # z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+            z_grid = interpolate.interp1d(xi, zi, kind='cubic', bounds_error=False)(x_grid)
+
+            y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
+
+            plt.plot(xi, zi, '.', color='red')                # FOR interplation analysis (how good is the fit)
+            plt.plot(x_grid, z_grid, '-', color='red')
+
+        y_zg = np.delete(y_zg, 0, 0)
+        y = y_zg[:, 0]
+        zi = y_zg[:, 1:]
+
+        f = interpolate.interp2d(x_grid, y, zi, kind='linear', bounds_error=False)
+        z_grid2 = f(x_grid, y_grid)
+
+        # z_grid2 = np.zeros(len(y_grid))
+        # for i in range(len(x_grid)):  # INTERPOLATING EVERY COLUMN to achive 'depth' number of points
+        #     # z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:, i])(y_grid)))
+        #     z_grid2 = np.vstack((z_grid2, interpolate.interp1d(y, zi[:, i], kind='cubic', bounds_error=False)(y_grid)))
+        # z_grid2 = np.delete(z_grid2, 0, 0)
+
+        x_y_z_final = Math.combine(x_grid, y_grid, z_grid2)
 
         return x_y_z_final
 
@@ -1024,8 +1063,36 @@ class SP_file_work():
         y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
 
 
-        x_y_z = self.x_y_z(cls[yc_index],x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
-        Plots.plot_color_table(x_y_z, x_v_n, y_v_n, z_v_n,)
+        x_y_z = self.x_y_z2d(cls[yc_index],x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
+
+        Plots.plot_color_table(x_y_z, x_v_n, y_v_n, z_v_n)
+
+        return x_y_z
+
+    def save_x_y_z(self, x_v_n, y_v_n, z_v_n, depth, min_or_max = 'min', append_crit = True):
+        yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+
+        x_y_z3d = []
+
+        for yc_val in yc:
+
+            if yc_val in yc:
+                yc_index = Math.find_nearest_index(yc, yc_val)
+            else:
+                raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
+
+            x1, x2, y1, y2 = self.x_y_limits(cls[yc_index], x_v_n, y_v_n, min_or_max, append_crit)
+            x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
+            y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
+
+            x_y_z = self.x_y_z2d(cls[yc_index], x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
+            x_y_z[0, 0] = yc_val
+            x_y_z3d = np.append(x_y_z3d, x_y_z)
+
+        res = np.reshape(x_y_z3d, (len(yc), depth+1, depth+1))
+
+        Save_Load_tables.save_3d_table(res,self.opal_used,'yc_{}_{}_{}'.format(x_v_n, y_v_n, z_v_n), 'yc', x_v_n, y_v_n, z_v_n,
+                                       self.out_dir)
 
     # --- --- ---
 
@@ -2093,8 +2160,6 @@ class Read_Observables:
     #     # mdot1 = Physics.l_mdot_prescriptions(llm1, 10 * get_z(self.opal_used), l_mdot_rescription)
     #     # mdot2 = Physics.l_mdot_prescriptions(llm2, 10 * get_z(self.opal_used), l_mdot_rescription)
 
-
-
 class Read_Plot_file:
 
     # path = './data/'
@@ -2127,14 +2192,14 @@ class Read_Plot_file:
         self.t_max = plot_table[:i_stop,14]         # vvcmax
         self.rho_at_t_max = plot_table[:i_stop,15]  # gammax
         self.m_at_t_max = plot_table[:i_stop,16]    # wcrit
-        self.logg = plot_table[:i_stop,17]          # logg
-        self.rwindluca = plot_table[:i_stop,18]     # rwindluca/rsun
-        self.r_n_rsun = plot_table[:i_stop, 19]     # r(n)/rsun
-        self.teffluca = plot_table[:i_stop, 20]     # teffluca
-        self.Tn = plot_table[:i_stop, 21]           # T(N)
-        self.tauatR = plot_table[:i_stop, 22]       # tauatR
-        self.windform_23 = plot_table[:i_stop, 23]     # Abs(windmd)/(4.d0*PI*rwindluca**2*(v0+(vinf-v0)*(1.d0-R(N)/rwindluca))),
-        self.windform_24 = plot_table[:i_stop, 24]     # v0+(vinf-v0)*(1-R(N)/rwindluca)
+        # self.logg = plot_table[:i_stop,17]          # logg
+        # self.rwindluca = plot_table[:i_stop,18]     # rwindluca/rsun
+        # self.r_n_rsun = plot_table[:i_stop, 19]     # r(n)/rsun
+        # self.teffluca = np.log10(plot_table[:i_stop, 20])   # teffluca
+        # self.Tn = np.log10(plot_table[:i_stop, 21])         # T(N)
+        # self.tauatR = np.log10(plot_table[:i_stop, 22]   )  # tauatR
+        # self.windform_23 = plot_table[:i_stop, 23]          # Abs(windmd)/(4.d0*PI*rwindluca**2*(v0+(vinf-v0)*(1.d0-R(N)/rwindluca))),
+        # self.windform_24 = plot_table[:i_stop, 24]          # v0+(vinf-v0)*(1-R(N)/rwindluca)
     # def
 
     @classmethod
@@ -2802,7 +2867,8 @@ class Read_SM_data_file:
                 i = v_n
                 break
         if i == -1:
-            raise ValueError('\t__Error. Sound speed is not found in data. |get_sp|')
+            pass
+            # raise ValueError('\t__Error. Sound speed is not found in data. |get_sp|')
 
         return i
 

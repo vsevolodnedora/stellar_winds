@@ -219,12 +219,18 @@ class Combine:
 
             fname = self.plot_files[j].split('/')[-2] + self.plot_files[j].split('/')[-1]# get the last folder in which the .plot1 is
 
-            plt.plot(mod_x, mod_y, '-', color=color, label = '{}'.format("%.1f" % plfl.m_[0])+' M$_{\odot}$' )
+            time = plfl.time - plfl.time[0]
+            time_max = time.max()
+            plt.plot(mod_x, mod_y, '-', color=color, label = ('{}'.format("%.1f" % plfl.m_[0]) +
+                                                              ' M$_{\odot}$'+' {} Myr'.format( "%.2f" % (time_max
+                                                                                               / 1000000))) )
                      # label='{}, m:({}->{})'.format(fname, "%.1f" % plfl.m_[0], "%.1f" % plfl.m_[-1]) )
                      # str("%.2f" % plfl.m_[0]) + ' to ' + str("%.2f" % plfl.m_[-1]) + ' solar mass')
 
 
-            imx = Math.find_nearest_index( plfl.y_c, plfl.y_c.max() )
+            imx  = Math.find_nearest_index( plfl.y_c, plfl.y_c.max() )
+
+
             plt.plot(mod_x[imx], mod_y[imx], 'x')
             ax.annotate("%.4f" % plfl.y_c.max(), xy=(mod_x[imx], mod_y[imx]), textcoords='data')
 
@@ -236,7 +242,7 @@ class Combine:
                 x_p = mod_x[ind]
                 y_p = mod_y[ind]
                 plt.plot(x_p, y_p, '.', color='red')
-                ax.annotate("%.2f" % plfl.y_c[ind], xy=(x_p, y_p), textcoords='data')
+                ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % (time[ind]/time_max)) , xy=(x_p, y_p), textcoords='data')
 
         ax.grid(which='both')
         ax.grid(which='minor', alpha=0.2)
@@ -250,6 +256,39 @@ class Combine:
         plt.savefig(plot_name)
 
         plt.show()
+
+    def time_analysis(self, percent_of_lifetime, yc_steps = 10):
+
+
+        for j in range(len(self.plot_files)):
+
+            plfl = Read_Plot_file.from_file(self.plot_files[j])
+
+
+            imx = Math.find_nearest_index(plfl.y_c, plfl.y_c.max())
+            time = plfl.time - plfl.time[0]
+            time_max = time.max()/1000000
+
+            yc_vals = []
+            time_yc_vals = []
+            for i in range(yc_steps):
+                ind = Math.find_nearest_index(plfl.y_c, (i / yc_steps))
+                yc_vals = np.append(yc_vals, plfl.y_c[ind])
+                time_yc_vals = np.append(time_yc_vals, time[ind]/1000000)
+
+            time_yc_vals, yc_vals = Math.x_y_z_sort(time_yc_vals, yc_vals)
+
+            yc_t_req = interpolate.InterpolatedUnivariateSpline(time_yc_vals, yc_vals)(percent_of_lifetime*time_max/100)
+
+            plt.plot(time_yc_vals, yc_vals, '-', color='black')
+            plt.plot(percent_of_lifetime*time_max/100, yc_t_req, 'x', color='red', label='Yc:{} Time:{} Myr'
+                     .format("%.2f"%yc_t_req, "%.2f" % (percent_of_lifetime*time_max/100)))
+            plt.ylabel(Labels.lbls('Yc'))
+            plt.xlabel(Labels.lbls('time'))
+            plt.grid()
+            plt.legend()
+        plt.show()
+
 
     def xy_last_points(self, v_n1, v_n2, v_lbl1, num_pol_fit = True):
         fig = plt.figure()
@@ -745,6 +784,7 @@ class Combine:
 
         t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k',self.opal_used, self.output_dir)
 
+        # t_rho_k = Math.extrapolate(t_rho_k,None,None,10,None,500,2)
 
         t      = t_rho_k[0, 1:]  # x
         rho    = t_rho_k[1:, 0]  # y
@@ -769,8 +809,8 @@ class Combine:
             clas_table_anal = Table_Analyze(self.opal_used, 1000, False, self.output_dir, self.plot_dir)
 
             for i in range(len(self.sm_files)):  # self.nmdls
-                mdl_m = self.mdl[i].get_value('xm', 'sp')
-                mdl_l = self.mdl[i].get_value('l',  'sp')
+                mdl_m = self.mdl[i].get_cond_value('xm', 'sp')
+                mdl_l = self.mdl[i].get_cond_value('l',  'sp')
 
                 k_edd = Physics.edd_opacity(mdl_m, mdl_l)
 
@@ -786,9 +826,16 @@ class Combine:
         # ----------------------DENSITY----------------------------------------
 
         for i in range(len(self.sm_files)):
-            res = self.mdl[i].get_set_of_cols(['t', 'rho', var_for_label1, var_for_label2])
+            res  = self.mdl[i].get_set_of_cols(['t', 'rho', var_for_label1, var_for_label2])
+            xm   = self.mdl[i].get_cond_value('xm', 'sp')
+            mdot = self.mdl[i].get_cond_value('mdot', 'sp')
 
-            lbl = '{} , {}:{} , {}:{}'.format(i, var_for_label1, '%.2f' % res[0, 2], var_for_label2, '%.2f' % res[0, 3])
+            rho_sp = self.mdl[i].get_cond_value('rho', 'sp')
+            t_sp = self.mdl[i].get_cond_value('t', 'sp')
+
+            plt.plot(t_sp, rho_sp, 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+
+            lbl = '{} , {}:{} , {}:{}'.format(i, 'M', '%.2f' % xm, 'Mdot', '%.2f' % mdot)
             plt.plot(res[:, 0], res[:, 1], '-', color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
             plt.plot(res[-1, 0], res[-1, 1], 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
             plt.annotate(str('%.2f' % res[0, 2]), xy=(res[-1, 0], res[-1, 1]), textcoords='data')
@@ -1740,7 +1787,7 @@ class Crit_Mdot:
 
             plt.show()
 
-    def min_mdot_sp_set(self, l_or_lm, yc_vals, yc1, yc2):
+    def min_mdot_sp_set(self, l_or_lm, yc_vals, yc1, yc2, v_n_background):
         '''
         PLOTS the set of llm(mdot), with l->m relation assumed from yc_vals.
         :param l_or_lm:
@@ -1781,7 +1828,20 @@ class Crit_Mdot:
             ax.fill_between(mdot, llm, color="lightgray")
 
             '''=============================OBSERVABELS==============================='''
+
             Plots.plot_obs_mdot_llm(ax, self.obs, l_or_lm, yc_val, yc1, yc2)
+
+            '''=============================BACKGROUND================================'''
+            if v_n_background != None:
+                yc_mdot_llm_z = Save_Load_tables.load_3d_table(self.opal_used,
+                                                               'yc_mdot_{}_{}'.format(l_or_lm, v_n_background),
+                                                               'yc', 'mdot', l_or_lm, v_n_background, self.output_dir)
+
+                yc_ind = Physics.ind_of_yc(yc_mdot_llm_z[:, 0, 0], yc_val)
+                mdot_llm_z = yc_mdot_llm_z[yc_ind, :, :]
+
+                Plots.plot_color_background(ax, mdot_llm_z, 'mdot', l_or_lm, v_n_background, 'Yc:{}'.format(yc_val))
+
 
         plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
         plot_name = self.plot_dir + 'minMdot_l.pdf'

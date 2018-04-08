@@ -775,9 +775,12 @@ class Math:
             if x_grid.min() == x_arr.min() and x_arr.max() == x_grid.max():
                 return interpolate.InterpolatedUnivariateSpline(x_arr, y_arr)(x_grid)
             else:
-                new_x, new_y = Math.fit_plynomial(x_arr, y_arr, pol_order, depth, x_grid)
-                return new_y
-
+                if pol_order in [1,2,3,4]:
+                    new_x, new_y = Math.fit_plynomial(x_arr, y_arr, pol_order, depth, x_grid)
+                    return new_y
+                if pol_order == 'unispline':
+                    new_y = interpolate.UnivariateSpline(x_arr, y_arr)(x_grid)
+                    return new_y
 
         x_grid = np.mgrid[x1:x2:depth*1j]
         z_y = np.zeros(len(x_grid))
@@ -1441,13 +1444,20 @@ class Plots:
         pass
 
     @staticmethod
-    def plot_color_table(table, v_n_x, v_n_y, v_n_z, label = None):
+    def plot_color_table(table, v_n_x, v_n_y, v_n_z, opal_used, label = None):
 
         plt.figure()
+        ax = plt.subplot(111)
+
 
         if label != None:
-            print('TEXT')
-            plt.text(table[0, 1:].min(), table[1:, 0].min(), label, style='italic')
+            ax.text(0.8, 0.1, label, style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
+
+
+            # print('TEXT')
+            # plt.text(table[0, 1:].min(), table[1:, 0].min(), label, style='italic')
             # bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10}
             # plt.text(2, 0.65, r'$\cos(2 \pi t) \exp(-t)$')
 
@@ -1457,27 +1467,8 @@ class Plots:
         plt.ylabel(Labels.lbls(v_n_y))
         plt.xlabel(Labels.lbls(v_n_x))
 
-        levels = []
-        if v_n_z == 'r':
-            levels = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
-        if v_n_z == 'm':
-            levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
-        if v_n_z == 'mdot':
-            levels = [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5, -3.25, -3.]
-            # levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
-        if v_n_z == 'l':
-            levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
-        if v_n_z == 'lm':
-            levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35, 4.4, 4.45,
-                      4.5, 4.55, 4.6, 4.65, 4.7, 4.75, 4.8, 4.85, 4.9, 4.95, 5.0]
-        if v_n_z == 't':
-            levels = [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30,
-                      5.31, 5.32, 5.33, 5.34, 5.35, 5.36, 5.37, 5.38, 5.39, 5.40]
+        levels = Levels.get_levels(v_n_z, opal_used)
 
-        if v_n_z == 'k':   levels = [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
-        if v_n_z == 'rho': levels = [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
-        # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
-        #                            1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.10, 2.15, 2.20]
 
         contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
         plt.colorbar(contour_filled, label=Labels.lbls(v_n_z))
@@ -1492,12 +1483,12 @@ class Plots:
         plt.show()
 
     @staticmethod
-    def plot_color_background(ax, table, v_n_x, v_n_y, v_n_z, label = None):
+    def plot_color_background(ax, table, v_n_x, v_n_y, v_n_z, opal_used, label = None):
 
 
 
-        if label != None:
-            print('TEXT')
+        # if label != None:
+        #     print('TEXT')
 
             # ax.text(table[0, 1:].min(), table[1:, 0].min(), s=label)
             # bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10}
@@ -1509,26 +1500,8 @@ class Plots:
         ax.set_ylabel(Labels.lbls(v_n_y))
         ax.set_xlabel(Labels.lbls(v_n_x))
 
-        levels = []
-        if v_n_z == 'r':
-            levels = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
-        if v_n_z == 'm':
-            levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
-        if v_n_z == 'mdot':
-            levels = [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5, -3.25, -3.]
-            # levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
-        if v_n_z == 'l':
-            levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
-        if v_n_z == 'lm':
-            levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35, 4.4, 4.45,
-                      4.5, 4.55, 4.6, 4.65, 4.7, 4.75, 4.8, 4.85, 4.9, 4.95, 5.0]
-        if v_n_z == 't':
-            levels = [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
+        levels = Levels.get_levels(v_n_z, opal_used)
 
-        if v_n_z == 'k':   levels = [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
-        if v_n_z == 'rho': levels = [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
-        # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
-        #                            1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.10, 2.15, 2.20]
 
         contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
         clb = plt.colorbar(contour_filled)
@@ -1538,6 +1511,11 @@ class Plots:
         contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
         ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
         ax.set_title('SONIC HR DIAGRAM')
+
+        # print('Yc:{}'.format(yc_val))
+        ax.text(0.9, 0.9, label, style='italic',
+                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                verticalalignment='center', transform=ax.transAxes)
 
 
         # plt.ylabel(l_or_lm)
@@ -1581,15 +1559,16 @@ class Plots:
 
             plt.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
                      color=obs_cls.get_class_color(star_n), ls='')  # plot color dots)))
-            ax.annotate('{}'.format(int(star_n)), xy=(mdot_obs[i], llm_obs[i]),
-                        textcoords='data')  # plot numbers of stars
+            ax.annotate('{}'.format(int(star_n)), xy=(mdot_obs[i], llm_obs[i]),textcoords='data')  # plot numbers of stars
 
-            # from Phys_Math_Labels import Opt_Depth_Analythis
-            # v_inf = self.obs.get_num_par('v_inf', star_n)
+            # t = obs_cls.get_num_par('t', star_n)
+            # ax.annotate('{}'.format("%.2f" % t), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plot numbers of stars
+
+
+            # v_inf = obs_cls.get_num_par('v_inf', star_n)
             # tau_cl = Opt_Depth_Analythis(30, v_inf, 1., 1., mdot_obs[i], 0.20)
             # tau = tau_cl.anal_eq_b1(1.)
-            # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
-            #
+            # # # # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
             # ax.annotate('{} {}'.format(str(int(tau)), eta), xy=(mdot_obs[i], llm_obs[i]),
             #             textcoords='data')  # plot numbers of stars
 
@@ -1606,7 +1585,8 @@ class Plots:
         # f = np.poly1d(fit)
         # fit_x_coord = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):1000j]
 
-        x_coord, y_coord = Math.fit_plynomial(mdot_obs, llm_obs, 1, 100)
+        mdot_grid = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):100j]
+        x_coord, y_coord = Math.fit_plynomial(mdot_obs, llm_obs, 1, 100, mdot_grid)
         ax.plot(x_coord, y_coord, '-.', color='blue')
 
         min_mdot, max_mdot = obs_cls.get_min_max('mdot')
@@ -1621,8 +1601,12 @@ class Plots:
         # ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
 
         print('Yc:{}'.format(yc_val))
-        ax.text(min_mdot, max_llm, 'Yc:{}'.format(yc_val), style='italic',
-                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
+        ax.text(0.9, 0.9, 'Yc:{}'.format(yc_val), style='italic',
+                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                verticalalignment='center', transform=ax.transAxes)
+
+        # ax.text(min_mdot, max_llm, 'Yc:{}'.format(yc_val), style='italic',
+        #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
 
         # l_grid = np.mgrid[5.2:6.:100j]
         # ax.plot(Physics.l_mdot_prescriptions(l_grid, ), l_grid, '-.', color='orange', label='Nugis & Lamers 2000')
@@ -1668,9 +1652,11 @@ class Plots:
                         lm1, lm2 = obs_cls.get_star_lm_err(star_n, yc_val, yc1, yc2)
                         ts1, ts2 = obs_cls.get_star_ts_err(star_n, t_llm_mdot, yc_val, yc1, yc2, lim_t1, lim_t2)
 
-                        ax.add_patch(patches.Rectangle((xyz[0, i] - ts1, xyz[1, i] - lm1), ts2 + ts1, lm2 + lm1,
-                                                       alpha=.5, color=obs_cls.get_class_color(star_n)))
+                        # ax.add_patch(patches.Rectangle((xyz[0, i] - ts1, xyz[1, i] - lm1), ts2 + ts1, lm2 + lm1,
+                        #                                alpha=.3, color=obs_cls.get_class_color(star_n)))
 
+                        # ax.plot([xyz[0, i] - ts1, xyz[1, i] - lm1], [xyz[0, i]+ts2, xyz[1, i] + lm2], '-', color=obs_cls.get_class_color(star_n))
+                        ax.plot([xyz[0, i] - ts1, xyz[0, i]+ts2], [xyz[1, i] - lm1, xyz[1, i] + lm2], '-', color=obs_cls.get_class_color(star_n))
 
                         # ax.errorbar(xyz[0, i], xyz[1, i], yerr=[[lm1], [lm2]], fmt='--.', color = obs_cls.get_class_color(star_n))
                         # ax.errorbar(xyz[0, i], xyz[1, i], xerr=[[ts1], [ts2]], fmt='--.', color=obs_cls.get_class_color(star_n))
@@ -1682,8 +1668,8 @@ class Plots:
         fit_x_coord = np.mgrid[(x.min() - 1):(x.max() + 1):1000j]
         plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
 
-        ax.text(0.9, 0.9,'Yc:{}'.format(yc_val), style='italic',
-                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center', verticalalignment='center', transform = ax.transAxes)
+        # ax.text(0.9, 0.9,'Yc:{}'.format(yc_val), style='italic',
+        #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center', verticalalignment='center', transform = ax.transAxes)
 
         # ax.text(x.max(), y.max(), 'Yc:{}'.format(yc_val), style='italic',
         #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
@@ -1766,7 +1752,72 @@ class Opt_Depth_Analythis():
         plt.plot(r, k)
         plt.show()
 
+class Levels:
 
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_levels(v_n, opal_used):
+        if opal_used.split('/')[-1] == 'table8.data':
+
+            if v_n == 'r':
+                return [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
+            if v_n == 'm':
+                levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+            if v_n == 'mdot':
+                return [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5, -3.25, -3.]
+                # levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
+            if v_n == 'l':
+                return [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2]
+            if v_n == 'lm':
+                return [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35, 4.4, 4.45,
+                          4.5, 4.55, 4.6, 4.65, 4.7, 4.75, 4.8, 4.85, 4.9, 4.95, 5.0]
+            if v_n == 't':
+                return [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
+
+            if v_n == 'k':
+                return [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+            if v_n == 'rho':
+                return [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
+            # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
+            #                            1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.10, 2.15, 2.20]
+            if v_n == 'tau':
+                return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
+            if v_n == 'm':
+                return [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+
+        if opal_used.split('/')[-1] == 'table_x.data':
+
+            if v_n == 'r':
+                return [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1]
+            if v_n == 'm':
+                levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+            if v_n == 'mdot':
+                return [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5, -3.25, -3.]
+                # levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
+            if v_n == 'l':
+                return [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
+            if v_n == 'lm':
+                return [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35, 4.4, 4.45,
+                          4.5, 4.55, 4.6, 4.65, 4.7, 4.75, 4.8, 4.85, 4.9, 4.95, 5.0]
+            if v_n == 't':
+                return [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
+
+            if v_n == 'k':
+                return [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+            if v_n == 'rho':
+                return [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
+            # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
+            #                            1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.10, 2.15, 2.20]
+            if v_n == 'tau':
+                return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
+
+
+        if v_n == 'Ys' or v_n == 'ys':
+            return [0.5, 0.55, 0.6, 0.65, 0.7,0.75,0.8,0.85,0.9,0.95,1.0]
+
+        raise NameError('Levels are not found for <{}> Opal:{}'.format(v_n, opal_used))
 
 class Labels:
     def __init__(self):
@@ -1777,28 +1828,43 @@ class Labels:
         #solar
         if v_n == 'l':
             return r'$\log(L)$'#(L_{\odot})
+
         if v_n == 'r':
             return r'$R(R_{\odot})$'
+
         if v_n == 'm' or v_n == 'xm':
             return r'$M(M_{\odot})$'
 
         #sonic and general
         if v_n == 'v' or v_n == 'u':
             return 'v (km/s)'
+
         if v_n == 'rho':
             return r'$\log(\rho)$'
+
         if v_n == 'k' or v_n == 'kappa':
             return r'$\kappa$'
+
         if v_n == 't':
             return r'log(T)'
+
         if v_n == 'ts':
             return r'$\log(T_{s})$'
+
         if v_n == 'lm':
             return r'$\log(L/M)$'
+
         if v_n == 'mdot':
             return r'$\log(\dot{M}$)'
-        if v_n == 'Yc':
+
+        if v_n == 'Yc' or v_n == 'yc':
             return r'$^{4}$He$_{core}$'
+
+        if v_n == 'He4':
+            return r'$^{4}$He$_{surf}$'
+
+        if v_n == 'Ys' or v_n == 'ys':
+            return r'$^{4}$He$_{surf}$'
 
         if v_n == 't_eff' or v_n == 'T_eff':
             return r'$\log($T$_{eff})$'

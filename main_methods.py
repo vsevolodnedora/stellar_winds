@@ -73,7 +73,7 @@ class Combine:
             self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
 
         # self.nums = Num_Models(smfls, plotfls)
-        self.obs = Read_Observables(self.obs_files, self.m_l_relation)
+        self.obs = Read_Observables(self.obs_files, self.opal_used)
 
     # --- METHODS THAT DO NOT REQUIRE OPAL TABLES ---
     def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = True):
@@ -309,8 +309,10 @@ class Combine:
                      .format(v_n1, "%.2f" % x[i], v_n2, "%.2f" % y[i], v_lbl1, "%.2f" % lbl1))  # plot color dots)))
             ax.annotate(str("%.2f" % lbl1), xy=(x[i], y[i]), textcoords='data')
 
+        plt.plot(x,y,'--', color='black')
+
         if num_pol_fit:
-            fit = np.polyfit(x, y, 3)  # fit = set of coeddicients (highest first)
+            fit = np.polyfit(x, y, 4)  # fit = set of coeddicients (highest first)
             f = np.poly1d(fit)
 
             # print('Equation:', f.coefficients)
@@ -323,6 +325,7 @@ class Combine:
         plt.xlabel(Labels.lbls(v_n1))
         plt.ylabel(Labels.lbls(v_n2))
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plt.grid()
         plt.savefig(name)
 
         plt.show()
@@ -1787,7 +1790,7 @@ class Crit_Mdot:
 
             plt.show()
 
-    def min_mdot_sp_set(self, l_or_lm, yc_vals, yc1, yc2, v_n_background):
+    def min_mdot_sp_set(self, l_or_lm, yc_vals, yc1, yc2, v_n_background = None):
         '''
         PLOTS the set of llm(mdot), with l->m relation assumed from yc_vals.
         :param l_or_lm:
@@ -1843,7 +1846,7 @@ class Crit_Mdot:
                 Plots.plot_color_background(ax, mdot_llm_z, 'mdot', l_or_lm, v_n_background, 'Yc:{}'.format(yc_val))
 
 
-        plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+        plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
         plot_name = self.plot_dir + 'minMdot_l.pdf'
         plt.savefig(plot_name)
         plt.show()
@@ -2123,8 +2126,6 @@ class Sonic_HRD:
 
         # self.nums = Num_Models(smfls, plotfls)
         self.obs = Read_Observables(self.obs_files, self.opal_used)
-
-
 
     # def save_y_yc_z_relation_sp(self, x_v_n, y_v_n, z_v_n, save, plot=False, yc_prec=0.1, depth=100):
     #
@@ -2521,25 +2522,103 @@ class Sonic_HRD:
     #     plt.savefig(name)
     #     plt.show()
 
-
-
     def plot_sonic_hrd(self, yc_val, l_or_lm, yc1=None, yc2=None):
         yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_{}_mdot'.format(l_or_lm),
                                                        'yc', 't', l_or_lm, 'mdot')
-
 
         yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
         t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
 
         t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, None, 25, 500, 4)
 
-
         fig = plt.figure(figsize=plt.figaspect(0.8))
         ax = fig.add_subplot(111) # , projection='3d'
         Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', 'Yc:{}'.format(yc_val))
         Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
 
+        plt.gca().invert_xaxis()
         plt.show()
+
+    def plot_sonic_hrd_set(self, l_or_lm, yc_arr, yc1 = None, yc2 = None):
+
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_{}_mdot'.format(l_or_lm),
+                                                       'yc', 't', l_or_lm, 'mdot')
+        yc = yc_t_llm_mdot[:, 0, 0]
+
+        for i in range(len(yc_arr)):
+            if not yc_arr[i] in yc:
+                raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc_arr[i], yc))
+
+        yc_vals = np.sort(yc_arr, axis=0)
+
+        yc_n = len(yc_vals)
+
+        fig = plt.figure()
+        fig.subplots_adjust(hspace=0.2, wspace=0.3)
+
+        for i in range(1, yc_n+1):
+            print(i)
+            yc_val = yc_vals[i-1]
+
+            ind = Math.find_nearest_index(yc, yc_val)
+            t_llm_mdot = yc_t_llm_mdot[ind, :, :]
+            t_llm_mdot = Math.extrapolate(t_llm_mdot, 10, None, None, 25, 500, 'unispline') # 2 is better to linear part
+
+            if yc_n % 2 == 0: ax = fig.add_subplot(2, yc_n/2, i)
+            else:             ax = fig.add_subplot(1, yc_n, i)
+
+            # fig = plt.figure(figsize=plt.figaspect(0.8))
+            # ax = fig.add_subplot(111)  # , projection='3d'
+            Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used,'Yc:{}'.format(yc_val))
+            Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
+
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = self.plot_dir + 'sonic_HRD.pdf'
+        plt.savefig(plot_name)
+        plt.gca().invert_xaxis()
+        plt.show()
+
+    # def plot_sonic_hrd_const_r(self, l_or_lm, r, yc, yc1=None, yc2=None):
+    def plot_sonic_hrd_const_r(self, l_or_lm, rs, yc_arr, yc1 = None, yc2 = None):
+
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_{}_mdot_rs_{}'.format(l_or_lm,rs),
+                                                       'yc', 't', l_or_lm, 'mdot_rs_{}'.format(rs))
+        yc = yc_t_llm_mdot[:, 0, 0]
+
+        for i in range(len(yc_arr)):
+            if not yc_arr[i] in yc:
+                raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc_arr[i], yc))
+
+        yc_vals = np.sort(yc_arr, axis=0)
+
+        yc_n = len(yc_vals)
+
+        fig = plt.figure()
+        fig.subplots_adjust(hspace=0.2, wspace=0.3)
+
+        for i in range(1, yc_n+1):
+            print(i)
+            yc_val = yc_vals[i-1]
+
+            ind = Math.find_nearest_index(yc, yc_val)
+            t_llm_mdot = yc_t_llm_mdot[ind, :, :]
+            t_llm_mdot = Math.extrapolate(t_llm_mdot, 5, None, None, 25, 500, 'unispline') # 2 is better to linear part
+
+            if yc_n % 2 == 0: ax = fig.add_subplot(2, yc_n/2, i)
+            else:             ax = fig.add_subplot(1, yc_n, i)
+
+            # fig = plt.figure(figsize=plt.figaspect(0.8))
+            # ax = fig.add_subplot(111)  # , projection='3d'
+            Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used,'Yc:{} Rs:{}'.format(yc_val, rs))
+            Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
+
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = self.plot_dir + 'sonic_HRD_const_rs.pdf'
+        plt.savefig(plot_name)
+        plt.gca().invert_xaxis()
+        plt.show()
+
+
 
     def test(self):
         pass

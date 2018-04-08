@@ -198,13 +198,14 @@ class Criticals:
             r = self.smdl[i_model].get_col('r')[min_indx:]
             t = self.smdl[i_model].get_col('t')[min_indx:]
 
-            out_array = np.append(out_array, self.smdl[i_model].get_col('l')[-1])  # appending 'l'    __1__
-            out_array = np.append(out_array, self.smdl[i_model].get_col('xm')[-1])  # appending 'xm'   __2__
-            out_array = np.append(out_array, self.smdl[i_model].get_col('He4')[0])  # appending 'Yc'   __3__
+            out_array = np.append(out_array, self.smdl[i_model].get_col('l')[-1])    # appending 'l'    __1__
+            out_array = np.append(out_array, self.smdl[i_model].get_col('xm')[-1])   # appending 'xm'   __2__
+            out_array = np.append(out_array, self.smdl[i_model].get_col('He4')[0])   # appending 'Yc'   __3__
+            out_array = np.append(out_array, self.smdl[i_model].get_col('He4')[-1])  # appending 'Ys'   __4__
 
-            out_array = np.append(out_array, self.smdl[i_model].get_col('mdot')[-1])  # appending 'mdot' __4__
-            out_array = np.append(out_array, rs_p)  # appending 'mdot' __5__
-            out_array = np.append(out_array, ts_p)  # appending 'mdot' __6__
+            out_array = np.append(out_array, self.smdl[i_model].get_col('mdot')[-1])  # appending 'mdot' __5__
+            out_array = np.append(out_array, rs_p)  # appending 'mdot' __6__
+            out_array = np.append(out_array, ts_p)  # appending 'mdot' __7__
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -258,7 +259,7 @@ class Criticals:
         r_t_mdot_max = np.array([0., 0., 0.])
         # rs_ts_mdot   = np.array([0.,0.,0.])
 
-        out_array = np.zeros(len(add_sonic_vals) + 6) # where 6 are: [l, m, Yc, mdot, rs, ts] # always include
+        out_array = np.zeros(len(add_sonic_vals) + 7) # where 6 are: [l, m, Yc, Ys, mdot, rs, ts] # always include
 
         min_ind = 0
         max_ind = -1
@@ -691,17 +692,19 @@ class Criticals:
             plt.show()
 
 
-        l = out_array[-1,0]  # choosing the last mpdel to get l, m, yc as low mdot would affect these them the least
-        m = out_array[-1,1]
-        yc= out_array[-1,2]
+        l = out_array[-1, 0]  # choosing the last mpdel to get l, m, yc as low mdot would affect these them the least
+        m = out_array[-1, 1]
+        yc= out_array[-1, 2]
+        ys = out_array[-1, 3]
 
-        out_array[0,0] = l   # inserting l, m, yc into the first row of the output array
-        out_array[0,1] = m
-        out_array[0,2] = yc
+        out_array[0, 0] = l   # inserting l, m, yc into the first row of the output array
+        out_array[0, 1] = m
+        out_array[0, 2] = yc
+        out_array[0, 3] = ys
 
-        out_array[0,3] = crit_mdot_u # inserting criticals in the first row
-        out_array[0,4] = crit_r
-        out_array[0,5] = crit_t
+        out_array[0, 4] = crit_mdot_u # inserting criticals in the first row
+        out_array[0, 5] = crit_r
+        out_array[0, 6] = crit_t
 
 
         print(out_array)
@@ -709,8 +712,8 @@ class Criticals:
         print('\t__Note. Critical Values are found and written in the FIRST row (out of {}) in output file.'.
               format(len(self.num_files) + 1))
 
-        tablehead = '{}  {}     {}     {}  {} {}'\
-            .format('log(L)', 'M(Msun)', 'Yc', 'l(Mdot)', 'Rs(Rsun)', 'log(Ts)')
+        tablehead = '{}  {}     {}     {}      {}   {} {}'\
+            .format('log(L)', 'M(Msun)', 'Yc', 'Ys', 'l(Mdot)', 'Rs(Rsun)', 'log(Ts)')
 
 
         tmp = ''
@@ -1159,8 +1162,6 @@ class Criticals2:
 
         # for i in range(len(self.num_files)):
         #     print(self.smdl[i].get_col(v_n)[where])
-
-
 
     def sort_sp_smfiles(self, v_n, where = -1, descending=True):
         '''
@@ -1835,9 +1836,10 @@ class Criticals2:
             out_array = np.append(out_array, cls.get_col('mdot')[-1])  # appending 'mdot'   __4__
             out_array = np.append(out_array, rs_p)  # appending 'rs' __5__
             out_array = np.append(out_array, ts_p)  # appending 'ts' __6__
-            out_array = np.append(out_array, r_wind)# appending 'ts' __7__
-            out_array = np.append(out_array, t_eff) # appending 'ts' __8__
-            out_array = np.append(out_array, tau)   # appending 'ts' __9__
+            out_array = np.append(out_array, tau)   # appending 'ts' __7__
+            out_array = np.append(out_array, r_wind)# appending 'ts' __8__
+            out_array = np.append(out_array, t_eff) # appending 'ts' __9__
+
 
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -2009,7 +2011,7 @@ class Criticals2:
             plt.show()
 
         tablehead = '{} {} {} {} {} {} {} {} {}' \
-            .format('log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp', 'R_wind', 'T_eff', 'Tau')
+            .format('log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp', 'Tau', 'R_wind', 'T_eff')
 
         tmp = ''
         for v_n in add_sonic_vals:
@@ -2020,7 +2022,18 @@ class Criticals2:
         out_array = np.delete(out_array, 0, 0)
         return extended_head.split(' '), out_array
 
-    def combine_ga_sp(self, depth, add_sonic_vals, show_plot):
+    def combine_ga_sp(self, depth, add_sonic_vals, show_plot, way_to_interp_tau='Uni'):
+        '''
+        Interpolates tau to get the critical value, based on the mdot_critical, obtained from analysis of GA models,
+        returns the column of tau, where the first value is the critical value.
+        OUT: 2d table with Sonic point values from SONIC-BEC and critical values from NORMAL-BEC (+ tau)
+
+        :param depth:
+        :param add_sonic_vals:
+        :param show_plot:
+        :param way_to_interp_tau: IntUni, Uni, poly4, ploy3, poly2, poly1,
+        :return:
+        '''
         ga_head, ga_table = self.analyze_ga_sm_fls(depth, add_sonic_vals, show_plot)
         sp_head, sp_table = self.analyze_sp_sm_and_plot_fls(depth, add_sonic_vals, show_plot)
 
@@ -2081,7 +2094,7 @@ class Criticals2:
 
             return arr
 
-        def extrapolate_crit_val(v_n):
+        def extrapolate_crit_val(v_n, way_to_interp_tau):
 
             grid_mdot = ga_table[1:, 3] # mdot
             mdot = sp_table[:, 3]
@@ -2106,7 +2119,6 @@ class Criticals2:
 
 
 
-
             tau_grid1 = interpolate.InterpolatedUnivariateSpline(md_tau_sh[:,0], md_tau_sh[:,1])(grid_mdot)
             tau_cr1 = interpolate.InterpolatedUnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(ga_table[0, 3])
 
@@ -2126,8 +2138,6 @@ class Criticals2:
             tmp, tau_cr6 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 1, 0, np.array([ga_table[0, 3]]))
 
 
-
-
             plt.plot(md_tau_sh[:,0], md_tau_sh[:,1], '.', color = 'black')
             plt.plot(grid_mdot, tau_grid1, '--', color='gray', label = '{}_cr(IntUn)  = {}'.format(v_n, "%.2f" % ( tau_cr1)))
             plt.plot(grid_mdot, tau_grid2, '--', color='blue', label = '{}_cr(Univ) = {}'.format(v_n, "%.2f" % ( tau_cr2)))
@@ -2135,7 +2145,6 @@ class Criticals2:
             plt.plot(grid_mdot, tau_grid4, '--', color='red', label='{}_cr(ploy3) = {}'.format(v_n, "%.2f" % ( tau_cr4)))
             plt.plot(grid_mdot, tau_grid5, '--', color='cyan', label='{}_cr(ploy2) = {}'.format(v_n, "%.2f" % ( tau_cr5)))
             plt.plot(grid_mdot, tau_grid6, '--', color='black', label='{}_cr(ploy1) = {}'.format(v_n, "%.2f" % ( tau_cr6)))
-
 
             plt.axvline(x=ga_table[0, 3], label='Critical point')
             plt.legend()
@@ -2145,20 +2154,42 @@ class Criticals2:
             if show_plot:
                 plt.show()
 
-            return np.append(np.array([tau_cr2]), tau_grid1) # Returns the Univariant interpolation!
+
+
+            if way_to_interp_tau == 'IntUni':
+                return tau_cr1, np.append(np.array([tau_cr1]), tau_grid1)
+
+            if way_to_interp_tau == 'Uni':
+                return tau_cr2, np.append(np.array([tau_cr2]), tau_grid2)
+
+            if way_to_interp_tau == 'poly4':
+                return tau_cr3, np.append(np.array([tau_cr3]), tau_grid3)
+
+            if way_to_interp_tau == 'poly3':
+                return tau_cr4, np.append(np.array([tau_cr4]), tau_grid4)
+
+            if way_to_interp_tau == 'poly2':
+                return tau_cr5, np.append(np.array([tau_cr5]), tau_grid5)
+
+            if way_to_interp_tau == 'poly1':
+                return tau_cr6, np.append(np.array([tau_cr6]), tau_grid6)
+
+            raise NameError('Given way_to_interp_tau ({}) is not availabel. '
+                            'Use only: IntUni, Uni, poly4, poly3, poly2, poly1'.format(way_to_interp_tau))
 
 
 
 
         arr = compare_sonic_values()
 
+        print(way_to_interp_tau)
         # 'log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp', 'R_wind', 'T_eff', 'Tau'
-        tau = extrapolate_crit_val('Tau')
+        tau, tau_row = extrapolate_crit_val('Tau', way_to_interp_tau)
 
         ga_head.insert(6,'Tau')
         tmp = ''
         for i in range(len(ga_head)):
-            tmp = tmp+ga_head[i]
+            tmp = tmp + ' ' + ga_head[i]
 
         ga_head = tmp
         ga_table = np.insert(ga_table, 6, tau, 1)
@@ -2175,15 +2206,63 @@ class Criticals2:
 
         print('Results are saved in: {}'.format(self.out_dir + out_name))
 
-        np.savetxt(self.out_dir + out_name, ga_table, '%.5f', '  ', '\n', ga_head, '')
+        # np.savetxt(self.out_dir + out_name, ga_table, '%.5f', '  ', '\n', ga_head, '')
+
+        # sp_head.insert(6, 'Tau')
+
+        crit_row = np.zeros(len(sp_head))
+        crit_row[0] = ga_table[0,0] # L
+        crit_row[1] = ga_table[0,1] # M
+        crit_row[2] = ga_table[0,2] # Yc
+        crit_row[3] = ga_table[0,3] # mdot
+        crit_row[4] = ga_table[0,4] # R
+        crit_row[5] = ga_table[0,5] # T
+        crit_row[6] = tau
+
+        tmp = ''
+        for i in range(len(sp_head)):
+            tmp = tmp + ' ' + sp_head[i]
+        sp_head = tmp
+
+        sp_table_and_crit_row = np.insert(sp_table, 0, crit_row, 0)
+        np.savetxt(self.out_dir + out_name, sp_table_and_crit_row, '%.5f', '  ', '\n', sp_head, '')
 
 
         # print(arr)
 
         print('a')
-class Read_Tau:
 
-    def __init__(self, plotfiles, smfiles, out_dir, plot_dir, dirs_not_to_be_included):
+    # def extract_mdot_tau(self, mdot1, mdot2, mdot_step):
+    #
+    #     self.mdot_grid = np.flip(np.arange(mdot1, mdot2, mdot_step), 0)
+    #
+    #     arr = np.empty((len(self.mdot_grid), 3))
+    #     arr[:] = np.nan
+    #
+    #     for i in range(len(self.plt_files)):
+    #         l = self.plotmdl[i].l_[-1]
+    #         m = self.plotmdl[i].m_[-1]
+    #         mdot = self.plotmdl[i].mdot_[-1]
+    #         tau = self.plotmdl[i].tauatR[-1]
+    #
+    #         if not np.float("%.2f" % mdot) in list([np.float("%.2f" % mdot) for mdot in self.mdot_grid]):
+    #             raise ValueError('Value of mdot from .plot file ({}) is not in a grid \n {}'.format(mdot, self.mdot_grid))
+    #         else:
+    #             # j = np.where( list([np.float("%.2f" % mdot) for mdot in self.mdot_grid]) == np.float("%.2f" % mdot) )[0]
+    #             j = Math.find_nearest_index(np.array(list([np.float("%.2f" % mdot) for mdot in self.mdot_grid])), np.float("%.2f" % mdot))
+    #             arr[j, 0] = l
+    #             arr[j, 1] = m
+    #             arr[j, 2] = tau
+    #
+    #     arr_ = np.vstack((self.mdot_grid, arr.T)).T
+    #
+    #     return arr_
+
+class Tau_Map:
+
+    def __init__(self, mdot1, mdot2, mdot_step, plotfiles, smfiles, out_dir, plot_dir, dirs_not_to_be_included):
+
+        self.mdot_grid = np.flip(np.arange(mdot1, mdot2, mdot_step), 0)
 
         self.input_dirs = plotfiles[0].split('/')[:-1]
         # print(self.input_dirs)
@@ -2206,10 +2285,65 @@ class Read_Tau:
         for file in smfiles:
             self.smmdl.append(Read_SM_data_file.from_sm_data_file(file))
 
+
+    def extract_mdot_tau(self):
+        arr = np.empty((len(self.mdot_grid), 3))
+        arr[:] = np.nan
+
+        for i in range(len(self.plt_files)):
+            l = self.plotmdl[i].l_[-1]
+            m = self.plotmdl[i].m_[-1]
+            mdot = self.plotmdl[i].mdot_[-1]
+            tau = self.plotmdl[i].tauatR[-1]
+
+            if not np.float("%.2f" % mdot) in list([np.float("%.2f" % mdot) for mdot in self.mdot_grid]):
+                raise ValueError('Value of mdot from .plot file ({}) is not in a grid \n {}'.format(mdot, self.mdot_grid))
+            else:
+                # j = np.where( list([np.float("%.2f" % mdot) for mdot in self.mdot_grid]) == np.float("%.2f" % mdot) )[0]
+                j = Math.find_nearest_index(np.array(list([np.float("%.2f" % mdot) for mdot in self.mdot_grid])), np.float("%.2f" % mdot))
+                arr[j, 0] = l
+                arr[j, 1] = m
+                arr[j, 2] = tau
+
+        arr_ = np.vstack((self.mdot_grid, arr.T)).T
+
+        return arr_
+
+
+
+
+    def interpolation_tau(self):
+        # arr_ = np.flip(tmp, 0)
+
+        arr = self.extract_mdot_tau()
+        data = []
+        # arr = np.nan_to_num(arr)
+        for i in range(len(arr[:,0])):
+            if str(arr[i,-1]) != str(np.nan):
+
+                data = np.append(data, [arr[i,0], arr[i,-1]])
+
+        data_sort = np.sort(data.view('f8, f8'), order=['f0'], axis=0).view(np.float)
+        data_shape = np.reshape(data_sort, (np.int(len(data)/2), 2))
+
+        tau_int = interpolate.UnivariateSpline(data_shape[:,0], data_shape[:,-1])(self.mdot_grid)
+
+
+
+        plt.plot(self.mdot_grid, tau_int, '-', color='gray')
+        plt.plot(data_shape[:,0],data_shape[:,-1], '.', color='black')
+
+        plt.grid()
+        plt.show()
+        print('a')
+
     def tau(self):
 
         mdot_tau = []
         for i in range(len(self.plt_files)):
+
+
+
             t = self.plotmdl[i].t_eff[-1]
             mdot =  self.plotmdl[i].mdot_[-1]
             tau =  self.plotmdl[i].tauatR[-1]

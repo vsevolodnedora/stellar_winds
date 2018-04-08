@@ -89,9 +89,8 @@ gal_opal_file = '../data/opal/table8.data'
 tst_opal_file = ''
 
 
-smfiles = get_files(sse_locaton + 'ga_z0008/', ['10sm/y10/','12sm/y10/','14sm/y10/','16sm/y10/',
-                                                '18sm/y10/', '20sm/y10/', '22sm/y10/', '24sm/y10/',
-                                                '26sm/y10/', '28sm/y10/', '30sm/y10/'], ['4.50'], 'sm.data')
+smfiles = get_files(sse_locaton + 'ga_z002/', ['10sm/y4/', '15sm/y4/', '20sm/y4/', '25sm/y4/'], ['3.00'], 'sm.data')
+# smfiles = get_files(sse_locaton, ['zams_004/hecore/t1/'], [], 'sm.data')
 
 # lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
 # gal_ml_relation = '../data/output/l_yc_m_gal_wne.data'
@@ -231,7 +230,7 @@ def gray_analysis2(z, m_set, y_set, plot):
     for m in m_set:
         for y in y_set:
             root_name = 'ga_z' + z + '/'
-            folder_name = 't'+str(m)+'sm/y'+str(y)+'/'
+            folder_name = str(m)+'sm/y'+str(y)+'/'
             out_name = str(m) + 'z' + z + '/'
 
             print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
@@ -247,19 +246,21 @@ def gray_analysis2(z, m_set, y_set, plot):
 
             print('m:{}, y:{} DONE'.format(m,y))
 
-# gray_analysis2('0008', [30], [10], True)
+# gray_analysis('002', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], [10,9,8,7,6,5,4,3,2,1], False)
 
 '''======================================================TAU========================================================='''
 
-# from Sonic_Criticals import Criticals2
-# smfiles_ga = get_files(sse_locaton + 'ga_z0008/', ['t30sm/y10/'], [], 'sm.data')
-# smfiles_sp = get_files(sse_locaton + 'ga_z0008/', ['t30sm/y10/sp/'], [], 'sm.data')
-# plotfls_sp = get_files(sse_locaton +'ga_z0008/', ['t30sm/y10/sp/'], [], '.plot1')
+from Sonic_Criticals import Criticals2
+from Sonic_Criticals import Tau_Map
+# smfiles_ga = get_files(sse_locaton + 'ga_z0008/', ['30sm/y4/'], [], 'sm.data')
+# smfiles_sp = get_files(sse_locaton + 'ga_z0008/', ['30sm/y4/sp/'], [], 'sm.data')
+# plotfls_sp = get_files(sse_locaton +'ga_z0008/', ['30sm/y4/sp/'], [], '.plot1')
 # tau = Criticals2(smfiles_ga, smfiles_sp, plotfls_sp, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'], output_dir)
 # # tau = Criticals(smfiles_ga, output_dir, plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])
 # # tau.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'], True)
 # tau.combine_ga_sp(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'], True)
-# tau.tau()
+# tau = Tau_Map(-3.,-6.,-0.1, plotfls_sp, smfiles_sp, output_dir, plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])
+# tau.interpolation_tau()
 '''====================================================CREATION======================================================='''
 
 from FilesWork import Creation
@@ -274,16 +275,23 @@ from FilesWork import Creation
 # make.save_t_llm_mdot(1.,'lm','',1.34)
 
 from FilesWork import SP_file_work
-# spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
+spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
+spcls.save_min_max_lm()
 # spcls.separate_sp_by_fname()
-# spcls.save_y_yc_z_relation('lm', 'r', 'pol', True)
+# spcls.save_y_yc_z_relation('lm', 'Ys', 'pol', True)
+# spcls.save_y_yc_z_relation('lm', 'ys', 'int', True)           # ONLY for Ys
+
 # spcls.save_x_y_yc_evol_relation('m', 'lm')
-# spcls.plot_x_y_z_for_yc('mdot', 'lm', 'r', .5, 100, 'max', True)
-# spcls.save_x_y_z('mdot', 'lm', 'r', 100, 'max', True)
-# spcls.plot_t_llm_mdot_for_yc(0.5, 'l', 'min', True)
+
+# spcls.plot_x_y_z_for_yc('t', 'lm', 'r', 0.4, 100, 'min', True)
+# spcls.save_x_y_z('t', 'lm', 'r', 500, 'min', True)
+# spcls.plot_x_y_z('t', 'lm', 'r', [0.4], 100, 'min', True)
+
+# spcls.plot_t_llm_mdot_for_yc(1.0, 'lm', 'min', True)
 # spcls.save_t_llm_mdot('lm', 500, 'min', True)
-# spcls.plot_t_llm_mdot_for_yc_const_r(1., 1.,'lm', 'min', True)
+# spcls.plot_t_llm_mdot_for_yc_const_r(1., 1.5,'lm', 'min', True)
 # spcls.save_y_yc_z_relation_sp('t', 'lm', 'r', 'pol', True)
+# spcls.save_t_llm_mdot_const_r('lm', 2.0, 500, 'min', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
 
@@ -305,9 +313,9 @@ comb.plot_files = plotfiles
 
 # comb.sp_xy_last_points('m','l','mdot', 4)
 
-# comb.xy_profile('r','u','mdot','xm')
+# comb.xy_profile('r','He4','mdot','lm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
-# comb.xy_last_points('r','l','mdot',True)
+# comb.xy_last_points('lm','He4','mdot',False)
 # comb.hrd('lm')
 # comb.time_analysis(50)
 # comb.sp_get_r_lt_table2('rho', 'lm')
@@ -323,10 +331,10 @@ mdot = Crit_Mdot()
 mdot.sp_files = spfiles
 mdot.opal_used = opalfile
 mdot.obs_files = obsfile
-# mdot.set_files(5.18, None)
+mdot.set_files(5.18, None)
 
 # mdot.save_yc_llm_mdot_cr()
-# mdot.min_mdot_sp_set('lm', [0.4], 1.0, 0.1, None)
+# mdot.min_mdot_sp_set('lm', [0.6], 1.0, 0.1, None)
 
 # --- --- ---
 
@@ -338,9 +346,10 @@ shrd.sm_files = smfiles
 shrd.obs_files = obsfile
 shrd.plot_files = plotfiles
 
-# shrd.set_files(5.18, None)
+shrd.set_files(5.18, None)
 # shrd.plot_sonic_hrd(0.4, 'lm', 1.0, 0.1)
-
+# shrd.plot_sonic_hrd_set('lm', [1.0], 1.0, 0.1)
+# shrd.plot_sonic_hrd_const_r('lm', 1., [1.0], None, None)
 
 '''===========================================================3D====================================================='''
 #
@@ -503,7 +512,8 @@ shrd.plot_files = plotfiles
 # for i in range(1,11):
 #     print('cp y{}/fy{}.bin1 y{}/sp/;'.format(i,i,i))
 
-# for i in range(10,31):
+# for i in range(10,17):
 #     for j in range(1,11):
-#         print('cp ../ga_z0008/{}sm/y{}/fy{}.bin1 {}sm/y{}/sp'.format(i,j,j,  i,j))
-        # print('cp -r sp {}sm/y{}/sp/'.format(i,j))
+#         print('cp auto_ev_rd_bb.sh {}sm/y{}/'.format(i, j))
+        # print('cp ref_m.dat {}sm/y{}/'.format(i, j))
+        # print('cp -r sp {}sm/y{}/sp/'.format(i,j)) ref_m.dat

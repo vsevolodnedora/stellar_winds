@@ -801,6 +801,68 @@ class Math:
 
         return res
 
+    @staticmethod
+    def get_z_for_yc_and_y(yc_value, yc_y_z, y_inp, dimension=0):
+        '''
+        LOADS the table with given v_ns and extract the row with given Yc and interpolateds the y_value, for x_val given
+        :param yc_value:
+        :param y_v_n:
+        :param z_v_n:
+        :param y_inp:
+        :param opal_used:
+        :param dimension:
+        :return:
+        '''
+
+        # name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
+        # yc_x_y = Save_Load_tables.load_table(name, 'yc', y_v_n, z_v_n, opal_used)
+        x_arr = yc_y_z[1:, 0]
+        yc_arr = yc_y_z[0, 1:]
+        z2d = yc_y_z[1:, 1:]
+
+        print()
+
+        # yc_value = np.float("%.3f" % yc_value)
+
+        if yc_value in yc_arr:
+            ind_yc = Math.find_nearest_index(yc_arr, yc_value)
+        else:
+            raise ValueError(
+                'Table: {} Given yc_arr({}) is not in available yc_arr:({})'.format(name, yc_value, yc_arr))
+
+        if dimension == 0:
+            if y_inp >= x_arr.min() and y_inp <= x_arr.max():
+
+                y_arr = z2d[:, ind_yc]
+                # lm_arr = []
+                # for i in range(len(y_arr)):
+                #     lm_arr = np.append(lm_arr, [x_arr[i], y_arr[i]])
+                #
+                # lm_arr_sort = np.sort(lm_arr.view('float64, float64'), order=['f0'], axis=0).view(np.float)
+                # lm_arr_shaped = np.reshape(lm_arr_sort, (len(y_arr), 2))
+
+                f = interpolate.InterpolatedUnivariateSpline(x_arr, y_arr)
+                y = f(y_inp)
+                # print(log_l, y)
+                print('Yc: {}, y_row({} - {}), y_res: {}'.format(yc_value, y_arr.min(), y_arr.max(), y))
+                return y_inp, y
+            else:
+                raise ValueError(
+                    'Given l({}) not in available range of l:({}, {})'.format(y_inp, x_arr.min(), x_arr.max()))
+
+        if dimension == 1:
+            x_arr_f = []
+            y_arr_f = []
+            for i in range(len(y_inp)):
+                if y_inp[i] >= x_arr.min() and y_inp[i] <= x_arr.max():
+                    f = interpolate.UnivariateSpline(x_arr, z2d[:, ind_yc])
+                    y_arr_f = np.append(x_arr_f, f(y_inp[i]))
+                    x_arr_f = np.append(x_arr_f, y_inp[i])
+                # else:
+                #     raise ValueError(
+                #         'Given x({}, {}) not in available range of x:({}, {})'.format(x_inp[0], x_inp[-1], x_arr.min(), x_arr.max()))
+
+            return x_arr_f, y_arr_f
 
 class Physics:
     def __init__(self):
@@ -1548,13 +1610,23 @@ class Plots:
             llm_obs = np.append(llm_obs, obs_cls.get_num_par(l_or_lm, star_n, yc_val))
             eta = obs_cls.get_num_par('eta', star_n)
 
-            if yc1 != None and yc2 != None and l_or_lm == 'lm':
+            lm_err1, lm_err2 = obs_cls.get_star_lm_obs_err(star_n, yc_val)
+            mdot1, mdot2 = obs_cls.get_star_mdot_obs_err(star_n, yc_val)
 
-                llm1, llm2 = obs_cls.get_star_lm_err(star_n, yc_val, yc1, yc2)
+            mdot_coord = [mdot1, mdot2, mdot2, mdot1]
+            lm_coord = [lm_err1, lm_err1, lm_err2, lm_err2]
+            ax.add_patch(patches.Polygon(xy=list(zip(mdot_coord, lm_coord)), fill=True, alpha=.4,
+                                         color=obs_cls.get_class_color(star_n)))
+
+            if l_or_lm == 'lm':
+
+                llm1, llm2 = obs_cls.get_star_lm_err(star_n, yc_val)
                     # obs_cls.get_star_llm_evol_err(star_n, l_or_lm, yc_val, 1.0, 0.1)                  # ERRORS L/LM
                 # mdot1, mdot2 = obs_cls.get_star_mdot_err(star_n, l_or_lm, yc_val, 1.0, 0.1, 'nugis')           # ERRORS Mdot
+                mdot = obs_cls.get_num_par('mdot', star_n)
+                plt.plot([mdot, mdot], [llm1, llm2], '-', color=obs_cls.get_class_color(star_n))
 
-                ax.errorbar(mdot_obs[i], llm_obs[i], yerr=[[llm1],  [llm2]], fmt='--.', color=obs_cls.get_class_color(star_n))
+                # ax.errorbar(mdot_obs[i], llm_obs[i], yerr=[[llm1],  [llm2]], fmt='--.', color=obs_cls.get_class_color(star_n))
 
 
             plt.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
@@ -1648,15 +1720,47 @@ class Plots:
                                  label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
                         classes.append(obs_cls.get_star_class(star_n))
 
-                    if yc1 != None and yc2 != None and l_or_lm == 'lm':
-                        lm1, lm2 = obs_cls.get_star_lm_err(star_n, yc_val, yc1, yc2)
-                        ts1, ts2 = obs_cls.get_star_ts_err(star_n, t_llm_mdot, yc_val, yc1, yc2, lim_t1, lim_t2)
+                    # -------------------------OBSERVABLE ERRORS FOR L and Mdot ----------------------------------------
+                    lm_err1, lm_err2 = obs_cls.get_star_lm_obs_err(star_n, yc_val)
+                    ts1_b, ts2_b, ts1_t, ts2_t = obs_cls.get_star_ts_obs_err(star_n, t_llm_mdot, yc_val, lim_t1, lim_t2)
+                    ts_coord = [ts1_b, ts2_b, ts2_t, ts1_t]
+                    lm_coord = [lm_err1, lm_err1, lm_err2, lm_err2]
+                    ax.add_patch(patches.Polygon(xy=list(zip(ts_coord, lm_coord)), fill=True, alpha=.4,
+                                                 color=obs_cls.get_class_color(star_n)))
+                    # ax.plot([xyz[0, i], xyz[0, i]], [lm_err1, lm_err2], '-',
+                    #         color='gray')
+
+                    # ax.plot([ts_err1, ts_err2], [xyz[1, i], xyz[1, i]], '-',
+                    #         color='gray')
+                    # print('  :: Star {}. L/M:{}(+{}/-{}) ts:{}(+{}/-{})'
+                    #       .format(star_n, "%.2f" % xyz[0, i], "%.2f" % np.abs(xyz[0, i]-lm_err2), "%.2f" % np.abs(xyz[0, i]-lm_err2),
+                    #               "%.2f" % xyz[1, i],  "%.2f" % np.abs(xyz[1, i]-ts_err2), "%.2f" % np.abs(xyz[1, i]-ts_err1)))
+                    # ax.plot([ts_err1, ts_err2], [lm_err1, lm_err2], '-', color='gray')
+
+                    #
+
+
+
+                    if l_or_lm == 'lm':
+                        lm1, lm2 = obs_cls.get_star_lm_err(star_n, yc_val)
+                        ts1, ts2 = obs_cls.get_star_ts_err(star_n, t_llm_mdot, yc_val, lim_t1, lim_t2)
+                        ax.plot([ts1, ts2], [lm1, lm2], '-',
+                                color=obs_cls.get_class_color(star_n))
+
+                        # ax.plot([xyz[0, i], xyz[0, i]], [lm1, lm2], '-',
+                        #         color=obs_cls.get_class_color(star_n))
+                        # ax.plot([ts1, ts2], [xyz[1, i], xyz[1, i]], '-',
+                        #         color=obs_cls.get_class_color(star_n))
+
+
+                        # ax.add_patch(patches.Rectangle((xyz[0, i] - ts1, xyz[1, i] - lm1), ts2 + ts1, lm2 + lm1,
+                        #                                alpha=.3, color=obs_cls.get_class_color(star_n)))
 
                         # ax.add_patch(patches.Rectangle((xyz[0, i] - ts1, xyz[1, i] - lm1), ts2 + ts1, lm2 + lm1,
                         #                                alpha=.3, color=obs_cls.get_class_color(star_n)))
 
                         # ax.plot([xyz[0, i] - ts1, xyz[1, i] - lm1], [xyz[0, i]+ts2, xyz[1, i] + lm2], '-', color=obs_cls.get_class_color(star_n))
-                        ax.plot([xyz[0, i] - ts1, xyz[0, i]+ts2], [xyz[1, i] - lm1, xyz[1, i] + lm2], '-', color=obs_cls.get_class_color(star_n))
+                        # ax.plot([xyz[0, i] - ts1, xyz[0, i]+ts2], [xyz[1, i] - lm1, xyz[1, i] + lm2], '-', color=obs_cls.get_class_color(star_n))
 
                         # ax.errorbar(xyz[0, i], xyz[1, i], yerr=[[lm1], [lm2]], fmt='--.', color = obs_cls.get_class_color(star_n))
                         # ax.errorbar(xyz[0, i], xyz[1, i], xerr=[[ts1], [ts2]], fmt='--.', color=obs_cls.get_class_color(star_n))
@@ -1673,7 +1777,7 @@ class Plots:
 
         # ax.text(x.max(), y.max(), 'Yc:{}'.format(yc_val), style='italic',
         #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
-        ax.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
+        ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
 
 
 

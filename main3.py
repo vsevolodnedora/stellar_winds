@@ -193,7 +193,7 @@ def set_sp_oopal_obs(gal_or_lmc):
         obsfile = tst_obs_file
     # raise NameError('Wrong name: {}'.format(gal_or_lmc))
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-set_sp_oopal_obs('gal')
+set_sp_oopal_obs('lmc')
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''=================================================NEW=TABLE========================================================'''
 
@@ -246,7 +246,7 @@ def gray_analysis2(z, m_set, y_set, plot):
 
             print('m:{}, y:{} DONE'.format(m,y))
 
-# gray_analysis('002', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], [10,9,8,7,6,5,4,3,2,1], False)
+# gray_analysis('0008', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], [10,9,8,7,6,5,4,3,2,1], False)
 
 '''======================================================TAU========================================================='''
 
@@ -276,7 +276,7 @@ from FilesWork import Creation
 
 from FilesWork import SP_file_work
 spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
-spcls.save_min_max_lm()
+# spcls.save_min_max_lm('l')
 # spcls.separate_sp_by_fname()
 # spcls.save_y_yc_z_relation('lm', 'Ys', 'pol', True)
 # spcls.save_y_yc_z_relation('lm', 'ys', 'int', True)           # ONLY for Ys
@@ -307,7 +307,7 @@ comb.obs_files = obsfile
 comb.plot_files = plotfiles
 # comb.m_l_relation=0.993
 
-# comb.set_files()
+comb.set_files()
 
 
 
@@ -317,6 +317,7 @@ comb.plot_files = plotfiles
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', False)
 # comb.xy_last_points('lm','He4','mdot',False)
 # comb.hrd('lm')
+# comb.mdot_check()
 # comb.time_analysis(50)
 # comb.sp_get_r_lt_table2('rho', 'lm')
 # comb.save_yc_llm_mdot_cr('l')
@@ -334,7 +335,7 @@ mdot.obs_files = obsfile
 mdot.set_files(5.18, None)
 
 # mdot.save_yc_llm_mdot_cr()
-# mdot.min_mdot_sp_set('lm', [0.6], 1.0, 0.1, None)
+mdot.min_mdot_sp_set('lm', [1.0], None, None, None)
 
 # --- --- ---
 
@@ -347,7 +348,7 @@ shrd.obs_files = obsfile
 shrd.plot_files = plotfiles
 
 shrd.set_files(5.18, None)
-# shrd.plot_sonic_hrd(0.4, 'lm', 1.0, 0.1)
+# shrd.plot_sonic_hrd(1.0, 'lm', None, None)
 # shrd.plot_sonic_hrd_set('lm', [1.0], 1.0, 0.1)
 # shrd.plot_sonic_hrd_const_r('lm', 1., [1.0], None, None)
 

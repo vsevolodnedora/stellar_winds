@@ -179,6 +179,33 @@ class Combine:
         plt.savefig(plot_name)
         plt.show()
 
+    def mdot_check(self):
+        array = []
+        for j in range(len(self.plot_files)):
+            plfl = Read_Plot_file.from_file(self.plot_files[j])
+
+            imx = Math.find_nearest_index(plfl.y_c, plfl.y_c.max())
+
+            for i in range(10):
+                ind = Math.find_nearest_index(plfl.y_c, (i / 10))
+                yc = plfl.y_c[ind]
+                mdot = plfl.mdot_[ind]
+                l = plfl.l_[ind]
+
+                mdot_prescr = Physics.l_mdot_prescriptions(l, 10**0.02, 'yoon')
+
+                in_mass = self.plot_files[j].split('/')[-1].split('ev')[0]
+
+                array = np.append(array, [in_mass, yc, l, mdot, mdot_prescr, np.abs(mdot-mdot_prescr)])
+                print('\t__Mdots: Model: {} Mdot {}, presc: {}, diff: {}'
+                      .format(self.plot_files[j].split('/')[-1], mdot, mdot_prescr, np.abs(mdot-mdot_prescr)))
+
+                print('a')
+
+        # array_sort = np.sort(array.view('i8, f8, f8, f8, f8, f8'), order=['f0'], axis=0).view(np.float)
+        array_shaped = np.reshape(array, (np.int(len(array)/6), 6))
+        print(array_shaped)
+
     def hrd(self, l_or_lm):
 
         fig, ax = plt.subplots(1, 1)
@@ -212,7 +239,8 @@ class Combine:
             if l_or_lm == 'l':
                 mod_y = plfl.l_
             else:
-                mod_y = plfl.l_/plfl.m_
+                mod_y = Physics.loglm(plfl.l_, plfl.m_)
+
 
 
             color = 'C' + str(col_num[j])
@@ -242,7 +270,9 @@ class Combine:
                 x_p = mod_x[ind]
                 y_p = mod_y[ind]
                 plt.plot(x_p, y_p, '.', color='red')
-                ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % (time[ind]/time_max)) , xy=(x_p, y_p), textcoords='data')
+                ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % plfl.mdot_[ind]), xy=(x_p, y_p),
+                            textcoords='data')
+                # ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % (time[ind]/time_max)) , xy=(x_p, y_p), textcoords='data')
 
         ax.grid(which='both')
         ax.grid(which='minor', alpha=0.2)
@@ -1549,6 +1579,9 @@ class Crit_Mdot:
         # self.nums = Num_Models(smfls, plotfls)
         self.obs = Read_Observables(self.obs_files, self.opal_used)
 
+
+
+
     def save_yc_llm_mdot_cr(self, depth = 100, plot = True):
 
         def interp(x, y, x_grid):
@@ -2529,11 +2562,11 @@ class Sonic_HRD:
         yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
         t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
 
-        t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, None, 25, 500, 4)
+        t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, 10, 5, 500, 4)
 
         fig = plt.figure(figsize=plt.figaspect(0.8))
         ax = fig.add_subplot(111) # , projection='3d'
-        Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', 'Yc:{}'.format(yc_val))
+        Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used, 'Yc:{}'.format(yc_val))
         Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
 
         plt.gca().invert_xaxis()
@@ -2602,7 +2635,7 @@ class Sonic_HRD:
 
             ind = Math.find_nearest_index(yc, yc_val)
             t_llm_mdot = yc_t_llm_mdot[ind, :, :]
-            t_llm_mdot = Math.extrapolate(t_llm_mdot, 5, None, None, 25, 500, 'unispline') # 2 is better to linear part
+            t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, 10, 5, 500, 'unispline') # 2 is better to linear part
 
             if yc_n % 2 == 0: ax = fig.add_subplot(2, yc_n/2, i)
             else:             ax = fig.add_subplot(1, yc_n, i)

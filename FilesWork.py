@@ -1244,19 +1244,25 @@ class SP_file_work():
         #                                l_or_lm, 'mdot_r_{}'.format(rs), self.out_dir)
 
 
-    def save_min_max_lm(self):
+    def save_min_max_lm(self, v_n):
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
 
         ys_zams = cls[-1][0].get_crit_value('ys')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
 
         yc_lm_min_max = np.zeros(3)
         for i in range(len(yc)):
             lm_tmp = []
             ys_tmp = []
             for c in cls[i]:
-                lm_tmp = np.append(lm_tmp, c.get_crit_value('lm'))
+                lm_tmp = np.append(lm_tmp, c.get_crit_value(v_n))
                 ys_tmp = np.append(ys_tmp, c.get_crit_value('ys'))
             lm_tmp, ys_tmp = Math.x_y_z_sort(lm_tmp, ys_tmp)
+            tmp = np.zeros(len(lm_tmp))
+            tmp.fill(yc[i])
+            ax.plot(tmp, lm_tmp, '.', color='gray')
 
             lm_tmp2 = []
             for j in range(len(cls[i])):
@@ -1267,7 +1273,7 @@ class SP_file_work():
                 raise ValueError('No values with zams Ys  found for Yc: {}'.format(yc[i]))
             lm_max = lm_tmp2[-1]
             lm_min = lm_tmp2[0]
-            print(i)
+            # print(i)
             yc_lm_min_max = np.vstack((yc_lm_min_max, [yc[i], lm_min, lm_max]))
 
         # yc_lm_min_max = np.reshape(yc_lm_min_max, (len(yc), 3))
@@ -1275,7 +1281,17 @@ class SP_file_work():
         # yc_lm_min_max = np.insert(yc_lm_min_max,0,  np.zeros(len(yc_lm_min_max[0, 1:])), 1)
         yc_lm_min_max = yc_lm_min_max.T
 
-        Save_Load_tables.save_table(yc_lm_min_max, self.opal_used,'yc_nan_lmlim', 'yc', 'nan', 'lmlim')
+        ax.plot(yc_lm_min_max[0,1:], yc_lm_min_max[1,1:], '-', color='blue', label='WNE region')
+        ax.plot(yc_lm_min_max[0, 1:], yc_lm_min_max[2, 1:], '-', color='blue')
+        ax.fill_between(yc_lm_min_max[0,1:], yc_lm_min_max[1,1:], yc_lm_min_max[2, 1:], color='blue',
+                         alpha='.3')
+        ax.set_xlabel(Labels.lbls('yc'))
+        ax.set_ylabel(Labels.lbls(v_n))
+        ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        ax.grid()
+        plt.show()
+
+        Save_Load_tables.save_table(yc_lm_min_max, self.opal_used,'yc_nan_{}lim'.format(v_n), 'yc', 'nan', '{}lim'.format(v_n))
 
             # lm_arr = np.append(lm_arr, cl.get_crit_value('lm'))
             # ys_arr = np.append(ys_arr, cl.get_crit_value('ys'))
@@ -1885,7 +1901,7 @@ class SP_file_work():
 
 class Read_Observables:
 
-    def __init__(self, observ_name, opal_used, clump_used=4, clump_req=4):
+    def __init__(self, observ_name, opal_used, load_relations = True, clump_used=4, clump_req=4):
         '''
 
         :param observ_name:
@@ -1929,6 +1945,11 @@ class Read_Observables:
         self.set_num_str_tables()
         # print(self.get_table_num_par('l', 110))
         # print(self.get_star_class(110))
+
+        if load_relations:
+            self.yc_l_lm = Save_Load_tables.load_table('yc_l_lm', 'yc', 'l', 'lm', self.opal_used)
+            self.yc_nan_lmlim = Save_Load_tables.load_table('yc_nan_lmlim', 'yc', 'nan', 'lmlim', self.opal_used)
+
 
     def set_num_str_tables(self):
 
@@ -1996,6 +2017,104 @@ class Read_Observables:
         return value
 
     #---------------------------------------------PUBLIC FUNCTIONS---------------------------------------
+    def l_lm_for_errs(self, l, star_n, yc_val):
+        '''
+        Changes the L of the star to the maximmum available for plotting.
+        :param v_n:
+        :param star_n:
+        :param yc_val:
+        :return:
+        '''
+
+        if l < self.yc_l_lm[1:, 0].min(): l = self.yc_l_lm[1:, 0].min()
+        if l > self.yc_l_lm[1:, 0].max(): l = self.yc_l_lm[1:, 0].max()
+        # print('\__ Yc: {}'.format(yc_val))
+
+        if yc_val >= 0 and yc_val <= 1.:
+            l, lm = Math.get_z_for_yc_and_y(yc_val, self.yc_l_lm, l, 0)
+            yc_ind = Math.find_nearest_index(self.yc_l_lm, yc_val)
+            lm_lim = self.yc_nan_lmlim[1:, yc_ind]
+            if yc_val != 1.0 and (lm < lm_lim[0] or lm > lm_lim[1]):
+                raise ValueError('For Yc:{}, star:{} L/M limits are: {}, {}, given lm {}'
+                                 .format(yc_val, star_n, "%.2f" % lm_lim[0], "%.2f" % lm_lim[1], "%.2f" % lm))
+
+            # l, lm = SP_file_work.yc_x__to__y__sp(yc_val, 'l', 'lm', l, self.opal_used, 0)
+            return lm
+
+        if yc_val == -1 or yc_val == 'langer':
+            return np.log10(10 ** l / 10 ** Physics.l_to_m_langer(l))
+
+        if yc_val == None or yc_val == 'hamman':
+            m = self.get_num_par_from_table('m', star_n)
+            return np.log10(10 ** l / m)
+    def get_star_lm_obs_err(self,star_n, yc_assumed):
+        l_err = None
+        if self.opal_used.split('/')[-1] == 'table8.data':
+            l_err = 0.2
+        if self.opal_used.split('/')[-1] == 'table_x.data':
+            l_err = 0.1
+
+
+        l = self.get_num_par('l', star_n, yc_assumed)
+        lm1 = self.l_lm_for_errs(l - l_err, star_n, yc_assumed)
+        lm2 = self.l_lm_for_errs(l + l_err, star_n, yc_assumed)
+
+        return lm1, lm2
+
+    def lm_mdot_to_ts_errs(self, lm, mdot, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2):
+        mdot_arr = t_llm_mdot[1:, 1:]
+        i = Math.find_nearest_index(t_llm_mdot[1:, 0], lm)
+        if t_llm_mdot[i, 1:].min() > mdot:
+
+            mdot = mdot_arr[i,:].min()
+
+        xyz = Physics.model_yz_to_xyz(t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lm, mdot, star_n, lim_t1, lim_t2)
+
+        if xyz.any():
+            if len(xyz[0, :]) > 1:
+                raise ValueError('Multiple coordinates for star: {} | Yc: {}'.format(star_n, yc_assumed))
+            else:
+                ts = xyz[0, 0] # xyz[0, :] ALL X coordinates
+                return ts
+
+        else:
+            raise ValueError('No solutions found star: {}, mdot: {}, mdot array:({}, {})'.format(star_n, mdot, mdot_arr[i, :].min(), mdot_arr[i, :].max()))
+    def get_star_mdot_obs_err(self, star_n, yc_assumed):
+        mdot_err = None
+        if self.opal_used.split('/')[-1] == 'table8.data':
+            mdot_err = 0.15
+        if self.opal_used.split('/')[-1] == 'table_x.data':
+            mdot_err = 0.15
+        if mdot_err == None: raise NameError('Opal_table is not recognised. '
+                                             'Expected: table8.data or table_x.data, Given: {}'.format(self.opal_used))
+        mdot = self.get_num_par('mdot', star_n, yc_assumed)
+        return mdot - mdot_err, mdot + mdot_err
+
+
+    def get_star_ts_obs_err(self, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2):
+
+        mdot_err = None
+        if self.opal_used.split('/')[-1] == 'table8.data':
+            mdot_err = 0.15
+        if self.opal_used.split('/')[-1] == 'table_x.data':
+            mdot_err = 0.15
+        if mdot_err == None: raise NameError('Opal_table is not recognised. '
+                                             'Expected: table8.data or table_x.data, Given: {}'.format(self.opal_used))
+
+        lm1, lm2 = self.get_star_lm_obs_err(star_n, yc_assumed)
+        # lm = self.get_num_par('lm', star_n, yc_assumed)
+        # mdot = self.get_num_par('mdot', star_n, yc_assumed)
+
+        mdot1, mdot2 = self.get_star_mdot_obs_err(star_n, yc_assumed)
+
+        ts1_b = self.lm_mdot_to_ts_errs(lm1, mdot1, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2)
+        ts2_b = self.lm_mdot_to_ts_errs(lm1, mdot2, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2)
+        ts1_t = self.lm_mdot_to_ts_errs(lm2, mdot1, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2)
+        ts2_t = self.lm_mdot_to_ts_errs(lm2, mdot2, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2)
+
+        return np.float(ts1_b), np.float(ts2_b), np.float(ts1_t), np.float(ts2_t)
+    # --------------------------------------------
+
     def get_num_par(self, v_n, star_n, yc_val = None):
         '''
 
@@ -2009,7 +2128,14 @@ class Read_Observables:
             # print('\__ Yc: {}'.format(yc_val))
             l = self.get_num_par_from_table('l', star_n)
             if yc_val >= 0 and yc_val <= 1.:
-                l, lm = SP_file_work.yc_x__to__y__sp(yc_val, 'l', 'lm', l, self.opal_used, 0)
+                l, lm = Math.get_z_for_yc_and_y(yc_val, self.yc_l_lm, l, 0)
+                yc_ind = Math.find_nearest_index(self.yc_l_lm, yc_val)
+                lm_lim = self.yc_nan_lmlim[1:, yc_ind]
+                if lm < lm_lim[0] or lm > lm_lim[1]:
+                    raise ValueError('For Yc:{}, star:{} L/M limits are: {}, {}, given lm {}'
+                                     .format(yc_val, star_n , "%.2f" % lm_lim[0], "%.2f" % lm_lim[1], "%.2f" % lm))
+
+                # l, lm = SP_file_work.yc_x__to__y__sp(yc_val, 'l', 'lm', l, self.opal_used, 0)
                 return lm
 
             if yc_val == -1 or yc_val == 'langer':
@@ -2151,9 +2277,32 @@ class Read_Observables:
     #                                                     "%.2f" % np.abs(lm - lm2)))
     #
     #     return np.abs(lm - lm1), np.abs(lm - lm2)
+    # ------------------------------------------- EVOLUTION ERRORS
+    def get_min_yc_for_lm(self, star_n):
+        '''
+        Get min lm for which the surface comp. hasn't changed. (checling the (yc, lm) point in yc_nan_lmlim file
+        :param star_n:
+        :return:
+        '''
+        yc = self.yc_nan_lmlim[0, 1:]
+        i = 0
+        yc1 = yc[i]  # assyming the lowest yc (highly likely sorface change, and therefore change in yc1)
 
+        found = True
+        while found:
 
-    def get_star_lm_err(self, star_n, yc_assumed, yc1, yc2):
+            l = self.get_num_par('l', star_n, yc1)
+            l, lm_tmp = Math.get_z_for_yc_and_y(yc[i], self.yc_l_lm, l, 0) # getting lm without chacking if lm is within limits, at it is for cycle.
+
+            lm_lim = self.yc_nan_lmlim[1:, 1:]
+            lm_lim1 = lm_lim[0, i]
+            lm_lim2 = lm_lim[1, i]
+            if lm_tmp < lm_lim1 or lm_tmp > lm_lim2:
+                i = i + 1
+            else:
+                return yc[i]
+
+    def get_star_lm_err(self, star_n, yc_assumed):
         '''
         Assuming the same l, but different L -> L/M relations for different Yc, retruns (lm-lm1), (lm-lm2)
         :param star_n:
@@ -2162,25 +2311,23 @@ class Read_Observables:
         :param yc2: END  ( or Low  Yc)
         :return:
         '''
-        if yc1 <= yc2:
-            raise ValueError('yc1({}) <= yc2({}) (should be > )'.format(yc1, yc2))
+        yc = self.yc_nan_lmlim[0, 1:]
+        yc2 = yc[-1]                # Max yc is always 1.0, - ZAMS (no surface change expected)
+        yc1 = self.get_min_yc_for_lm(star_n)
 
         lm1 = self.get_num_par('lm', star_n, yc1) # Getting lm at different Yc (assiming the same l, but
         lm2 = self.get_num_par('lm', star_n, yc2)
         lm  = self.get_num_par('lm', star_n, yc_assumed)
 
-        print('\t__STAR: {} | {} : {} (+{} -{})'.format(star_n, 'L/M', lm, "%.2f" % np.abs(lm - lm1),
-                                                        "%.2f" % np.abs(lm - lm2)))
+        print('\t__STAR: {} | Evol. Err. L/M for Yc ({} - {}) L/M: ({}, {})'.format(star_n, yc1, yc2, lm1, lm2))
 
-        return np.abs(lm - lm1), np.abs(lm - lm2)
+        return lm1, lm2
 
+    def get_star_ts_err(self, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2):
 
-
-    def get_star_ts_err(self, star_n, t_llm_mdot, yc_assumed, yc1, yc2, lim_t1, lim_t2):
-
-        if yc1 <= yc2:
-            raise ValueError('yc1({}) <= yc2({}) (should be > )'.format(yc1, yc2))
-
+        # if yc1 <= yc2:
+        #     raise ValueError('yc1({}) <= yc2({}) (should be > )'.format(yc1, yc2))
+        yc = self.yc_nan_lmlim[0, 1:]
         # lm1 = self.get_num_par('lm', star_n, yc1)  # Getting lm at different Yc (assiming the same l, but
         # lm2 = self.get_num_par('lm', star_n, yc2)
         # lm  = self.get_num_par('lm', star_n, yc_assumed)
@@ -2198,6 +2345,7 @@ class Read_Observables:
                 ts = xyz[0, 0] # xyz[0, :] ALL X coordinates
 
         ts1 = 0
+        yc1 = self.get_min_yc_for_lm(star_n)
         xyz1 = self.get_xyz_from_yz(yc1, star_n, 'lm', 'mdot',
                                    t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lim_t1, lim_t2)
         if xyz1.any():
@@ -2207,6 +2355,7 @@ class Read_Observables:
                 ts1 = xyz1[0, 0]  # xyz[0, :] ALL X coordinates
 
         ts2 = 0
+        yc2 = yc[-1]
         xyz2 = self.get_xyz_from_yz(yc2, star_n, 'lm', 'mdot',
                                    t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lim_t1, lim_t2)
         if xyz2.any():
@@ -2218,7 +2367,7 @@ class Read_Observables:
         print('\t__STAR: {} | {} : {} (+{} -{})'.format(star_n, 'Ts', ts, "%.2f" % np.abs(ts - ts1),
                                                         "%.2f" % np.abs(ts - ts2)))
 
-        return np.abs(ts - ts1), np.abs(ts - ts2)
+        return ts1, ts2
 
     # def get_star_lm_evol_err(self, star_n, l_or_lm, yc_assumed, yc1, yc2):
     #
@@ -2326,14 +2475,14 @@ class Read_Plot_file:
         self.t_max = plot_table[:i_stop,14]         # vvcmax
         self.rho_at_t_max = plot_table[:i_stop,15]  # gammax
         self.m_at_t_max = plot_table[:i_stop,16]    # wcrit
-        self.logg = plot_table[:i_stop,17]          # logg
-        self.rwindluca = plot_table[:i_stop,18]     # rwindluca/rsun
-        self.r_n_rsun = plot_table[:i_stop, 19]     # r(n)/rsun
-        self.teffluca = np.log10(plot_table[:i_stop, 20])   # teffluca
-        self.Tn = np.log10(plot_table[:i_stop, 21])         # T(N)
-        self.tauatR = np.log10(plot_table[:i_stop, 22]   )  # tauatR
-        self.windform_23 = plot_table[:i_stop, 23]          # Abs(windmd)/(4.d0*PI*rwindluca**2*(v0+(vinf-v0)*(1.d0-R(N)/rwindluca))),
-        self.windform_24 = plot_table[:i_stop, 24]          # v0+(vinf-v0)*(1-R(N)/rwindluca)
+        # self.logg = plot_table[:i_stop,17]          # logg
+        # self.rwindluca = plot_table[:i_stop,18]     # rwindluca/rsun
+        # self.r_n_rsun = plot_table[:i_stop, 19]     # r(n)/rsun
+        # self.teffluca = np.log10(plot_table[:i_stop, 20])   # teffluca
+        # self.Tn = np.log10(plot_table[:i_stop, 21])         # T(N)
+        # self.tauatR = np.log10(plot_table[:i_stop, 22]   )  # tauatR
+        # self.windform_23 = plot_table[:i_stop, 23]          # Abs(windmd)/(4.d0*PI*rwindluca**2*(v0+(vinf-v0)*(1.d0-R(N)/rwindluca))),
+        # self.windform_24 = plot_table[:i_stop, 24]          # v0+(vinf-v0)*(1-R(N)/rwindluca)
     # def
 
     @classmethod

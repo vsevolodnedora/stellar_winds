@@ -31,6 +31,8 @@ from Phys_Math_Labels import Physics
 from Phys_Math_Labels import Constants
 from Phys_Math_Labels import Labels
 from Phys_Math_Labels import Plots
+from Phys_Math_Labels import Get_Z
+
 
 from OPAL import Read_Table
 from OPAL import Row_Analyze
@@ -44,6 +46,7 @@ from FilesWork import Read_SM_data_file
 from FilesWork import Read_SP_data_file
 from FilesWork import Save_Load_tables
 from FilesWork import SP_file_work
+from FilesWork import Opacity_Bump
 
 from PhysPlots import PhysPlots
 #-----------------------------------------------------------------------------------------------------------------------
@@ -319,7 +322,6 @@ class Combine:
             plt.legend()
         plt.show()
 
-
     def xy_last_points(self, v_n1, v_n2, v_lbl1, num_pol_fit = True):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -467,6 +469,26 @@ class Combine:
         plt.grid()
 
         plt.show()
+
+    def table(self):
+        print(
+            '| Mdot'
+            '\t| Mass'
+            '\t| R/Rs '
+            '\t| L/Ls'
+            '\t| kappa'
+            '\t| l(Rho)'
+            '\t| Temp'
+            '\t| mfp  '
+            '\t| vel '
+            '\t| gamma'
+            '\t| tpar '
+            '\t| HP '
+            '\t| tau '
+            '\t|')
+        for mdl in self.mdl:
+
+            mdl.get_par_table('l')
 
     # --- METHODS THAT DO REQUIRE OPAL TABLES ---
     def sp_get_r_lt_table2(self, v_n, l_or_lm, plot=True, ref_t_llm_vrho=np.empty([])):
@@ -810,30 +832,37 @@ class Combine:
 
         return t_l_or_lm_r, t_llm_vrho
 
-    def plot_t_rho_kappa(self, var_for_label1, var_for_label2,  n_int_edd = 1000, plot_edd = True):
+    def plot_t_rho_kappa(self, bump, var_for_label1, var_for_label2,  n_int_edd = 1000, plot_edd = True):
         # self.int_edd = self.tbl_anlom_OPAL_table(self.op_name, 1, n_int, load_lim_cases)
 
         # t_k_rho = self.opal.interp_opal_table(t1, t2, rho1, rho2)
 
-        t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k',self.opal_used, self.output_dir)
+        t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k',self.opal_used, bump, self.output_dir)
 
         # t_rho_k = Math.extrapolate(t_rho_k,None,None,10,None,500,2)
 
         t      = t_rho_k[0, 1:]  # x
         rho    = t_rho_k[1:, 0]  # y
-        kappa  = t_rho_k[1:, 1:] # z
+        kappa  = 10 ** t_rho_k[1:, 1:] # z   # as initial t_rho_k has log(k)
+        t_rho_k = Math.combine(t, rho, kappa)
 
-        plt.figure()
-        levels = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
-        pl.xlim(t.min(), t.max())
-        pl.ylim(rho.min(), rho.max())
-        contour_filled = plt.contourf(t, rho, 10 ** (kappa), levels, cmap=plt.get_cmap('RdYlBu_r'))
-        plt.colorbar(contour_filled)
-        contour = plt.contour(t, rho, 10 ** (kappa), levels, colors='k')
-        plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
-        plt.title('OPACITY PLOT')
-        plt.xlabel('Log(T)')
-        plt.ylabel('log(rho)')
+        fig = plt.figure(figsize=plt.figaspect(0.8))
+        ax = fig.add_subplot(111)  # , projection='3d'
+        z = Get_Z.z(self.opal_used.split('/')[-1])
+        Plots.plot_color_background(ax, t_rho_k, 't', 'rho', 'k', self.opal_used, '{}'.format(z))
+        Plots.plot_edd_kappa(ax, t, self.mdl, self.opal_used, 1000)
+
+        # plt.figure()
+        # levels = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
+        # pl.xlim(t.min(), t.max())
+        # pl.ylim(rho.min(), rho.max())
+        # contour_filled = plt.contourf(t, rho, 10 ** (kappa), levels, cmap=plt.get_cmap('RdYlBu_r'))
+        # plt.colorbar(contour_filled)
+        # contour = plt.contour(t, rho, 10 ** (kappa), levels, colors='k')
+        # plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
+        # plt.title('OPACITY PLOT')
+        # plt.xlabel(Labels.lbls('t'))
+        # plt.ylabel(Labels.lbls('rho'))
 
         # ------------------------EDDINGTON-----------------------------------
         Table_Analyze.plot_k_vs_t = False  # there is no need to plot just one kappa in the range of availability
@@ -851,8 +880,8 @@ class Combine:
                 x = n_model_for_edd_k[0, :]
                 y = n_model_for_edd_k[1, :]
                 color = 'black'
-                lbl = 'Model:{}, k_edd:{}'.format(i, '%.2f' % 10 ** k_edd)
-                plt.plot(x, y, '-.', color=color, label=lbl)
+                # lbl = 'Model:{}, k_edd:{}'.format(i, '%.2f' % 10 ** k_edd)
+                plt.plot(x, y, '-.', color=color) #, label=lbl)
                 plt.plot(x[-1], y[-1], 'x', color=color)
 
         Table_Analyze.plot_k_vs_t = True
@@ -873,7 +902,7 @@ class Combine:
             plt.plot(res[-1, 0], res[-1, 1], 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
             plt.annotate(str('%.2f' % res[0, 2]), xy=(res[-1, 0], res[-1, 1]), textcoords='data')
 
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plt.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
         name = self.plot_dir + 't_rho_kappa.pdf'
         plt.savefig(name)
         plt.show()
@@ -1568,10 +1597,11 @@ class Crit_Mdot:
     def __init__(self):
         pass
 
-    def set_files(self, lim_t1, lim_t2):
+    def set_files(self, bump, coeff):
 
-        self.lim_t1 = lim_t1
-        self.lim_t2 = lim_t2
+        self.bump = bump
+        self.coeff = coeff
+        self.lim_t1, self.lim_t2 = Opacity_Bump.t_for_bump(bump)
         self.spmdl=[]
         for file in self.sp_files:
             self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
@@ -1579,113 +1609,206 @@ class Crit_Mdot:
         # self.nums = Num_Models(smfls, plotfls)
         self.obs = Read_Observables(self.obs_files, self.opal_used)
 
+    @staticmethod
+    def interp(x, y, x_grid):
+        f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
+        return f(x_grid)
 
+    @staticmethod
+    def univar_interp(x, y, new_x):
+        # if new_x.min() < x.min():
+        #     raise ValueError('new_x.min({}) < x.min({})'.format(new_x.min(), x.min()))
+        # if new_x.max() > x.max():
+        #     raise ValueError('new_x.min({}) > x.min({})'.format(new_x.max(), x.max()))
+        if len(x) != len(y):
+            raise ValueError('len(x)[{}] != len(y)[{}]'.format(len(x), len(y)))
+        for x_i in x:
+            if x_i < x[0]:
+                raise ValueError('Array x is not monotonically increasing. x_i({}) < x[0]({})'.format(x_i, x[0]))
 
+        f = interpolate.UnivariateSpline(x, y)
+
+        return f(new_x)
+
+    @staticmethod
+    def fit_plynomial(x, y, order, depth, new_x=np.empty(0, )):
+        '''
+        RETURNS f(new_x)
+        :param x:
+        :param y:
+        :param order: 1-4 are supported
+        :return:
+        '''
+        f = None
+        lbl = None
+
+        if new_x == np.empty(0, ):
+            new_x = np.mgrid[(x.min()):(x.max()):depth * 1j]
+
+        if order == 1:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x)'.format(
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+
+        if order == 2:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x) + ({}*x**2)'.format(
+                "%.3f" % f.coefficients[2],
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+        if order == 3:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3)'.format(
+                "%.3f" % f.coefficients[3],
+                "%.3f" % f.coefficients[2],
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+        if order == 4:
+            fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
+            f = np.poly1d(fit)
+            lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3) + ({}*x**4)'.format(
+                "%.3f" % f.coefficients[4],
+                "%.3f" % f.coefficients[3],
+                "%.3f" % f.coefficients[2],
+                "%.3f" % f.coefficients[1],
+                "%.3f" % f.coefficients[0]
+            )
+            # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
+            # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
+
+        print(lbl)
+
+        return f(new_x)
+
+    @staticmethod
+    def common_y3(arr1, arr2, arr3):
+
+        y1 = arr1[1:, 0]
+        y2 = arr2[1:, 0]
+        y3 = arr3[1:, 0]
+
+        y_min = np.array([y1.min(), y2.min(), y3.min()]).max()
+        y_max = np.array([y1.max(), y2.max(), y3.max()]).min()
+
+        arr1_cropped = Math.crop_2d_table(arr1, None, None, y_min, y_max)
+        arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
+        arr3_cropped = Math.crop_2d_table(arr3, None, None, y_min, y_max)
+
+        return arr1_cropped, arr2_cropped, arr3_cropped
+
+    @staticmethod
+    def common_y2(arr1, arr2):
+
+        y1 = arr1[1:, 0]
+        y2 = arr2[1:, 0]
+
+        y_min = np.array([y1.min(), y2.min()]).max()
+        y_max = np.array([y1.max(), y2.max()]).min()
+
+        arr1_cropped = Math.crop_2d_table(arr1, None, None, y_min, y_max)
+        arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
+
+        return arr1_cropped, arr2_cropped
+
+    @staticmethod
+    def x_y_grids(x_arr, y_arr, depth):
+        x_grid = np.mgrid[x_arr.min():x_arr.max(): depth * 1j]
+        y_grid = np.mgrid[y_arr.min():y_arr.max(): depth * 1j]
+        return x_grid, y_grid
+
+    @staticmethod
+    def plot_4arrays(yc_l_mdot_int, yc_l_mdot_pol, yc_lm_mdot_int, yc_lm_mdot_pol):
+        levels = [-7.0, -6.9, -6.8, -6.7, -6.6, -6.5, -6.4, -6.3, -6.2, -6.1, -6.0, -5.9, -5.8,
+                  -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5, -4.4, -4.3,
+                  -4.2, -4.1, -4.]
+
+        fig = plt.figure(figsize=plt.figaspect(1.0))
+
+        ax = fig.add_subplot(221)
+
+        ax.set_title('INTERPOLATION')
+        ax.set_xlim(yc_l_mdot_int[0, 1:].min(), yc_l_mdot_int[0, 1:].max())
+        ax.set_ylim(yc_l_mdot_int[1:, 0].min(), yc_l_mdot_int[1:, 0].max())
+        ax.set_ylabel(Labels.lbls('l'))
+        ax.set_xlabel(Labels.lbls('Yc'))
+        contour_filled = plt.contourf(yc_l_mdot_int[0, 1:], yc_l_mdot_int[1:, 0], yc_l_mdot_int[1:, 1:], levels,
+                                      cmap=plt.get_cmap('RdYlBu_r'))
+        contour = plt.contour(yc_l_mdot_int[0, 1:], yc_l_mdot_int[1:, 0], yc_l_mdot_int[1:, 1:], levels, colors='k')
+        clb = plt.colorbar(contour_filled)
+        clb.ax.set_title(Labels.lbls('mdot'))
+        plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+        # ----------------------------------------------------------------------------------------------------------
+
+        ax = fig.add_subplot(222)
+
+        ax.set_title('EXTRAPOLATION')
+        ax.set_xlim(yc_l_mdot_pol[0, 1:].min(), yc_l_mdot_pol[0, 1:].max())
+        ax.set_ylim(yc_l_mdot_pol[1:, 0].min(), yc_l_mdot_pol[1:, 0].max())
+        ax.set_ylabel(Labels.lbls('l'))
+        ax.set_xlabel(Labels.lbls('Yc'))
+        contour_filled = plt.contourf(yc_l_mdot_pol[0, 1:], yc_l_mdot_pol[1:, 0], yc_l_mdot_pol[1:, 1:], levels,
+                                      cmap=plt.get_cmap('RdYlBu_r'))
+        contour = plt.contour(yc_l_mdot_pol[0, 1:], yc_l_mdot_pol[1:, 0], yc_l_mdot_pol[1:, 1:], levels, colors='k')
+        clb = plt.colorbar(contour_filled)
+        clb.ax.set_title(Labels.lbls('mdot'))
+        plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+        # ----------------------------------------------------------------------------------------------------------
+
+        ax = fig.add_subplot(223)
+
+        ax.set_xlim(yc_lm_mdot_int[0, 1:].min(), yc_lm_mdot_int[0, 1:].max())
+        ax.set_ylim(yc_lm_mdot_int[1:, 0].min(), yc_lm_mdot_int[1:, 0].max())
+        ax.set_ylabel(Labels.lbls('lm'))
+        ax.set_xlabel(Labels.lbls('Yc'))
+        contour_filled = plt.contourf(yc_lm_mdot_int[0, 1:], yc_lm_mdot_int[1:, 0], yc_lm_mdot_int[1:, 1:], levels,
+                                      cmap=plt.get_cmap('RdYlBu_r'))
+        contour = plt.contour(yc_lm_mdot_int[0, 1:], yc_lm_mdot_int[1:, 0], yc_lm_mdot_int[1:, 1:], levels, colors='k')
+        clb = plt.colorbar(contour_filled)
+        clb.ax.set_title(Labels.lbls('mdot'))
+        plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+        # ----------------------------------------------------------------------------------------------------------
+
+        ax = fig.add_subplot(224)
+
+        ax.set_xlim(yc_lm_mdot_pol[0, 1:].min(), yc_lm_mdot_pol[0, 1:].max())
+        ax.set_ylim(yc_lm_mdot_pol[1:, 0].min(), yc_lm_mdot_pol[1:, 0].max())
+        ax.set_ylabel(Labels.lbls('lm'))
+        ax.set_xlabel(Labels.lbls('Yc'))
+        contour_filled = plt.contourf(yc_lm_mdot_pol[0, 1:], yc_lm_mdot_pol[1:, 0], yc_lm_mdot_pol[1:, 1:], levels,
+                                      cmap=plt.get_cmap('RdYlBu_r'))
+        contour = plt.contour(yc_lm_mdot_pol[0, 1:], yc_lm_mdot_pol[1:, 0], yc_lm_mdot_pol[1:, 1:], levels, colors='k')
+        clb = plt.colorbar(contour_filled)
+        clb.ax.set_title(Labels.lbls('mdot'))
+        plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+
+        plt.show()
+
+    # --- --- --- PUBLIC --- --- ---
 
     def save_yc_llm_mdot_cr(self, depth = 100, plot = True):
-
-        def interp(x, y, x_grid):
-            f = interpolate.interp1d(x, y, kind='cubic', bounds_error=False)
-            return f(x_grid)
-
-        def univar_interp(x, y, new_x):
-            # if new_x.min() < x.min():
-            #     raise ValueError('new_x.min({}) < x.min({})'.format(new_x.min(), x.min()))
-            # if new_x.max() > x.max():
-            #     raise ValueError('new_x.min({}) > x.min({})'.format(new_x.max(), x.max()))
-            if len(x) != len(y):
-                raise ValueError('len(x)[{}] != len(y)[{}]'.format(len(x), len(y)))
-            for x_i in x:
-                if x_i < x[0]:
-                    raise ValueError('Array x is not monotonically increasing. x_i({}) < x[0]({})'.format(x_i, x[0]))
-
-            f = interpolate.UnivariateSpline(x, y)
-
-            return f(new_x)
-
-        def fit_plynomial(x, y, order, depth, new_x=np.empty(0, )):
-            '''
-            RETURNS f(new_x)
-            :param x:
-            :param y:
-            :param order: 1-4 are supported
-            :return:
-            '''
-            f = None
-            lbl = None
-
-            if new_x == np.empty(0, ):
-                new_x = np.mgrid[(x.min()):(x.max()):depth * 1j]
-
-            if order == 1:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x)'.format(
-                    "%.3f" % f.coefficients[1],
-                    "%.3f" % f.coefficients[0]
-                )
-                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
-                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-
-            if order == 2:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x) + ({}*x**2)'.format(
-                    "%.3f" % f.coefficients[2],
-                    "%.3f" % f.coefficients[1],
-                    "%.3f" % f.coefficients[0]
-                )
-                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
-                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-            if order == 3:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3)'.format(
-                    "%.3f" % f.coefficients[3],
-                    "%.3f" % f.coefficients[2],
-                    "%.3f" % f.coefficients[1],
-                    "%.3f" % f.coefficients[0]
-                )
-                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
-                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-            if order == 4:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3) + ({}*x**4)'.format(
-                    "%.3f" % f.coefficients[4],
-                    "%.3f" % f.coefficients[3],
-                    "%.3f" % f.coefficients[2],
-                    "%.3f" % f.coefficients[1],
-                    "%.3f" % f.coefficients[0]
-                )
-                # fit_x_coord = np.mgrid[(x.min()):(x.max()):depth*1j]
-                # plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-
-            print(lbl)
-
-            return f(new_x)
-
-        def common_y(arr1, arr2, arr3):
-
-            y1 = arr1[1:, 0]
-            y2 = arr2[1:, 0]
-            y3 = arr3[1:, 0]
-
-            y_min = np.array([y1.min(), y2.min(), y3.min()]).max()
-            y_max = np.array([y1.max(), y2.max(), y3.max()]).min()
-
-            arr1_cropped = Math.crop_2d_table(arr1, None, None, y_min, y_max)
-            arr2_cropped = Math.crop_2d_table(arr2, None, None, y_min, y_max)
-            arr3_cropped = Math.crop_2d_table(arr3, None, None, y_min, y_max)
-
-            return arr1_cropped, arr2_cropped, arr3_cropped
 
         def l_lm_mdot_rows(t_lm_rho_opal, lm_l_sp, lm_r_sp, lim_t1, lim_t2):
             lm_op = t_lm_rho_opal[1:, 0]
             t = t_lm_rho_opal[0, 1:]
             rho2d = t_lm_rho_opal[1:, 1:]
-            new_l = univar_interp(lm_l_sp[0, :], lm_l_sp[1, :], lm_op)
-            new_r = univar_interp(lm_r_sp[0, :], lm_r_sp[1, :], lm_op)
+            new_l = self.univar_interp(lm_l_sp[0, :], lm_l_sp[1, :], lm_op)
+            new_r = self.univar_interp(lm_r_sp[0, :], lm_r_sp[1, :], lm_op)
 
             if len(lm_op) != len(new_l) or len(lm_op) != len(new_r):
                 raise ValueError('len(lm_op)[{}] != len(new_l)[{}] or len(lm_op)[{}] != len(new_r)[{}]'
@@ -1699,16 +1822,14 @@ class Crit_Mdot:
 
             return new_l, lm_op, mdot_cr
 
-        def x_y_grids(x_arr, y_arr, depth):
-            x_grid = np.mgrid[x_arr.min():x_arr.max(): depth*1j ]
-            y_grid = np.mgrid[y_arr.min():y_arr.max(): depth*1j ]
-            return x_grid, y_grid
+        if self.bump != 'Fe':
+            raise NameError('This function is not available for bumps other than Fe.')
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.coeff), 't',  '{}lm'.format(self.coeff),
+                                               'rho', self.opal_used, 'Fe', self.output_dir)
+        yc_lm_l  = Save_Load_tables.load_table('yc_lm_l',  'yc', 'lm', 'l',   self.opal_used, '', self.output_dir)
+        yc_lm_r  = Save_Load_tables.load_table('yc_lm_r',  'yc', 'lm', 'r',   self.opal_used, '', self.output_dir)
 
-        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't',  'lm', 'rho', self.opal_used, self.output_dir)
-        yc_lm_l  = Save_Load_tables.load_table('yc_lm_l',  'yc', 'lm', 'l',   self.opal_used, self.output_dir)
-        yc_lm_r  = Save_Load_tables.load_table('yc_lm_r',  'yc', 'lm', 'r',   self.opal_used, self.output_dir)
-
-        t_lm_rho, yc_lm_l, yc_lm_r = common_y(t_lm_rho, yc_lm_l, yc_lm_r)
+        t_lm_rho, yc_lm_l, yc_lm_r = self.common_y3(t_lm_rho, yc_lm_l, yc_lm_r)
 
         yc  = yc_lm_l[0, 1:]
         lm_sp  = yc_lm_l[1:, 0]
@@ -1716,7 +1837,7 @@ class Crit_Mdot:
         l2d = yc_lm_l[1:, 1:]
         r2d = yc_lm_r[1:, 1:]
 
-        lm_grid, l_grid = x_y_grids(lm_sp, l2d, depth)
+        lm_grid, l_grid = self.x_y_grids(lm_sp, l2d, depth)
 
         mdot_poly_l = np.zeros(len(l_grid))
         mdot_poly_lm= np.zeros(len(lm_grid))
@@ -1732,11 +1853,11 @@ class Crit_Mdot:
 
             l, lm, mdot = l_lm_mdot_rows(t_lm_rho, lm_l, lm_r, self.lim_t1, self.lim_t2)
 
-            mdot_poly_l  = np.vstack((mdot_poly_l,  fit_plynomial(l,  mdot, 3, depth, l_grid)))
-            mdot_poly_lm = np.vstack((mdot_poly_lm, fit_plynomial(lm, mdot, 3, depth, lm_grid)))
+            mdot_poly_l  = np.vstack((mdot_poly_l,  self.fit_plynomial(l,  mdot, 3, depth, l_grid)))
+            mdot_poly_lm = np.vstack((mdot_poly_lm, self.fit_plynomial(lm, mdot, 3, depth, lm_grid)))
 
-            mdot_int_l  = np.vstack((mdot_int_l,  interp(l,  mdot, l_grid)))
-            mdot_int_lm = np.vstack((mdot_int_lm, interp(lm, mdot, lm_grid)))
+            mdot_int_l  = np.vstack((mdot_int_l,  self.interp(l,  mdot, l_grid)))
+            mdot_int_lm = np.vstack((mdot_int_lm, self.interp(lm, mdot, lm_grid)))
 
         mdot_poly_l  = np.delete(mdot_poly_l,  0, 0)
         mdot_poly_lm = np.delete(mdot_poly_lm, 0, 0)
@@ -1748,93 +1869,135 @@ class Crit_Mdot:
         yc_l_mdot_int  = Math.combine(yc, l_grid,  mdot_int_l.T)
         yc_lm_mdot_int = Math.combine(yc, lm_grid, mdot_int_lm.T)
 
-        table_name = '{}_{}_{}'.format('yc', 'l', 'mdot_crit')
-        Save_Load_tables.save_table(yc_l_mdot_pol, self.opal_used, table_name, 'yc', 'l', 'mdot_crit')
+        table_name = '{}_{}{}_{}'.format('yc', self.coeff, 'l', 'mdot_cr')
+        Save_Load_tables.save_table(yc_l_mdot_pol, self.opal_used, self.bump, table_name, 'yc', '{}l'.format(self.coeff), 'mdot_cr')
 
-        table_name = '{}_{}_{}'.format('yc', 'lm', 'mdot_crit')
-        Save_Load_tables.save_table(yc_lm_mdot_pol, self.opal_used, table_name, 'yc', 'lm', 'mdot_crit')
+        table_name = '{}_{}{}_{}'.format('yc', self.coeff,'lm', 'mdot_cr')
+        Save_Load_tables.save_table(yc_lm_mdot_pol, self.opal_used, self.bump, table_name, 'yc', '{}lm'.format(self.coeff), 'mdot_cr')
 
         if plot:
-            levels = [-7.0, -6.9, -6.8, -6.7, -6.6, -6.5, -6.4, -6.3, -6.2, -6.1, -6.0, -5.9, -5.8,
-                      -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5, -4.4, -4.3,
-                      -4.2, -4.1, -4.]
+            self.plot_4arrays(yc_l_mdot_int, yc_l_mdot_pol, yc_lm_mdot_int, yc_lm_mdot_pol)
 
-            fig = plt.figure(figsize=plt.figaspect(1.0))
+    def save_yc_llm_mdot_cr_const_r(self, r_cr, depth = 100, plot = True):
 
-            ax = fig.add_subplot(221)
+        def l_lm_mdot_rows_r_const(t_lm_rho_opal, lm_l_sp, r_cr, lim_t1, lim_t2):
+            lm_op = t_lm_rho_opal[1:, 0]
+            t = t_lm_rho_opal[0, 1:]
+            rho2d = t_lm_rho_opal[1:, 1:]
+            new_l = self.univar_interp(lm_l_sp[0, :], lm_l_sp[1, :], lm_op)
 
-            ax.set_title('INTERPOLATION')
-            ax.set_xlim(yc_l_mdot_int[0, 1:].min(), yc_l_mdot_int[0, 1:].max())
-            ax.set_ylim(yc_l_mdot_int[1:, 0].min(), yc_l_mdot_int[1:, 0].max())
-            ax.set_ylabel(Labels.lbls('l'))
-            ax.set_xlabel(Labels.lbls('Yc'))
-            contour_filled = plt.contourf(yc_l_mdot_int[0, 1:], yc_l_mdot_int[1:, 0], yc_l_mdot_int[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
-            contour = plt.contour(yc_l_mdot_int[0, 1:], yc_l_mdot_int[1:, 0], yc_l_mdot_int[1:, 1:], levels, colors='k')
-            clb = plt.colorbar(contour_filled)
-            clb.ax.set_title(Labels.lbls('mdot'))
-            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
-
-            # ----------------------------------------------------------------------------------------------------------
-
-            ax = fig.add_subplot(222)
-
-            ax.set_title('EXTRAPOLATION')
-            ax.set_xlim(yc_l_mdot_pol[0, 1:].min(), yc_l_mdot_pol[0, 1:].max())
-            ax.set_ylim(yc_l_mdot_pol[1:, 0].min(), yc_l_mdot_pol[1:, 0].max())
-            ax.set_ylabel(Labels.lbls('l'))
-            ax.set_xlabel(Labels.lbls('Yc'))
-            contour_filled = plt.contourf(yc_l_mdot_pol[0, 1:], yc_l_mdot_pol[1:, 0], yc_l_mdot_pol[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
-            contour = plt.contour(yc_l_mdot_pol[0, 1:], yc_l_mdot_pol[1:, 0], yc_l_mdot_pol[1:, 1:], levels, colors='k')
-            clb = plt.colorbar(contour_filled)
-            clb.ax.set_title(Labels.lbls('mdot'))
-            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
-
-            # ----------------------------------------------------------------------------------------------------------
+            if len(lm_op) != len(new_l):
+                raise ValueError('len(lm_op)[{}] != len(new_l)[{}] or len(lm_op)[{}]'
+                                 .format(len(lm_op), len(new_l), len(lm_op)))
 
 
+            vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+            m_dot = Physics.vrho_mdot(vrho, r_cr, '')                  # '' for constant r
+            mins = Math.get_mins_in_every_row(t, new_l, m_dot, 5000, lim_t1, lim_t2)
+            mdot_cr = mins[2, :]
 
-            ax = fig.add_subplot(223)
+            return new_l, lm_op, mdot_cr
 
-            ax.set_xlim(yc_lm_mdot_int[0, 1:].min(), yc_lm_mdot_int[0, 1:].max())
-            ax.set_ylim(yc_lm_mdot_int[1:, 0].min(), yc_lm_mdot_int[1:, 0].max())
-            ax.set_ylabel(Labels.lbls('lm'))
-            ax.set_xlabel(Labels.lbls('Yc'))
-            contour_filled = plt.contourf(yc_lm_mdot_int[0, 1:], yc_lm_mdot_int[1:, 0], yc_lm_mdot_int[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
-            contour = plt.contour(yc_lm_mdot_int[0, 1:], yc_lm_mdot_int[1:, 0], yc_lm_mdot_int[1:, 1:], levels, colors='k')
-            clb = plt.colorbar(contour_filled)
-            clb.ax.set_title(Labels.lbls('mdot'))
-            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.coeff), 't', '{}lm'.format(self.coeff),
+                                               'rho', self.opal_used, self.bump, self.output_dir)
+        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', self.opal_used, '', self.output_dir)
+
+        t_lm_rho, yc_lm_l = self.common_y2(t_lm_rho, yc_lm_l)
+
+        yc    = yc_lm_l[0, 1:]
+        lm_sp = yc_lm_l[1:, 0]
+        l2d   = yc_lm_l[1:, 1:]
+
+        lm_grid, l_grid = self.x_y_grids(lm_sp, l2d, depth)
+
+        mdot_poly_l = np.zeros(len(l_grid))
+        mdot_poly_lm = np.zeros(len(lm_grid))
+
+        mdot_int_l = np.zeros(len(l_grid))
+        mdot_int_lm = np.zeros(len(lm_grid))
+
+        for i in range(len(yc)):
+            print('\n\t__Yc={}__'.format(yc[i]))
+            yc_i = Math.find_nearest_index(yc, yc[i])
+            lm_l = np.vstack((yc_lm_l[1:, 0] , l2d[:, yc_i]))
+
+            l, lm, mdot = l_lm_mdot_rows_r_const(t_lm_rho, lm_l, r_cr, self.lim_t1, self.lim_t2)
+
+            mdot_poly_l  = np.vstack((mdot_poly_l,  self.fit_plynomial(l,  mdot, 3, depth, l_grid)))
+            mdot_poly_lm = np.vstack((mdot_poly_lm, self.fit_plynomial(lm, mdot, 3, depth, lm_grid)))
+
+            mdot_int_l  = np.vstack((mdot_int_l,  self.interp(l,  mdot, l_grid)))
+            mdot_int_lm = np.vstack((mdot_int_lm, self.interp(lm, mdot, lm_grid)))
+
+        mdot_poly_l = np.delete(mdot_poly_l, 0, 0)
+        mdot_poly_lm = np.delete(mdot_poly_lm, 0, 0)
+        mdot_int_l = np.delete(mdot_int_l, 0, 0)
+        mdot_int_lm = np.delete(mdot_int_lm, 0, 0)
+
+        yc_l_mdot_pol = Math.combine(yc, l_grid, mdot_poly_l.T)
+        yc_lm_mdot_pol = Math.combine(yc, lm_grid, mdot_poly_lm.T)
+        yc_l_mdot_int = Math.combine(yc, l_grid, mdot_int_l.T)
+        yc_lm_mdot_int = Math.combine(yc, lm_grid, mdot_int_lm.T)
+
+        table_name = '{}_{}{}_{}'.format('yc',self.coeff, 'l', 'mdot_cr_r_{}'.format(r_cr))
+        Save_Load_tables.save_table(yc_l_mdot_pol, self.opal_used, self.bump, table_name, 'yc',
+                                    '{}l'.format(self.coeff), 'mdot_cr_r_{}'.format(r_cr))
+
+        table_name = '{}_{}{}_{}'.format('yc',self.coeff, 'lm', 'mdot_cr_r_{}'.format(r_cr))
+        Save_Load_tables.save_table(yc_lm_mdot_pol, self.opal_used, self.bump, table_name, 'yc',
+                                    '{}lm'.format(self.coeff), 'mdot_cr_r_{}'.format(r_cr))
+
+        if plot:
+            self.plot_4arrays(yc_l_mdot_int, yc_l_mdot_pol, yc_lm_mdot_int, yc_lm_mdot_pol)
 
 
-            # ----------------------------------------------------------------------------------------------------------
+    def plot_test_min_mdot(self, r_cr):
+
+        def l_lm_mdot_rows_r_const(t_lm_rho_opal, r_cr, lim_t1, lim_t2):
+            lm_op = t_lm_rho_opal[1:, 0]
+            t = t_lm_rho_opal[0, 1:]
+            rho2d = t_lm_rho_opal[1:, 1:]
 
 
-            ax = fig.add_subplot(224)
+            vrho = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
+            m_dot = Physics.vrho_mdot(vrho, r_cr, '')                  # '' for constant r
+            mins = Math.get_mins_in_every_row(t, lm_op, m_dot, 5000, lim_t1, lim_t2)
+            mdot_cr = mins[2, :]
+            lm = mins[1, :]
+            ts = mins[0, :]
 
-            ax.set_xlim(yc_lm_mdot_pol[0, 1:].min(), yc_lm_mdot_pol[0, 1:].max())
-            ax.set_ylim(yc_lm_mdot_pol[1:, 0].min(), yc_lm_mdot_pol[1:, 0].max())
-            ax.set_ylabel(Labels.lbls('lm'))
-            ax.set_xlabel(Labels.lbls('Yc'))
-            contour_filled = plt.contourf(yc_lm_mdot_pol[0, 1:], yc_lm_mdot_pol[1:, 0], yc_lm_mdot_pol[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
-            contour = plt.contour(yc_lm_mdot_pol[0, 1:], yc_lm_mdot_pol[1:, 0], yc_lm_mdot_pol[1:, 1:], levels, colors='k')
-            clb = plt.colorbar(contour_filled)
-            clb.ax.set_title(Labels.lbls('mdot'))
-            plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+            return Math.combine(t, lm_op, m_dot), ts, lm, mdot_cr
 
-            plt.show()
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.coeff), 't', '{}lm'.format(self.coeff),
+                                               'rho', self.opal_used, self.bump, self.output_dir)
 
-    def min_mdot_sp_set(self, l_or_lm, yc_vals, yc1, yc2, v_n_background = None):
+        t_lm_mdot, ts, lm, mdot = l_lm_mdot_rows_r_const(t_lm_rho, r_cr, self.lim_t1, self.lim_t2)
+
+        fig = plt.figure(figsize=plt.figaspect(0.8))
+        ax = fig.add_subplot(111)  # , projection='3d'
+        Plots.plot_color_background(ax, t_lm_mdot, 't', 'lm', 'mdot', self.opal_used, 'Test')
+        ax.plot(ts, lm, '.-', color = 'red')
+        plt.show()
+
+    def min_mdot_sp_set(self, l_or_lm, yc_vals, r_cr = None, v_n_background = None):
         '''
         PLOTS the set of llm(mdot), with l->m relation assumed from yc_vals.
         :param l_or_lm:
         :param yc_vals:
-        :param yc1: if None - no lm error bars, else, the largest Yc (Zams for example)
-        :param yc2: if None - no lm error bars, else, the lowest extend of Yc range
         :return:
         '''
 
-        name  = '{}_{}_{}'.format('yc', l_or_lm, 'mdot_crit')
-        yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', l_or_lm, 'mdot_crit', self.opal_used)
+
+
+        if r_cr == None:
+            name = '{}_{}{}_{}'.format('yc', self.coeff, l_or_lm, 'mdot_cr')
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.coeff)+l_or_lm,
+                                                         'mdot_cr', self.opal_used, self.bump)
+        else:
+            name = '{}_{}{}_{}_r_{}'.format('yc', self.coeff, l_or_lm, 'mdot_cr', r_cr)
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.coeff) + l_or_lm,
+                                                         'mdot_cr_r_{}'.format(r_cr), self.opal_used, self.bump)
+
         yc    = yc_llm_mdot_cr[0, 1:]
         llm   = yc_llm_mdot_cr[1:, 0]
         mdot2d= yc_llm_mdot_cr[1:, 1:]
@@ -1863,9 +2026,18 @@ class Crit_Mdot:
             ax.plot(mdot, llm, '-',    color='black')
             ax.fill_between(mdot, llm, color="lightgray")
 
+            if r_cr != None:
+                ax.text(0.1, 0.9, 'R:{}'.format(r_cr), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+            if self.coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+
             '''=============================OBSERVABELS==============================='''
 
-            Plots.plot_obs_mdot_llm(ax, self.obs, l_or_lm, yc_val, yc1, yc2)
+            Plots.plot_obs_mdot_llm(ax, self.obs, l_or_lm, yc_val)
 
             '''=============================BACKGROUND================================'''
             if v_n_background != None:
@@ -1879,10 +2051,13 @@ class Crit_Mdot:
                 Plots.plot_color_background(ax, mdot_llm_z, 'mdot', l_or_lm, v_n_background, 'Yc:{}'.format(yc_val))
 
 
+
+
         plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
         plot_name = self.plot_dir + 'minMdot_l.pdf'
         plt.savefig(plot_name)
         plt.show()
+
 
     # def save_yc_llm_mdot_cr(self, l_or_lm='l',yc_prec=0.1, depth=100, plot=True):
     #
@@ -2136,6 +2311,106 @@ class Crit_Mdot:
     #
     #         plt.show()
 
+class Plot_Multiple_Crit_Mdots:
+
+    output_dir = '../data/output/'
+    plot_dir = '../data/plots/'
+
+    y_coord = []
+    coeff = []
+    r_cr = []
+    opal = []
+    bump = []
+    yc   = []
+
+    def __init__(self, obs_files, opal_for_obs):
+        '''
+        Table name expected: ' yc_0.8lm_mdot_cr_r_1.0__HeII_table_x '
+        :param tables:
+        :param yc:
+        :param obs_files:
+        '''
+        self.obs = []
+        self.obs_files = obs_files
+        for i in range(len(obs_files)):
+            self.obs.append( Read_Observables(obs_files[i], opal_for_obs[i]) )
+
+    def plot_crit_mdots(self):
+
+        n = len(self.y_coord)
+
+        if len(self.coeff) != n or len(self.r_cr) != n or len(self.opal) != n or len(self.bump) != n or len(self.yc) != n:
+            raise ValueError('Length of all input array must me the same. Given: {}')
+
+        fig = plt.figure(figsize=plt.figaspect(0.8))
+        ax = fig.add_subplot(111)  # , projection='3d'
+
+        lbl = []
+        min_lm = []
+        max_lm = []
+        min_mdot = []
+        max_mdot = []
+        for i in range(n):
+
+            l_or_lm = self.y_coord[i]
+            coeff   = self.coeff[i]
+            r_cr    = self.r_cr[i]
+            opal    = self.opal[i]
+            bump    = self.bump[i]
+            yc      = self.yc[i]
+            z = Get_Z.z(opal)
+
+            if r_cr == None:
+                name = '{}_{}{}_{}'.format('yc', coeff, l_or_lm, 'mdot_cr')
+                lbl.append( 'z:{}({}) K:{}'.format(z, bump, coeff) )
+                yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(coeff) + l_or_lm,
+                                                             'mdot_cr', opal, bump)
+            else:
+                name = '{}_{}{}_{}_r_{}'.format('yc', coeff, l_or_lm, 'mdot_cr', r_cr)
+                lbl.append( 'z:{}({}) K:{} R:{}'.format(z, bump, coeff, r_cr) )
+                yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(coeff) + l_or_lm,
+                                                             'mdot_cr_r_{}'.format(r_cr), opal, bump)
+
+            yc_arr = yc_llm_mdot_cr[0,  1:]
+            llm    = yc_llm_mdot_cr[1:, 0]
+            mdot2d = yc_llm_mdot_cr[1:, 1:]
+
+            for j in range(len(yc_arr)):
+                if not yc in yc_arr:
+                    raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc_arr[j], yc))
+
+            ind = Math.find_nearest_index(yc_arr, yc)
+            mdot = mdot2d[:, ind]
+            min_mdot = np.append(min_mdot, mdot.min())
+            max_mdot = np.append(max_mdot, mdot.max())
+            min_lm = np.append(min_lm, llm.min())
+            max_lm = np.append(max_lm, llm.max())
+
+            ax.plot(mdot, llm, '-', color='C'+str(i+1))
+            # ax.fill_between(mdot, llm, color="lightgray")
+
+        for i in range(n):
+
+
+            ax.text(0.2, 0.9-(i/10), lbl[i], style='italic',
+                    bbox={'facecolor': 'C'+str(i+1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
+
+        for i in range(len(self.obs_files)):
+            l_or_lm = self.y_coord[i]
+            yc = self.yc[i]
+            Plots.plot_obs_mdot_llm(ax, self.obs[i], l_or_lm, yc)
+
+        # --- --- WATER MARK -- -- --
+        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+
+
+        plt.xlim(min_mdot.min(), max_mdot.max())
+        plt.ylim(min_lm.min(), max_lm.max())
+        plt.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1, framealpha=0.1)
+        plt.legend()
+        plt.show()
+
 class Sonic_HRD:
 
     output_dir = '../data/output/'
@@ -2149,10 +2424,12 @@ class Sonic_HRD:
     def __init__(self):
         pass
 
-    def set_files(self, lim_t1, lim_t2):
+    def set_files(self, bump, coeff):
 
-        self.lim_t1 = lim_t1
-        self.lim_t2 = lim_t2
+        self.coeff = coeff
+        self.bump = bump
+        self.lim_t1, self.lim_t2 = Opacity_Bump.t_for_bump(bump)
+
         self.spmdl=[]
         for file in self.sp_files:
             self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
@@ -2555,9 +2832,11 @@ class Sonic_HRD:
     #     plt.savefig(name)
     #     plt.show()
 
-    def plot_sonic_hrd(self, yc_val, l_or_lm, yc1=None, yc2=None):
-        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_{}_mdot'.format(l_or_lm),
-                                                       'yc', 't', l_or_lm, 'mdot')
+
+    def plot_sonic_hrd(self, yc_val, l_or_lm):
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, self.bump,
+                                                       'yc_t_{}{}_mdot'.format(self.coeff, l_or_lm),
+                                                       'yc', 't', str(self.coeff) + l_or_lm, 'mdot')
 
         yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
         t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
@@ -2567,15 +2846,20 @@ class Sonic_HRD:
         fig = plt.figure(figsize=plt.figaspect(0.8))
         ax = fig.add_subplot(111) # , projection='3d'
         Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used, 'Yc:{}'.format(yc_val))
-        Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
+        Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, self.lim_t1, self.lim_t2)
+
+        if self.coeff != 1.0:
+            ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
 
         plt.gca().invert_xaxis()
         plt.show()
 
     def plot_sonic_hrd_set(self, l_or_lm, yc_arr, yc1 = None, yc2 = None):
 
-        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_{}_mdot'.format(l_or_lm),
-                                                       'yc', 't', l_or_lm, 'mdot')
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, self.bump, 'yc_t_{}{}_mdot'
+                                                       .format(self.coeff, l_or_lm),'yc', 't', str(self.coeff) + l_or_lm, 'mdot')
         yc = yc_t_llm_mdot[:, 0, 0]
 
         for i in range(len(yc_arr)):
@@ -2605,6 +2889,11 @@ class Sonic_HRD:
             Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used,'Yc:{}'.format(yc_val))
             Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
 
+            if self.coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plot_name = self.plot_dir + 'sonic_HRD.pdf'
         plt.savefig(plot_name)
@@ -2612,10 +2901,10 @@ class Sonic_HRD:
         plt.show()
 
     # def plot_sonic_hrd_const_r(self, l_or_lm, r, yc, yc1=None, yc2=None):
-    def plot_sonic_hrd_const_r(self, l_or_lm, rs, yc_arr, yc1 = None, yc2 = None):
+    def plot_sonic_hrd_const_r(self, l_or_lm, rs, yc_arr):
 
-        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_{}_mdot_rs_{}'.format(l_or_lm,rs),
-                                                       'yc', 't', l_or_lm, 'mdot_rs_{}'.format(rs))
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, self.bump, 'yc_t_{}{}_mdot_rs_{}'.format(self.coeff, l_or_lm, rs),
+                                                       'yc', 't', str(self.coeff) + l_or_lm, 'mdot_rs_{}'.format(rs))
         yc = yc_t_llm_mdot[:, 0, 0]
 
         for i in range(len(yc_arr)):
@@ -2643,7 +2932,12 @@ class Sonic_HRD:
             # fig = plt.figure(figsize=plt.figaspect(0.8))
             # ax = fig.add_subplot(111)  # , projection='3d'
             Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used,'Yc:{} Rs:{}'.format(yc_val, rs))
-            Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
+            Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, self.lim_t1, self.lim_t2)
+
+            if self.coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
 
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plot_name = self.plot_dir + 'sonic_HRD_const_rs.pdf'
@@ -3038,6 +3332,170 @@ class Sonic_HRD:
     #     plot_name = self.plot_dir + 'minMdot_l.pdf'
     #     plt.savefig(plot_name)
     #     plt.show()
+
+class Plot_Tow_Sonic_HRDs:
+
+    output_dir = '../data/output/'
+    plot_dir = '../data/plots/'
+
+    y_coord = []
+    coeff = []
+    rs = []
+    opal = []
+    bump = []
+    yc = []
+
+    def __init__(self, obs_files, opal_for_obs):
+        '''
+        Table name expected: ' yc_0.8lm_mdot_cr_r_1.0__HeII_table_x '
+        :param tables:
+        :param yc:
+        :param obs_files:
+        '''
+        self.n = len(self.y_coord)
+
+        self.obs = []
+        self.obs_files = obs_files
+        for i in range(len(obs_files)):
+            self.obs.append(Read_Observables(obs_files[i], opal_for_obs[i]))
+
+    def plot_srhd(self):
+
+        n = len(self.y_coord)
+        if n > 2: raise ValueError('Only 2 sHRDs available now')
+
+        if len(self.coeff) != n or len(self.rs) != n or len(self.opal) != n or len(self.bump) != n or len(self.yc) != n:
+            raise ValueError('Length of all input array must me the same. Given: {}, {}, {}, {}, {}'
+                             .format(len(self.coeff), len(self.rs), len(self.opal), len(self.bump), len(self.yc) != n))
+
+        def load_t_llm_mdot(l_or_lm, coeff, rs, opal, bump, yc):
+            lbl = []
+            z = Get_Z.z(opal)
+
+            if rs == None:
+
+                yc_t_llm_mdot = Save_Load_tables.load_3d_table(opal, bump, 'yc_t_{}{}_mdot'.format(coeff, l_or_lm),
+                                                               'yc', 't', str(coeff) + l_or_lm, 'mdot')
+
+                lbl.append('z:{}({}) K:{}'.format(z, bump, coeff))
+            else:
+
+                yc_t_llm_mdot = Save_Load_tables.load_3d_table(opal, bump,
+                                                               'yc_t_{}{}_mdot_rs_{}'.format(coeff, l_or_lm, rs),
+                                                               'yc', 't', str(coeff) + l_or_lm,
+                                                               'mdot_rs_{}'.format(rs))
+
+                lbl.append('z:{}({}) K:{} Rs:{}'.format(z, bump, coeff, rs))
+
+            yc_arr = yc_t_llm_mdot[:, 0, 0]
+
+            for i in range(len(yc_arr)):
+                if not yc in yc_arr:
+                    raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc, yc_arr))
+
+            # selecting one table with required Yc
+            yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc)
+            t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
+
+            # Extrapolatin
+            t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, 10, 5, 500, 4)
+            return t_llm_mdot, lbl
+
+        t_llm_mdot1, lbl1 = load_t_llm_mdot(self.y_coord[0], self.coeff[0], self.rs[0], self.opal[0], self.bump[0], self.yc[0])
+        t_llm_mdot2, lbl2 = load_t_llm_mdot(self.y_coord[1], self.coeff[1], self.rs[1], self.opal[1], self.bump[1], self.yc[1])
+
+
+        def plot_background(ax, table, opal):
+            from Phys_Math_Labels import Levels
+            levels = Levels.get_levels('mdot', opal)
+
+            contour_filled = ax.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+            # clb = plt.colorbar(contour_filled)
+            # clb.ax.set_title(Labels.lbls('mdot'))
+
+            contour = ax.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
+            # ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+            # ax.set_title('SONIC HR DIAGRAM')
+            return ax, contour_filled
+
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+        fig = plt.figure()
+        # fig.set_size_inches(18.5, 10.5)
+        # fig.set_size_inches(10, 4.5)
+
+        ax1 = fig.add_subplot(1, 2, 1, aspect="equal")
+        ax2 = fig.add_subplot(1, 2, 2, aspect="equal", sharey=ax1)  # Share y-axes with subplot 1
+
+        # Set y-ticks of subplot 2 invisible
+        plt.setp(ax2.get_yticklabels(), visible=False)
+
+        # Plot data
+        im1, cf1 = plot_background(ax1, t_llm_mdot1, self.opal[0])
+        im2, cf2 = plot_background(ax2, t_llm_mdot2, self.opal[1])
+
+
+        ax1_stars = Plots.plot_obs_t_llm_mdot_int(ax2, t_llm_mdot2, self.obs[0], self.y_coord[1], None, None, False)
+        ax1_stars.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2)
+
+        ax2_stars = Plots.plot_obs_t_llm_mdot_int(ax1, t_llm_mdot1, self.obs[0], self.y_coord[0], None, None, False)
+        ax2_stars.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+
+
+        # Define locations of colorbars for both subplot 1 and 2
+        divider1 = make_axes_locatable(ax1)
+        cax1 = divider1.append_axes("right", size="5%", pad=0.05)
+
+        divider2 = make_axes_locatable(ax2)
+        cax2 = divider2.append_axes("right", size="5%", pad=0.05)
+
+        # Create and remove the colorbar for the first subplot
+
+        cbar1 = fig.colorbar(cf1, cax=cax1)
+        fig.delaxes(fig.axes[2])
+
+        # Create second colorbar
+        cbar2 = fig.colorbar(cf2, cax=cax2)
+        cbar2.ax.set_title(Labels.lbls('mdot'))
+
+        # Adjust the widths between the subplots
+        # plt.title('SONIC HR DIAGRAM', loc='center')
+        plt.subplots_adjust(wspace=-0.1)
+        ax1.invert_xaxis()
+        ax2.invert_xaxis()
+        plt.show()
+
+
+
+
+        # lbl = []
+        # min_lm = []
+        # max_lm = []
+        # min_mdot = []
+        # max_mdot = []
+        #
+        # for i in range(n):
+        #
+        #     l_or_lm = self.y_coord[i]
+        #     coeff = self.coeff[i]
+        #     r_cr = self.r_cr[i]
+        #     opal = self.opal[i]
+        #     bump = self.bump[i]
+        #     yc = self.yc[i]
+        #     z = Get_Z.z(opal)
+        #
+        #     if r_cr == None:
+        #         name = '{}_{}{}_{}'.format('yc', coeff, l_or_lm, 'mdot_cr')
+        #         lbl.append('z:{}({}) K:{}'.format(z, bump, coeff))
+        #         yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(coeff) + l_or_lm,
+        #                                                      'mdot_cr', opal, bump)
+        #     else:
+        #         name = '{}_{}{}_{}_r_{}'.format('yc', coeff, l_or_lm, 'mdot_cr', r_cr)
+        #         lbl.append('z:{}({}) K:{} R:{}'.format(z, bump, coeff, r_cr))
+        #         yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(coeff) + l_or_lm,
+        #                                                      'mdot_cr_r_{}'.format(r_cr), opal, bump)
+
+
 
 
 #================================================3D=====================================================================

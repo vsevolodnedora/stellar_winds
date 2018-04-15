@@ -261,6 +261,7 @@ class Math:
     @staticmethod
     def get_mins_in_every_row(x_arr, y_arr, z2d_arr, depth, from_ = None, to_ = None):
         '''
+        Return np.vstack((x_points, y_arr, values))
         Finds a min. value in every row of z2darr
         :param x_arr: usually temp
         :param y_arr: usually L/M
@@ -284,10 +285,10 @@ class Math:
             x2 = to_
 
         if x1 < x_arr[0]:
-            sys.exit('\t__Error. *from_* is too small. {} < {} '.format(x1, x_arr[0]))
+            raise ValueError('*from_* is too small. {} < {} '.format(x1, x_arr[0]))
 
         if x2 > x_arr[-1]:
-            sys.exit('\t__Error. *from_* is too big. {} > {} '.format(x2, x_arr[-1]))
+            raise ValueError('*from_* is too big. {} > {} '.format(x2, x_arr[-1]))
 
         new_x = np.mgrid[x1:x2:depth*1j]
 
@@ -820,7 +821,7 @@ class Math:
         yc_arr = yc_y_z[0, 1:]
         z2d = yc_y_z[1:, 1:]
 
-        print()
+        # print()
 
         # yc_value = np.float("%.3f" % yc_value)
 
@@ -844,7 +845,7 @@ class Math:
                 f = interpolate.InterpolatedUnivariateSpline(x_arr, y_arr)
                 y = f(y_inp)
                 # print(log_l, y)
-                print('Yc: {}, y_row({} - {}), y_res: {}'.format(yc_value, y_arr.min(), y_arr.max(), y))
+                # print('Yc: {}, y_row({} - {}), y_res: {}'.format(yc_value, y_arr.min(), y_arr.max(), y))
                 return y_inp, y
             else:
                 raise ValueError(
@@ -945,8 +946,9 @@ class Physics:
             return np.log10(Constants.c_k_edd) + np.log10(1 / (10 ** loglm))
 
     @staticmethod
-    def logk_loglm(logk, dimensions = 0):
+    def logk_loglm(logk, dimensions = 0, coeff = 1.0):
         '''
+        k_opal = coeff * k_edd; k_edd = 4*pi*c*G*M / L
         For logk = -0.026 -> log(l/m) = 4.141
         :param logk:
         :return:
@@ -954,16 +956,16 @@ class Physics:
         if dimensions == 1:
             res = np.zeros(len(logk))
             for i in range(len(logk)):
-                res[i] = np.log10(1 / (10 ** logk[i])) + np.log10(Constants.c_k_edd)
+                res[i] = np.log10(1 / (10 ** logk[i])) + np.log10(coeff * Constants.c_k_edd)
             return res
         if dimensions == 0:
-            return np.log10(1 / (10 ** logk)) + np.log10(Constants.c_k_edd)
+            return np.log10(1 / (10 ** logk)) + np.log10(coeff * Constants.c_k_edd)
 
         if dimensions == 2:
             res = np.zeros(( len(logk[:,0]), len(logk[0,:] )))
             for i in range(len(logk[:,0])):
                 for j in range(len(logk[0,:])):
-                    res[i,j] = np.log10(1 / (10 ** logk[i,j])) + np.log10(Constants.c_k_edd)
+                    res[i, j] = np.log10(1 / (10 ** logk[i,j])) + np.log10(coeff * Constants.c_k_edd)
             return res
 
         else:
@@ -994,10 +996,10 @@ class Physics:
     def get_k1_k2_from_llm1_llm2(t1, t2, l1, l2):
         lm1 = None
         if l1 != None:
-            lm1 = Physics.l_to_lm(l1)
+            lm1 = Physics.l_to_lm_langer(l1)
         lm2 = None
         if l2 != None:
-            lm2 = Physics.l_to_lm(l2)
+            lm2 = Physics.l_to_lm_langer(l2)
 
         if lm1 != None:
             k2 = Physics.loglm_logk(lm1)
@@ -1584,9 +1586,10 @@ class Plots:
         # plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         # plt.savefig(name)
         # plt.show()
+        return ax
 
     @staticmethod
-    def plot_obs_mdot_llm(ax, obs_cls, l_or_lm, yc_val, yc1, yc2):
+    def plot_obs_mdot_llm(ax, obs_cls, l_or_lm, yc_val):
         '''
 
         :param ax:
@@ -1624,13 +1627,13 @@ class Plots:
                     # obs_cls.get_star_llm_evol_err(star_n, l_or_lm, yc_val, 1.0, 0.1)                  # ERRORS L/LM
                 # mdot1, mdot2 = obs_cls.get_star_mdot_err(star_n, l_or_lm, yc_val, 1.0, 0.1, 'nugis')           # ERRORS Mdot
                 mdot = obs_cls.get_num_par('mdot', star_n)
-                plt.plot([mdot, mdot], [llm1, llm2], '-', color=obs_cls.get_class_color(star_n))
+                ax.plot([mdot, mdot], [llm1, llm2], '-', color=obs_cls.get_class_color(star_n))
 
                 # ax.errorbar(mdot_obs[i], llm_obs[i], yerr=[[llm1],  [llm2]], fmt='--.', color=obs_cls.get_class_color(star_n))
 
 
-            plt.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
-                     color=obs_cls.get_class_color(star_n), ls='')  # plot color dots)))
+            ax.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                     color=obs_cls.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
             ax.annotate('{}'.format(int(star_n)), xy=(mdot_obs[i], llm_obs[i]),textcoords='data')  # plot numbers of stars
 
             # t = obs_cls.get_num_par('t', star_n)
@@ -1646,7 +1649,7 @@ class Plots:
 
             if obs_cls.get_star_class(star_n) not in classes:
                 plt.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
-                         color=obs_cls.get_class_color(star_n), ls='',
+                         color=obs_cls.get_class_color(star_n), ls='', mec='black',
                          label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
                 classes.append(obs_cls.get_star_class(star_n))
 
@@ -1670,13 +1673,14 @@ class Plots:
         ax.set_ylabel(Labels.lbls(l_or_lm))
         ax.set_xlabel(Labels.lbls('mdot'))
         ax.grid(which='major', alpha=0.2)
-        # ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+        ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
 
         print('Yc:{}'.format(yc_val))
         ax.text(0.9, 0.9, 'Yc:{}'.format(yc_val), style='italic',
                 bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                 verticalalignment='center', transform=ax.transAxes)
 
+        return ax
         # ax.text(min_mdot, max_llm, 'Yc:{}'.format(yc_val), style='italic',
         #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
 
@@ -1686,7 +1690,7 @@ class Plots:
         # ax.plot(Physics.yoon(l_grid, 10 ** 0.02), l_grid, '-.', color='green', label='Yoon 2017')
 
     @staticmethod
-    def plot_obs_t_llm_mdot_int(ax, t_llm_mdot, obs_cls, l_or_lm, yc1 = None, yc2 = None, lim_t1 = None, lim_t2 = None):
+    def plot_obs_t_llm_mdot_int(ax, t_llm_mdot, obs_cls, l_or_lm, lim_t1 = None, lim_t2 = None, show_legend = True):
 
         if lim_t1 == None: lim_t1 = t_llm_mdot[0, 1:].min()
         if lim_t2 == None: lim_t2 = t_llm_mdot[0, 1:].max()
@@ -1709,14 +1713,14 @@ class Plots:
 
                 for i in range(len(xyz[0, :])):
 
-                    plt.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
-                             color=obs_cls.get_class_color(star_n), ls='')  # plot color dots)))
+                    ax.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                             color=obs_cls.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
                     ax.annotate(int(star_n), xy=(xyz[0, i], xyz[1, i]),
                                 textcoords='data')  # plot numbers of stars
 
                     if obs_cls.get_star_class(star_n) not in classes:
-                        plt.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
-                                 color=obs_cls.get_class_color(star_n), ls='',
+                        ax.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                                 color=obs_cls.get_class_color(star_n), mec='black', ls='',
                                  label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
                         classes.append(obs_cls.get_star_class(star_n))
 
@@ -1769,18 +1773,43 @@ class Plots:
 
         fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
         f = np.poly1d(fit)
-        fit_x_coord = np.mgrid[(x.min() - 1):(x.max() + 1):1000j]
-        plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
+        fit_x_coord = np.mgrid[(t_llm_mdot[0,1:].min()):(t_llm_mdot[0,1:].max()):1000j]
+        ax.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
 
+        ax.set_xlim(t_llm_mdot[0,1:].min(), t_llm_mdot[0,1:].max())
+        ax.set_ylim(t_llm_mdot[1:,0].min(), t_llm_mdot[1:,0].max())
         # ax.text(0.9, 0.9,'Yc:{}'.format(yc_val), style='italic',
         #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center', verticalalignment='center', transform = ax.transAxes)
 
         # ax.text(x.max(), y.max(), 'Yc:{}'.format(yc_val), style='italic',
         #         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10})
-        ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        if show_legend:
+            ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
 
+        return ax
 
+    @staticmethod
+    def plot_edd_kappa(ax, t_arr, sm_cls, opal_used, n_int_edd):
+        from OPAL import Table_Analyze
+        Table_Analyze.plot_k_vs_t = False  # there is no need to plot just one kappa in the range of availability
+        clas_table_anal = Table_Analyze(opal_used, n_int_edd, False)
 
+        for i in range(len(sm_cls)):  # self.nmdls
+            mdl_m = sm_cls[i].get_cond_value('xm', 'sp')
+            mdl_l = sm_cls[i].get_cond_value('l', 'sp')
+
+            k_edd = Physics.edd_opacity(mdl_m, mdl_l)
+
+            n_model_for_edd_k = clas_table_anal.interp_for_single_k(t_arr.min(), t_arr.max(), n_int_edd, k_edd)
+            x = n_model_for_edd_k[0, :]
+            y = n_model_for_edd_k[1, :]
+            color = 'black'
+            # lbl = 'Model:{}, k_edd:{}'.format(i, '%.2f' % 10 ** k_edd)
+            ax.plot(x, y, '-.', color=color)  # , label=lbl)
+            ax.plot(x[-1], y[-1], 'x', color=color)
+
+        Table_Analyze.plot_k_vs_t = True
+        return ax
 # class Opt_Depth_Analythis():
 #
 #
@@ -1881,7 +1910,8 @@ class Levels:
                 return [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
 
             if v_n == 'k':
-                return [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+                # return [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+                return [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]  # FOR log Kappa
             if v_n == 'rho':
                 return [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
             # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
@@ -1909,7 +1939,8 @@ class Levels:
                 return [5.15, 5.16, 5.17, 5.18, 5.19, 5.20, 5.21, 5.22, 5.23, 5.24, 5.25, 5.26, 5.27, 5.28, 5.29, 5.30]
 
             if v_n == 'k':
-                return [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+                # return [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]  # FOR log Kappa
+                return [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2]  # FOR log Kappa
             if v_n == 'rho':
                 return [-10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4]
             # if v_n_z == 'r':   levels = [0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6,
@@ -1975,3 +2006,15 @@ class Labels:
 
         if v_n == 'rho':
             return r'$\log(\rho)$'
+
+class Get_Z:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def z(opal_table):
+        if opal_table.split('/')[-1] == 'table8.data':
+            return 0.02
+        if opal_table.split('/')[-1] == 'table_x.data':
+            return 0.008
+        raise NameError('Opal Table is not recognised: (given: {})'.format(opal_table))

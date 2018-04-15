@@ -189,21 +189,21 @@ class Criticals:
 
             return Math.find_nearest_index(x, x_mon[-1])
 
-        def all_values_array(i_model, rs_p, ts_p, min_indx, add_sonic_vals):
+        def all_values_array(cls, rs_p, ts_p, min_indx, add_sonic_vals):
 
             out_array = []
 
             # --- --- GET ARRAYS AND VALUES AND APPENDING TO OUTPUT ARRAY --- --- --- --- --- --- --- ---
 
-            r = self.smdl[i_model].get_col('r')[min_indx:]
-            t = self.smdl[i_model].get_col('t')[min_indx:]
+            r = cls.get_col('r')[min_indx:]
+            t = cls.get_col('t')[min_indx:]
 
-            out_array = np.append(out_array, self.smdl[i_model].get_col('l')[-1])    # appending 'l'    __1__
-            out_array = np.append(out_array, self.smdl[i_model].get_col('xm')[-1])   # appending 'xm'   __2__
-            out_array = np.append(out_array, self.smdl[i_model].get_col('He4')[0])   # appending 'Yc'   __3__
-            out_array = np.append(out_array, self.smdl[i_model].get_col('He4')[-1])  # appending 'Ys'   __4__
+            out_array = np.append(out_array, cls.get_col('l')[-1])    # appending 'l'    __1__
+            out_array = np.append(out_array, cls.get_col('xm')[-1])   # appending 'xm'   __2__
+            out_array = np.append(out_array, cls.get_col('He4')[0])   # appending 'Yc'   __3__
+            out_array = np.append(out_array, cls.get_col('He4')[-1])  # appending 'Ys'   __4__
 
-            out_array = np.append(out_array, self.smdl[i_model].get_col('mdot')[-1])  # appending 'mdot' __5__
+            out_array = np.append(out_array, cls.get_col('mdot')[-1])  # appending 'mdot' __5__
             out_array = np.append(out_array, rs_p)  # appending 'mdot' __6__
             out_array = np.append(out_array, ts_p)  # appending 'mdot' __7__
 
@@ -222,13 +222,12 @@ class Criticals:
                 cond = v_n_cond.split('-')[-1]
 
                 if cond != 'sp':
-                    var_val = self.smdl[i_model].get_cond_value(v_n,
-                                                                cond)  # assuming that condition is not required interp
+                    var_val = cls.get_cond_value(v_n, cond)  # assuming that condition is not required interp
 
                 else:
                     ''' Here The Interpolation of v_n is Done'''
 
-                    v_n_val_arr = self.smdl[i_model].get_col(v_n)[min_indx:]
+                    v_n_val_arr = cls.get_col(v_n)[min_indx:]
                     f = interpolate.InterpolatedUnivariateSpline(r, v_n_val_arr)
                     var_val = f(rs_p)
 
@@ -264,10 +263,10 @@ class Criticals:
         min_ind = 0
         max_ind = -1
         r_min = get_boundary(0.1) # setting the lower value of r that above which the analysis will take place
-        for i in range(len(self.num_files)):
-            r = self.smdl[i].get_col('r')
-            u = self.smdl[i].get_col('u')
-            t = self.smdl[i].get_col('t')
+        for cl in self.smdl:
+            r = cl.get_col('r')
+            u = cl.get_col('u')
+            t = cl.get_col('t')
             min_ind = Math.find_nearest_index(r, r_min)
             max_ind = crop_ends(r, u)
 
@@ -276,14 +275,14 @@ class Criticals:
 
 
         '''------------------------------------------MAIN CYCLE------------------------------------------------------'''
-        for i in range(len(self.num_files)):
+        for cl in self.smdl:
 
-            r  = self.smdl[i].get_col('r')
-            u  = self.smdl[i].get_col('u')
-            mu = self.smdl[i].get_col('mu')
-            t  = self.smdl[i].get_col('t')
-            u_s= self.smdl[i].get_sonic_u()
-            mdot_u=self.smdl[i].get_col('mdot')[-1]
+            r  = cl.get_col('r')
+            u  = cl.get_col('u')
+            mu = cl.get_col('mu')
+            t  = cl.get_col('t')
+            u_s= cl.get_sonic_u()
+            mdot_u=cl.get_col('mdot')[-1]
             mdots = np.append(mdots, mdot_u)
             print('\t__Initical Array Length: {}'.format(len(r)))
 
@@ -339,7 +338,7 @@ class Criticals:
                 ax2.plot(rs_p, ts_p, 'X', color='red')
                 ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
 
-                row = all_values_array(i, rs_p, ts_p, min_ind, add_sonic_vals)
+                row = all_values_array(cl, rs_p, ts_p, min_ind, add_sonic_vals)
                 out_array = np.vstack((out_array, row))
 
 
@@ -712,8 +711,8 @@ class Criticals:
         print('\t__Note. Critical Values are found and written in the FIRST row (out of {}) in output file.'.
               format(len(self.num_files) + 1))
 
-        tablehead = '{}  {}     {}     {}      {}   {} {}'\
-            .format('log(L)', 'M(Msun)', 'Yc', 'Ys', 'l(Mdot)', 'Rs(Rsun)', 'log(Ts)')
+        tablehead = '{}  {}     {}     {}        {}     {}     {}  '\
+            .format('log(L)', 'M(Msun)', 'Yc', 'Ys', 'mdot', 'r-sp', 't-sp')#------------------------------------------
 
 
         tmp = ''
@@ -1098,7 +1097,7 @@ class Criticals2:
             self.sp_mdl.append(Read_SM_data_file.from_sm_data_file(file))
 
         for file in sp_plotfiles:
-            self.sp_plmdl.append(Read_Plot_file.from_file(file))
+            self.sp_plmdl.append(Read_Plot_file.from_file(file, True))
 
 
 
@@ -1814,7 +1813,7 @@ class Criticals2:
             t_eff  = -1
             tau    = -1
             for i in range(len(arr[:, 0])):
-                print('{} =? {}'.format("%.2f"%arr[i, 0] , "%.2f"%mdot))
+                # print('{} =? {}'.format("%.2f"%arr[i, 0] , "%.2f"%mdot))
                 if np.float("%.2f"%arr[i, 0]) == np.float("%.2f"%mdot):
                     print('     Found')
                     r_wind = arr[i, 4]
@@ -1863,6 +1862,9 @@ class Criticals2:
                     ''' Here The Interpolation of v_n is Done'''
 
                     v_n_val_arr = cls.get_col(v_n)[min_indx:]
+                    if rs_p < r.min() or rs_p > r.max():
+                        raise ValueError('rs ({}) outside of r region ({},{})'.format(rs_p, r.min(), r.max()))
+
                     f = interpolate.InterpolatedUnivariateSpline(r, v_n_val_arr)
                     var_val = f(rs_p)
 
@@ -1900,10 +1902,10 @@ class Criticals2:
         r_min = get_boundary(0.1)  # setting the lower value of r that above which the analysis will take place
 
         '''---PLOTTING TH U(R) PROFILES---'''
-        for i in range(len(self.sp_smfls)):
-            r = self.sp_smdl[i].get_col('r')
-            u = self.sp_smdl[i].get_col('u')
-            t = self.sp_smdl[i].get_col('t')
+        for cl in self.sp_smdl:
+            r = cl.get_col('r')
+            u = cl.get_col('u')
+            t = cl.get_col('t')
             min_ind = Math.find_nearest_index(r, r_min)
             # max_ind = crop_ends(r, u)
 
@@ -1919,16 +1921,16 @@ class Criticals2:
         #     ax2.plot(r_[min_ind:], t_[min_ind:], '-', color='gray')
         arr = []
         '''---GETTING THE .PLOT (TAU+R_wind)---'''
-        for i in range(len(self.sp_plmdl)):
+        for cl in self.sp_plmdl:
 
-            mdot = self.sp_plmdl[i].mdot_[-1]
-            ts = self.sp_plmdl[i].t_eff[-1]
+            mdot    = cl.mdot_[-1]
+            ts      = cl.t_eff[-1]
             # rs = self.sp_plmdl[i].r_
-            r_n_rsun = self.sp_plmdl[i].r_n_rsun[-1]
-            r_wind = self.sp_plmdl[i].rwindluca[-1]
-            teffluca = self.sp_plmdl[i].teffluca[-1]
+            r_n_rsun = cl.r_n_rsun[-1]
+            r_wind   = cl.rwindluca[-1]
+            teffluca = cl.teffluca[-1]
             # Tn  = self.sp_plmdl[i].Tn[-1]
-            tau = self.sp_plmdl[i].tauatR[-1]
+            tau      = cl.tauatR[-1]
 
             arr = np.append(arr, [mdot, ts, r_n_rsun, teffluca, r_wind, tau])
 
@@ -1940,14 +1942,14 @@ class Criticals2:
         '''---INTERPOLATING THE SONIC VALUES---'''
 
         out_array = np.zeros(len(add_sonic_vals) + 9)  # where 6 are: [l, m, Yc, mdot, rs, ts] # always include
-        for i in range(len(self.sp_smdl)):
+        for cl in self.sp_smdl:
 
-            r  = self.sp_smdl[i].get_col('r')
-            u  = self.sp_smdl[i].get_col('u')
-            mu = self.sp_smdl[i].get_col('mu')
-            t  = self.sp_smdl[i].get_col('t')
-            u_s= self.sp_smdl[i].get_sonic_u()
-            mdot_u=self.sp_smdl[i].get_col('mdot')[-1]
+            r  = cl.get_col('r')
+            u  = cl.get_col('u')
+            mu = cl.get_col('mu')
+            t  = cl.get_col('t')
+            u_s= cl.get_sonic_u()
+            mdot_u=cl.get_col('mdot')[-1]
             mdots = np.append(mdots, mdot_u)
             print('\t__Initical Array Length: {}'.format(len(r)))
 
@@ -1998,20 +2000,35 @@ class Criticals2:
             # --- --- ---| SONIC POINT PARAMTERS |--- --- ---
             rs_p, ts_p = Math.interpolated_intercept(int_r, int_ts_arr, int_t)     # SONIC TEPERATURE
             if rs_p.any():
+                # if len(rs_p)>1:
+                #     raise ValueError('Multiple sonic points in SP_BEC file(?) : Rs:{}'.format(rs_p))
+                # if rs_p > int_r[-1] or rs_p < int_r[-1]/2:
+                #     rs_p = int_r[-1]
+                #     ts_p = int_t[-1]
+                # else:
                 rs_p = rs_p[0][0]
                 ts_p = ts_p[0][0]
-                ax2.plot(rs_p, ts_p, 'X', color='red')
-                ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
+                # pass
+            else:
+                rs_p = int_r[-1]
+                ts_p = int_t[-1]
 
-                row = all_values_array(self.sp_mdl[i], min_ind, rs_p, ts_p, arr_reshaped, add_sonic_vals)
+            print('\t__         Rs ({}) AND   R region ({},{})'.format(rs_p, r.min(), r.max()))
+            if rs_p < r.min() or rs_p > r.max():
+                raise ValueError('rs ({}) outside of r region ({},{})'.format(rs_p, r.min(), r.max()))
 
-                out_array = np.vstack((out_array, row))
+            ax2.plot(rs_p, ts_p, 'X', color='red')
+            ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
+            # print('--Rs{} Ts{}'.format(rs_p, ts_p))
+            row = all_values_array(cl, min_ind, rs_p, ts_p, arr_reshaped, add_sonic_vals)
+
+            out_array = np.vstack((out_array, row))
 
         if show_plot:
             plt.show()
 
         tablehead = '{} {} {} {} {} {} {} {} {}' \
-            .format('log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp', 'Tau', 'R_wind', 'T_eff')
+            .format('log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp', 'Tau', 'R_wind', 'T_eff')#-----------------------
 
         tmp = ''
         for v_n in add_sonic_vals:
@@ -2096,7 +2113,7 @@ class Criticals2:
 
         def extrapolate_crit_val(v_n, way_to_interp_tau):
 
-            grid_mdot = ga_table[1:, 3] # mdot
+            grid_mdot = sp_table[1:, 3] # mdot
             mdot = sp_table[:, 3]
             tau = []
 
@@ -2104,11 +2121,10 @@ class Criticals2:
                 raise NameError('v_n: {} is not in sp_head: {}'.format(v_n, sp_head))
 
             for i in range(len(sp_head)):
-
                 if sp_head[i] == v_n:
                     tau = sp_table[:, i]
                     break
-            print(mdot, tau)
+            # print(mdot, tau)
 
             md_tau = []
             for i in range(len(mdot)):
@@ -2122,29 +2138,29 @@ class Criticals2:
             tau_grid1 = interpolate.InterpolatedUnivariateSpline(md_tau_sh[:,0], md_tau_sh[:,1])(grid_mdot)
             tau_cr1 = interpolate.InterpolatedUnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(ga_table[0, 3])
 
-            tau_grid2 = interpolate.UnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(grid_mdot)
-            tau_cr2 = interpolate.UnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(ga_table[0, 3])
-
-            tmp, tau_grid3 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
-            tmp, tau_cr3 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 4, 0, np.array([ga_table[0, 3]]))
-
-            tmp, tau_grid4 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 3, 0, grid_mdot)
-            tmp, tau_cr4 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 3, 0, np.array([ga_table[0, 3]]))
-
-            tmp, tau_grid5 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 2, 0, grid_mdot)
-            tmp, tau_cr5 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 2, 0, np.array([ga_table[0, 3]]))
-
-            tmp, tau_grid6 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 1, 0, grid_mdot)
-            tmp, tau_cr6 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 1, 0, np.array([ga_table[0, 3]]))
+            # tau_grid2 = interpolate.UnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(grid_mdot)
+            # tau_cr2 = interpolate.UnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(ga_table[0, 3])
+            #
+            # tmp, tau_grid3 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            # tmp, tau_cr3 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 4, 0, np.array([ga_table[0, 3]]))
+            #
+            # tmp, tau_grid4 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 3, 0, grid_mdot)
+            # tmp, tau_cr4 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 3, 0, np.array([ga_table[0, 3]]))
+            #
+            # tmp, tau_grid5 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 2, 0, grid_mdot)
+            # tmp, tau_cr5 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 2, 0, np.array([ga_table[0, 3]]))
+            #
+            # tmp, tau_grid6 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 1, 0, grid_mdot)
+            # tmp, tau_cr6 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 1, 0, np.array([ga_table[0, 3]]))
 
 
             plt.plot(md_tau_sh[:,0], md_tau_sh[:,1], '.', color = 'black')
             plt.plot(grid_mdot, tau_grid1, '--', color='gray', label = '{}_cr(IntUn)  = {}'.format(v_n, "%.2f" % ( tau_cr1)))
-            plt.plot(grid_mdot, tau_grid2, '--', color='blue', label = '{}_cr(Univ) = {}'.format(v_n, "%.2f" % ( tau_cr2)))
-            plt.plot(grid_mdot, tau_grid3, '--', color='orange', label='{}_cr(ploy4) = {}'.format(v_n, "%.2f" % ( tau_cr3)))
-            plt.plot(grid_mdot, tau_grid4, '--', color='red', label='{}_cr(ploy3) = {}'.format(v_n, "%.2f" % ( tau_cr4)))
-            plt.plot(grid_mdot, tau_grid5, '--', color='cyan', label='{}_cr(ploy2) = {}'.format(v_n, "%.2f" % ( tau_cr5)))
-            plt.plot(grid_mdot, tau_grid6, '--', color='black', label='{}_cr(ploy1) = {}'.format(v_n, "%.2f" % ( tau_cr6)))
+            # plt.plot(grid_mdot, tau_grid2, '--', color='blue', label = '{}_cr(Univ) = {}'.format(v_n, "%.2f" % ( tau_cr2)))
+            # plt.plot(grid_mdot, tau_grid3, '--', color='orange', label='{}_cr(ploy4) = {}'.format(v_n, "%.2f" % ( tau_cr3)))
+            # plt.plot(grid_mdot, tau_grid4, '--', color='red', label='{}_cr(ploy3) = {}'.format(v_n, "%.2f" % ( tau_cr4)))
+            # plt.plot(grid_mdot, tau_grid5, '--', color='cyan', label='{}_cr(ploy2) = {}'.format(v_n, "%.2f" % ( tau_cr5)))
+            # plt.plot(grid_mdot, tau_grid6, '--', color='black', label='{}_cr(ploy1) = {}'.format(v_n, "%.2f" % ( tau_cr6)))
 
             plt.axvline(x=ga_table[0, 3], label='Critical point')
             plt.legend()
@@ -2159,20 +2175,20 @@ class Criticals2:
             if way_to_interp_tau == 'IntUni':
                 return tau_cr1, np.append(np.array([tau_cr1]), tau_grid1)
 
-            if way_to_interp_tau == 'Uni':
-                return tau_cr2, np.append(np.array([tau_cr2]), tau_grid2)
-
-            if way_to_interp_tau == 'poly4':
-                return tau_cr3, np.append(np.array([tau_cr3]), tau_grid3)
-
-            if way_to_interp_tau == 'poly3':
-                return tau_cr4, np.append(np.array([tau_cr4]), tau_grid4)
-
-            if way_to_interp_tau == 'poly2':
-                return tau_cr5, np.append(np.array([tau_cr5]), tau_grid5)
-
-            if way_to_interp_tau == 'poly1':
-                return tau_cr6, np.append(np.array([tau_cr6]), tau_grid6)
+            # if way_to_interp_tau == 'Uni':
+            #     return tau_cr2, np.append(np.array([tau_cr2]), tau_grid2)
+            #
+            # if way_to_interp_tau == 'poly4':
+            #     return tau_cr3, np.append(np.array([tau_cr3]), tau_grid3)
+            #
+            # if way_to_interp_tau == 'poly3':
+            #     return tau_cr4, np.append(np.array([tau_cr4]), tau_grid4)
+            #
+            # if way_to_interp_tau == 'poly2':
+            #     return tau_cr5, np.append(np.array([tau_cr5]), tau_grid5)
+            #
+            # if way_to_interp_tau == 'poly1':
+            #     return tau_cr6, np.append(np.array([tau_cr6]), tau_grid6)
 
             raise NameError('Given way_to_interp_tau ({}) is not availabel. '
                             'Use only: IntUni, Uni, poly4, poly3, poly2, poly1'.format(way_to_interp_tau))

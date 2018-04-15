@@ -35,12 +35,13 @@ from OPAL import OPAL_Interpol
 from OPAL import New_Table
 #-----------------------------------------------------------------------------------------------------------------------
 
+
 class Save_Load_tables:
     def __init__(self):
         pass
 
     @staticmethod
-    def save_table(d2arr, opal_used, name, x_name, y_name, z_name, output_dir = '../data/output/'):
+    def save_table(d2arr, opal_used, bump, name, x_name, y_name, z_name, output_dir = '../data/output/'):
 
         header = np.zeros(len(d2arr)) # will be first row with limtis and
         # header[0] = x1
@@ -50,13 +51,13 @@ class Save_Load_tables:
         # tbl_name = 't_k_rho'
         # op_and_head = np.vstack((header, d2arr))  # arraching the line with limits to the array
 
-        part = opal_used.split('/')[-1]
+        part = '_' + bump + '_' + opal_used.split('/')[-1]
         full_name = output_dir + name + '_' + part  # dir/t_k_rho_table8.data
 
         np.savetxt(full_name, d2arr, '%.4f', '  ', '\n',
                    '\nINTERPOLATED OPAL {} TABLE for {} relation'.format(part, name), '',
                    '# {} | {} | {} | {} |'
-                   .format(opal_used, x_name, y_name, z_name))
+                   .format('_' + bump + '_' + opal_used, x_name, y_name, z_name))
 
         # np.savetxt(full_name, d2arr, '%.4f', '  ', '\n',
         #            '\nINTERPOLATED OPAL {} TABLE for {} relation'.format(part, name), '',
@@ -64,8 +65,8 @@ class Save_Load_tables:
         #            .format(opal_used, x_name, x1, x2, y_name, y1, y2, z_name, n_int, n_out))
 
     @staticmethod
-    def load_table(name, x_name, y_name, z_name, opal_used, dir = '../data/output/'):
-        part = opal_used.split('/')[-1]
+    def load_table(name, x_name, y_name, z_name, opal_used, bump, dir = '../data/output/'):
+        part =  '_' + bump + '_' + opal_used.split('/')[-1]
         full_name = dir + name + '_' + part
 
         f = open(full_name, 'r').readlines()
@@ -89,8 +90,8 @@ class Save_Load_tables:
         r_y_name = boxes[2].split()[-1]
         r_z_name = boxes[3].split()[-1]
 
-        if r_table != opal_used:
-            raise NameError('Read OPAL | {} | not the same is opal_used | {} |'.format(r_table, opal_used))
+        if r_table != '_' + bump + '_' + opal_used:
+            raise NameError('Read OPAL | {} | not the same is opal_used | {} |'.format(r_table,  '_' + bump + '_' + opal_used))
 
         if x_name != r_x_name:
             raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(x_name, r_x_name))
@@ -135,10 +136,10 @@ class Save_Load_tables:
         return np.array(file_table, dtype='float64') #[x1, x2, y1, y2, n1, n2]
 
     @staticmethod
-    def save_3d_table(d3array, opal_used, name, t_name, x_name, y_name, z_name, output_dir = '../data/output/'):
+    def save_3d_table(d3array, opal_used, bump, name, t_name, x_name, y_name, z_name, output_dir = '../data/output/'):
         i = 0
 
-        part = opal_used.split('/')[-1]
+        part =  '_' + bump + '_' + opal_used.split('/')[-1]
         full_name = output_dir + name + '_' + part  # dir/t_k_rho_table8.data
 
         # np.savetxt(full_name, d2arr, '%.4f', '  ', '\n',
@@ -151,7 +152,7 @@ class Save_Load_tables:
             # Any line starting with "#" will be ignored by numpy.loadtxt
             # outfile.write('# Array shape: {0}\n'.format(d3array.shape))
             outfile.write(
-                '# {} | {} | {} | {} | {} | {} | \n'.format(d3array.shape, t_name, x_name, y_name, z_name, opal_used))
+                '# {} | {} | {} | {} | {} | {} | \n'.format(d3array.shape, t_name, x_name, y_name, z_name,  '_' + bump + '_' + opal_used))
 
             # Iterating through a ndimensional array produces slices along
             # the last axis. This is equivalent to data[i,:,:] in this case
@@ -160,7 +161,7 @@ class Save_Load_tables:
                 # the values in left-justified columns 7 characters in width
                 # with 2 decimal places.
                 np.savetxt(outfile, data_slice, '%.4f', '  ', '\n',
-                           '\n# {}:{} | {} | {} | {} | {}\n'.format(t_name, data_slice[0,0], x_name, y_name, z_name, opal_used), '',
+                           '\n# {}:{} | {} | {} | {} | {}\n'.format(t_name, data_slice[0,0], x_name, y_name, z_name,  '_' + bump + '_' + opal_used), '',
                            '')
                 # np.savetxt(outfile, data_slice, fmt='%-7.2f')
 
@@ -169,7 +170,7 @@ class Save_Load_tables:
                 i = i + 1
 
     @staticmethod
-    def load_3d_table(opal_used, name, t_name, x_name, y_name, z_name, output_dir='../data/output/'):
+    def load_3d_table(opal_used, bump, name, t_name, x_name, y_name, z_name, output_dir='../data/output/'):
         '''
                             RETURS a 3d table
         :param opal_used:
@@ -183,7 +184,7 @@ class Save_Load_tables:
         '''
 
 
-        part = opal_used.split('/')[-1]
+        part = '_' + bump + '_' + opal_used.split('/')[-1]
         full_name = output_dir + name + '_' + part
 
         with open(full_name, 'r') as f: # reads only first line (to save time)
@@ -200,8 +201,8 @@ class Save_Load_tables:
 
         # --- Checks for opal (metallicity) and x,y,z,t, var_names.
 
-        if r_opal != opal_used:
-            raise NameError('Read OPAL <{}> not the same is opal_used <{}>'.format(r_opal, opal_used))
+        if r_opal !=  '_' + bump + '_' + opal_used:
+            raise NameError('Read OPAL <{}> not the same is opal_used <{}>'.format(r_opal,  '_' + bump + '_' + opal_used))
         if t_name != r_t_v_n:
             raise NameError('Provided x_name: {} not equal to table x_name: {}'.format(t_name, r_t_v_n))
         if x_name != r_x_v_n:
@@ -260,13 +261,42 @@ class Save_Load_tables:
         #
         # f.clear()
 
+class Opacity_Bump:
+
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def t_for_bump(bump_name):
+        '''
+        Returns t1, t2 for the opacity bump, corresponding to a Fe or HeII increase
+        :param bump_name:
+        :return:
+        '''
+
+        t_fe_bump1  = 5.18
+        t_fe_bump2  = 5.4
+
+        t_he2_bump1 = 4.75
+        t_he2_bump2 = 5.00
+
+        if bump_name == 'HeII':
+            return t_he2_bump1, t_he2_bump2
+
+        if bump_name == 'Fe':
+            return t_fe_bump1, t_fe_bump2
+
+        raise NameError('Incorrect bump_name. Opacity bumps availabel: {}'.format(['HeII', 'Fe']))
+
 class Creation:
 
-    def __init__(self, opal_name, t1, t2, n_interp = 1000, load_lim_cases = False,
+    def __init__(self, opal_name, bump, n_interp = 1000, load_lim_cases = False,
                  output_dir = '../data/output/', plot_dir = '../data/plots/'):
+
         self.op_name = opal_name
-        self.t1 = t1
-        self.t2 = t2
+        self.bump = bump
+        self.t1, self.t2 = Opacity_Bump.t_for_bump(bump)
         self.n_inter = n_interp
 
         self.out_dir = output_dir
@@ -280,7 +310,7 @@ class Creation:
         t1, t2, rho1, rho2 = op_cl.check_t_rho_limits(self.t1, self.t2, rho1, rho2)
         op_table = op_cl.interp_opal_table(self.t1, self.t2, rho1, rho2)
 
-        Save_Load_tables.save_table(op_table, self.op_name,'t_rho_k','t','rho','k',self.out_dir)
+        Save_Load_tables.save_table(op_table, self.op_name, self.bump, 't_rho_k','t', 'rho','k', self.out_dir)
 
     def save_t_k_rho(self, llm1=None, llm2=None, n_out = 1000):
 
@@ -289,23 +319,23 @@ class Creation:
         global t_k_rho
         t_k_rho = self.tbl_anl.treat_tasks_interp_for_t(self.t1, self.t2, n_out, self.n_inter, k1, k2).T
 
-        Save_Load_tables.save_table(t_k_rho, self.op_name, 't_k_rho', 't', 'k', 'rho', self.out_dir)
+        Save_Load_tables.save_table(t_k_rho, self.op_name, self.bump, 't_k_rho', 't', 'k', 'rho', self.out_dir)
         print('\t__Note. Table | t_k_rho | has been saved in {}'.format(self.out_dir))
         # self.read_table('t_k_rho', 't', 'k', 'rho', self.op_name)
         # def save_t_llm_vrho(self, llm1=None, llm2=None, n_out = 1000):
 
-    def from_t_k_rho__to__t_lm_rho(self):
-        t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.op_name)
+    def from_t_k_rho__to__t_lm_rho(self, coeff = 1.0):
+        t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.op_name, self.bump)
 
         t = t_k_rho[0, 1:]
         k = t_k_rho[1:, 0]
         rho2d = t_k_rho[1:, 1:]
 
-        lm = Physics.logk_loglm(k, 1)
+        lm = Physics.logk_loglm(k, 1, coeff)
 
         t_lm_rho = Math.invet_to_ascending_xy( Math.combine(t, lm, rho2d) )
 
-        Save_Load_tables.save_table(t_lm_rho, self.op_name, 't_lm_rho', 't', 'lm', 'rho', self.out_dir)
+        Save_Load_tables.save_table(t_lm_rho, self.op_name, self.bump, 't_{}lm_rho'.format(coeff), 't', '{}lm'.format(coeff), 'rho', self.out_dir)
         print('\t__Note. Table | t_lm_rho | for | {} | has been saved in {}'.format(self.op_name, self.out_dir))
 
     def save_t_llm_vrho(self, l_or_lm_name):
@@ -316,7 +346,7 @@ class Creation:
         '''
 
         # 1 load the t_k_rho
-        t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.op_name)
+        t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.op_name, self.bump)
 
         k = t_k_rho[0, 1:]
         t = t_k_rho[1:, 0]
@@ -326,7 +356,7 @@ class Creation:
 
         # ----------------------------- SELECT THE Y AXIS -----------------
         if l_or_lm_name == 'l':
-            l_lm_arr = Physics.lm_to_l(Physics.logk_loglm(k, True))  # Kappa -> L/M -> L
+            l_lm_arr = Physics.lm_to_l_langer(Physics.logk_loglm(k, True))  # Kappa -> L/M -> L
         else:
             l_lm_arr = Physics.logk_loglm(k, 1)
 
@@ -338,7 +368,7 @@ class Creation:
         t_llm_vrho = Math.combine(t, l_lm_arr, vrho)
         name = 't_'+ l_or_lm_name + '_vrho'
 
-        Save_Load_tables.save_table(t_llm_vrho, self.op_name, name, 't', l_or_lm_name, '_vrho', self.out_dir)
+        Save_Load_tables.save_table(t_llm_vrho, self.op_name, self.bump, name, 't', l_or_lm_name, '_vrho', self.out_dir)
 
         return t_llm_vrho
 
@@ -560,9 +590,9 @@ class SP_file_work():
 
         table_name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
         if save == 'int':
-            Save_Load_tables.save_table(yc_llm_m_int, self.opal_used, table_name, 'yc', y_v_n, z_v_n)
+            Save_Load_tables.save_table(yc_llm_m_int, self.opal_used, '', table_name, 'yc', y_v_n, z_v_n)
         if save == 'pol':
-            Save_Load_tables.save_table(yc_llm_m_pol, self.opal_used, table_name, 'yc', y_v_n, z_v_n)
+            Save_Load_tables.save_table(yc_llm_m_pol, self.opal_used, '', table_name, 'yc', y_v_n, z_v_n)
 
         # Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
 
@@ -627,10 +657,11 @@ class SP_file_work():
 
         if plot:
             from Phys_Math_Labels import Plots
+            from Phys_Math_Labels import Get_Z
             if save == 'int':
-                Plots.plot_color_table(yc_llm_m_int, 'yc', y_v_n, z_v_n, self.opal_used)
+                Plots.plot_color_table(yc_llm_m_int, 'yc', y_v_n, z_v_n, self.opal_used, 'z:{}'.format(Get_Z.z(self.opal_used)))
             if save == 'pol':
-                Plots.plot_color_table(yc_llm_m_pol, 'yc', y_v_n, z_v_n, self.opal_used)
+                Plots.plot_color_table(yc_llm_m_pol, 'yc', y_v_n, z_v_n, self.opal_used, 'z:{}'.format(Get_Z.z(self.opal_used)))
 
         # yc_llm_m_pol
 
@@ -1050,6 +1081,23 @@ class SP_file_work():
         else:
             raise NameError('min_or_max can be only: [{}, or {}] given: {}'.format('min', 'max', min_or_max))
 
+    @staticmethod
+    def y_limits(cls, y_v_n, min_or_max='min', append_crit=True):
+        y_mins = []
+        y_maxs = []
+        for cl in cls:
+            y = cl.get_sonic_cols(y_v_n)
+            if append_crit:
+                y = np.append(y, cl.get_crit_value(y_v_n))
+            y_mins = np.append(y_mins, y.min())
+            y_maxs = np.append(y_maxs, y.max())
+        if min_or_max == 'min':
+            return  y_mins.min(), y_maxs.max()
+        if min_or_max == 'max':
+            return  y_mins.min(), y_maxs.max()
+        else:
+            raise NameError('min_or_max can be only: [{}, or {}] given: {}'.format('min', 'max', min_or_max))
+
     def plot_x_y_z_for_yc(self, x_v_n, y_v_n, z_v_n, yc_val, depth, min_or_max = 'min', append_crit = True, plot=True):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
@@ -1165,7 +1213,7 @@ class SP_file_work():
     def get_t_llm_rho_crop_for_yc(self, cls, t_lm_rho, yc_val, y_v_n, min_max = 'min', opal_used = None, append_crit = True):
 
         # t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', opal_used)
-        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used)
+        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used, '')
         t_lm_rho_com, yc_lm_l_com = Math.common_y(t_lm_rho, yc_lm_l)
 
         if y_v_n == 'l':
@@ -1198,7 +1246,7 @@ class SP_file_work():
         vro = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
         mdot= Physics.vrho_mdot(vro, r2d,'tl')
         return Math.combine(t, llm, mdot, yc_val)
-    def plot_t_llm_mdot_for_yc(self, yc_val, l_or_lm, min_max = 'min', append_crit = True):
+    def plot_t_llm_mdot_for_yc(self, yc_val, l_or_lm, coeff, bump, min_max = 'min', append_crit = True):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
         if yc_val in yc:
@@ -1206,14 +1254,37 @@ class SP_file_work():
         else:
             raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
 
-        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', self.opal_used)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(coeff), 't', '{}lm'.format(coeff), 'rho', self.opal_used, bump)
         t_llm_mdot = self.get_t_llm_mdot_for_yc(cls[yc_index], t_lm_rho, yc[yc_index], l_or_lm, min_max, self.opal_used, append_crit)
 
-        Plots.plot_color_table(t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used, 'Yc:{}'.format(yc_val))
+        from Phys_Math_Labels import Get_Z
+        z = Get_Z.z(self.opal_used)
+        Plots.plot_color_table(t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used, 'z:{}({}) Yc:{} K:{}'.format(z, bump, yc_val, coeff))
 
+    def get_t_llm_rho_crop_for_yc_const_r(self, cls, t_lm_rho, yc_val, y_v_n, min_max = 'min', opal_used = None, append_crit = True):
+
+        # t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', opal_used)
+        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', opal_used, '')
+        t_lm_rho_com, yc_lm_l_com = Math.common_y(t_lm_rho, yc_lm_l)
+
+        if y_v_n == 'l':
+            l = self.lm_l(t_lm_rho_com[1:, 0], yc_lm_l, yc_val)
+
+            t_l_rho = Math.combine(t_lm_rho_com[0, 1:], l, t_lm_rho_com[1:, 1:])
+
+            y1, y2 = self.y_limits(cls, y_v_n, min_max, append_crit)
+            t_l_rho_crop = Math.crop_2d_table2(t_l_rho, None, None, y1, y2)  # taking absolut limits
+
+            return t_l_rho_crop
+
+        if y_v_n == 'lm':
+            y1, y2 = self.y_limits(cls, y_v_n, min_max, append_crit)
+            t_lm_rho_crop = Math.crop_2d_table2(t_lm_rho_com, None, None, y1, y2)
+
+            return t_lm_rho_crop
     def get_t_llm_mdot_for_yc_const_r(self, cls, t_lm_rho, yc_val, rs, y_v_n, min_max = 'min', opal_used = None, append_crit = True):
 
-        t_llm_rho = self.get_t_llm_rho_crop_for_yc(cls, t_lm_rho, yc_val, y_v_n, min_max, opal_used, append_crit)
+        t_llm_rho = self.get_t_llm_rho_crop_for_yc_const_r(cls, t_lm_rho, yc_val, y_v_n, min_max, opal_used, append_crit)
 
         # t_llm_r = self.x_y_z(cls, 't', y_v_n, 'r', t_llm_rho[0, 1:], t_llm_rho[1:, 0], append_crit)
 
@@ -1227,7 +1298,7 @@ class SP_file_work():
         vro = Physics.get_vrho(t, rho2d, 2, np.array([1.34]))
         mdot= Physics.vrho_mdot(vro, rs, '')
         return Math.combine(t, llm, mdot, yc_val)
-    def plot_t_llm_mdot_for_yc_const_r(self, yc_val, rs, l_or_lm, min_max = 'min', append_crit = True, plot=True):
+    def plot_t_llm_mdot_for_yc_const_r(self, yc_val, rs, l_or_lm, coeff, bump, min_max = 'min', append_crit = True, plot=True):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
         if yc_val in yc:
@@ -1235,10 +1306,11 @@ class SP_file_work():
         else:
             raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
 
-        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', self.opal_used)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(coeff), 't', '{}lm'.format(coeff), 'rho', self.opal_used, bump)
         t_llm_mdot = self.get_t_llm_mdot_for_yc_const_r(cls[yc_index], t_lm_rho, yc[yc_index], rs, l_or_lm, min_max, self.opal_used, append_crit)
 
-        Plots.plot_color_table(t_llm_mdot, 't', l_or_lm, 'mdot',self.opal_used, 'Yc:{} Rs:{}'.format(yc_val, rs))
+        if plot:
+            Plots.plot_color_table(t_llm_mdot, 't', l_or_lm, 'mdot',self.opal_used, 'Yc:{} R:{}'.format(yc_val, rs))
 
         # Save_Load_tables.save_3d_table(t_llm_mdot, self.opal_used, 'yc_t_{}_mdot_r_{}'.format(l_or_lm, rs), 'yc', 't',
         #                                l_or_lm, 'mdot_r_{}'.format(rs), self.out_dir)
@@ -1291,7 +1363,8 @@ class SP_file_work():
         ax.grid()
         plt.show()
 
-        Save_Load_tables.save_table(yc_lm_min_max, self.opal_used,'yc_nan_{}lim'.format(v_n), 'yc', 'nan', '{}lim'.format(v_n))
+        Save_Load_tables.save_table(yc_lm_min_max, self.opal_used, '',
+                                    'yc_nan_{}lim'.format(v_n), 'yc', 'nan', '{}lim'.format(v_n))
 
             # lm_arr = np.append(lm_arr, cl.get_crit_value('lm'))
             # ys_arr = np.append(ys_arr, cl.get_crit_value('ys'))
@@ -1328,16 +1401,16 @@ class SP_file_work():
         z2 = np.delete(z2, 0, 0)
         return Math.combine(x_grid, y_grid, z2.T)
 
-    def save_t_llm_mdot(self, l_or_lm, depth_square = 500, min_max = 'min', append_crit = True):
+    def save_t_llm_mdot(self, l_or_lm, coeff, bump, depth_square = 500, min_max = 'min', append_crit = True):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
-        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', self.opal_used)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(coeff), 't', '{}lm'.format(coeff), 'rho', self.opal_used, bump)
 
 
         # yc_t_llm_mdot = np.array([[[k*j*i for k in np.arange(0, 5, 1)] for j in np.arange(0, 5, 1)] for i in np.arange(0, 5, 1)])
         yc_t_llm_mdot = []
         for i in range(len(yc)):
-            print('\n<--- --- --- Yc:{} --- --- --->\n'.format(yc[i]))
+            print('\n<--- --- --- ({}) Yc:{} K:{} --- --- --->\n'.format(bump, yc[i], coeff))
             tmp1 = self.get_t_llm_mdot_for_yc(cls[i], t_lm_rho, yc[i], l_or_lm, min_max, self.opal_used, append_crit)
             tmp2 = self.get_square(tmp1, depth_square)
             tmp2[0, 0] = yc[i] # appending the yc value as a [0, 0] in the array.
@@ -1345,23 +1418,24 @@ class SP_file_work():
             yc_t_llm_mdot = np.append(yc_t_llm_mdot, tmp2)
 
         yc_t_llm_mdot = np.reshape(yc_t_llm_mdot, (len(yc), depth_square+1, depth_square+1))
-        print('\t__Saving the yc_t_{}_mdot table for. Shape:{}'.format(l_or_lm, yc_t_llm_mdot.shape))
+        print('\t__Saving the ({}) yc_t_{}{}_mdot table for. Shape:{}'.format(bump, coeff, l_or_lm, yc_t_llm_mdot.shape))
 
 
 
-        Save_Load_tables.save_3d_table(yc_t_llm_mdot, self.opal_used, 'yc_t_{}_mdot'.format(l_or_lm), 'yc', 't', l_or_lm, 'mdot', self.out_dir)
+        Save_Load_tables.save_3d_table(yc_t_llm_mdot, self.opal_used, bump, 'yc_t_{}{}_mdot'.format(coeff, l_or_lm),
+                                       'yc', 't', str(coeff) + l_or_lm, 'mdot', self.out_dir)
 
         # print(Save_Load_tables.load_3d_table(self.opal_used, 'yc_t_l_mdot', 'yc', 't', 'l', 'mdot', self.out_dir))
 
-    def save_t_llm_mdot_const_r(self, l_or_lm, rs, depth_square = 500, min_max = 'min', append_crit = True):
+    def save_t_llm_mdot_const_r(self, l_or_lm, coeff, bump, rs, depth_square = 500, min_max = 'min', append_crit = True):
 
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
-        t_lm_rho = Save_Load_tables.load_table('t_lm_rho', 't', 'lm', 'rho', self.opal_used)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(coeff), 't', '{}lm'.format(coeff), 'rho', self.opal_used, bump)
 
         # yc_t_llm_mdot_rs_const = np.array([[[k*j*i for k in np.arange(0, 5, 1)] for j in np.arange(0, 5, 1)] for i in np.arange(0, 5, 1)])
         yc_t_llm_mdot_rs_const = []
         for i in range(len(yc)):
-            print('\n<--- --- --- Yc:{} Rs:{} (const) --- --- --->\n'.format(yc[i], rs))
+            print('\n<--- --- --- ({}) Yc:{} K:{} Rs:{} (const) --- --- --->\n'.format(bump, yc[i], coeff, rs))
             tmp1 = self.get_t_llm_mdot_for_yc_const_r(cls[i], t_lm_rho, yc[i], rs, l_or_lm, min_max, self.opal_used, append_crit)
             tmp2 = self.get_square(tmp1, depth_square)
             tmp2[0, 0] = yc[i]  # appending the yc value as a [0, 0] in the array.
@@ -1369,10 +1443,11 @@ class SP_file_work():
             yc_t_llm_mdot_rs_const = np.append(yc_t_llm_mdot_rs_const, tmp2)
 
         yc_t_llm_mdot_rs_const = np.reshape(yc_t_llm_mdot_rs_const, (len(yc), depth_square + 1, depth_square + 1))
-        print('\t__Saving the yc_t_{}_mdot table for Rs = {} (const). Shape:{}'.format(l_or_lm, rs, yc_t_llm_mdot_rs_const.shape))
+        print('\t__Saving the ({}) yc_t_{}{}_mdot table for Rs = {} (const). Shape:{}'.format(bump, coeff, l_or_lm, rs,
+                                                                                              yc_t_llm_mdot_rs_const.shape))
 
-        Save_Load_tables.save_3d_table(yc_t_llm_mdot_rs_const, self.opal_used, 'yc_t_{}_mdot_rs_{}'.format(l_or_lm, rs), 'yc', 't',
-                                       l_or_lm, 'mdot_rs_{}'.format(rs), self.out_dir)
+        Save_Load_tables.save_3d_table(yc_t_llm_mdot_rs_const, self.opal_used, bump, 'yc_t_{}{}_mdot_rs_{}'.format(coeff, l_or_lm, rs), 'yc', 't',
+                                       str(coeff) + l_or_lm, 'mdot_rs_{}'.format(rs), self.out_dir)
 
 
     # def save_y_yc_z_relation_sp(self, x_v_n, y_v_n, z_v_n, save, plot=False, depth=100):
@@ -1947,8 +2022,8 @@ class Read_Observables:
         # print(self.get_star_class(110))
 
         if load_relations:
-            self.yc_l_lm = Save_Load_tables.load_table('yc_l_lm', 'yc', 'l', 'lm', self.opal_used)
-            self.yc_nan_lmlim = Save_Load_tables.load_table('yc_nan_lmlim', 'yc', 'nan', 'lmlim', self.opal_used)
+            self.yc_l_lm = Save_Load_tables.load_table('yc_l_lm', 'yc', 'l', 'lm', self.opal_used, '')
+            self.yc_nan_lmlim = Save_Load_tables.load_table('yc_nan_lmlim', 'yc', 'nan', 'lmlim', self.opal_used, '')
 
 
     def set_num_str_tables(self):
@@ -2064,8 +2139,9 @@ class Read_Observables:
     def lm_mdot_to_ts_errs(self, lm, mdot, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2):
         mdot_arr = t_llm_mdot[1:, 1:]
         i = Math.find_nearest_index(t_llm_mdot[1:, 0], lm)
-        if t_llm_mdot[i, 1:].min() > mdot:
 
+        if t_llm_mdot[i, 1:].min() > mdot:
+            print('\t__Star: {} Using the min. mdot in the row for the error. '.format(star_n))
             mdot = mdot_arr[i,:].min()
 
         xyz = Physics.model_yz_to_xyz(t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lm, mdot, star_n, lim_t1, lim_t2)
@@ -2078,7 +2154,12 @@ class Read_Observables:
                 return ts
 
         else:
-            raise ValueError('No solutions found star: {}, mdot: {}, mdot array:({}, {})'.format(star_n, mdot, mdot_arr[i, :].min(), mdot_arr[i, :].max()))
+
+            print('\t__ Error. No (Error) solutions found star: {}, mdot: {}, mdot array:({}, {})'
+                             .format(star_n, mdot, mdot_arr[i, :].min(), mdot_arr[i, :].max()))
+            return lim_t2
+            raise ValueError('No Error solutions found star: {}, mdot: {}, mdot array:({}, {})'
+                             .format(star_n, mdot, mdot_arr[i, :].min(), mdot_arr[i, :].max()))
     def get_star_mdot_obs_err(self, star_n, yc_assumed):
         mdot_err = None
         if self.opal_used.split('/')[-1] == 'table8.data':
@@ -2089,7 +2170,6 @@ class Read_Observables:
                                              'Expected: table8.data or table_x.data, Given: {}'.format(self.opal_used))
         mdot = self.get_num_par('mdot', star_n, yc_assumed)
         return mdot - mdot_err, mdot + mdot_err
-
 
     def get_star_ts_obs_err(self, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2):
 
@@ -2321,6 +2401,9 @@ class Read_Observables:
 
         print('\t__STAR: {} | Evol. Err. L/M for Yc ({} - {}) L/M: ({}, {})'.format(star_n, yc1, yc2, lm1, lm2))
 
+        if lm1 == lm2 :
+             raise  ValueError('lm1==lm2')
+
         return lm1, lm2
 
     def get_star_ts_err(self, star_n, t_llm_mdot, yc_assumed, lim_t1, lim_t2):
@@ -2353,6 +2436,8 @@ class Read_Observables:
                 raise ValueError('Multiple coordinates for star: {} | Yc: {}'.format(star_n, yc_assumed))
             else:
                 ts1 = xyz1[0, 0]  # xyz[0, :] ALL X coordinates
+        else:
+            ts1 = t_llm_mdot[0, -1]
 
         ts2 = 0
         yc2 = yc[-1]
@@ -2363,6 +2448,8 @@ class Read_Observables:
                 raise ValueError('Multiple coordinates for star: {} | Yc: {}'.format(star_n, yc_assumed))
             else:
                 ts2 = xyz2[0, 0]  # xyz[0, :] ALL X coordinates
+        else:
+            ts2 = t_llm_mdot[0, 0]
 
         print('\t__STAR: {} | {} : {} (+{} -{})'.format(star_n, 'Ts', ts, "%.2f" % np.abs(ts - ts1),
                                                         "%.2f" % np.abs(ts - ts2)))
@@ -2448,7 +2535,7 @@ class Read_Plot_file:
     # path = './data/'
     # compart = '.plot1'
 
-    def __init__(self, plot_table):
+    def __init__(self, plot_table, sonic_bec = False):
         i_stop = len(plot_table[:,0])
 
         for i in range(len(plot_table[:,8])): # if T_eff == 0 stop using the data
@@ -2475,18 +2562,21 @@ class Read_Plot_file:
         self.t_max = plot_table[:i_stop,14]         # vvcmax
         self.rho_at_t_max = plot_table[:i_stop,15]  # gammax
         self.m_at_t_max = plot_table[:i_stop,16]    # wcrit
-        # self.logg = plot_table[:i_stop,17]          # logg
-        # self.rwindluca = plot_table[:i_stop,18]     # rwindluca/rsun
-        # self.r_n_rsun = plot_table[:i_stop, 19]     # r(n)/rsun
-        # self.teffluca = np.log10(plot_table[:i_stop, 20])   # teffluca
-        # self.Tn = np.log10(plot_table[:i_stop, 21])         # T(N)
-        # self.tauatR = np.log10(plot_table[:i_stop, 22]   )  # tauatR
-        # self.windform_23 = plot_table[:i_stop, 23]          # Abs(windmd)/(4.d0*PI*rwindluca**2*(v0+(vinf-v0)*(1.d0-R(N)/rwindluca))),
-        # self.windform_24 = plot_table[:i_stop, 24]          # v0+(vinf-v0)*(1-R(N)/rwindluca)
+        if sonic_bec:
+            self.logg = plot_table[:i_stop,17]          # logg
+            self.rwindluca = plot_table[:i_stop,18]     # rwindluca/rsun
+            self.r_n_rsun = plot_table[:i_stop, 19]     # r(n)/rsun
+            self.teffluca = np.log10(plot_table[:i_stop, 20])   # teffluca
+            self.Tn = np.log10(plot_table[:i_stop, 21])         # T(N)
+            self.tauatR = np.log10(plot_table[:i_stop, 22]   )  # tauatR
+            self.windform_23 = plot_table[:i_stop, 23]          # Abs(windmd)/(4.d0*PI*rwindluca**2*(v0+(vinf-v0)*(1.d0-R(N)/rwindluca))),
+            self.windform_24 = plot_table[:i_stop, 24]          # v0+(vinf-v0)*(1-R(N)/rwindluca)
     # def
 
+
+
     @classmethod
-    def from_file(cls, plot_file_name):
+    def from_file(cls, plot_file_name, sonic_bec = False):
 
         full_name =  plot_file_name
 
@@ -2512,7 +2602,7 @@ class Read_Plot_file:
         # print(table[4985,:])
         print('\t__Note: file *',full_name,'* has been loaded successfully {} out of {}.'.format(table.shape, raws))
         # attached an empty raw to match the index of array
-        return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T)
+        return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T, sonic_bec)
 
     def get_min_max_l_lm_val(self, y_name):
         '''
@@ -3212,7 +3302,7 @@ class Read_SM_data_file:
         ind = self.ind_from_condition(condition)
         return np.float(self.get_col(v_n)[ind])
 
-    def get_par_table(self, model, y_name = 'l', i = -1):
+    def get_par_table(self, y_name = 'l', i = -1):
 
 
         # print(
@@ -3233,7 +3323,7 @@ class Read_SM_data_file:
 
         if y_name == 'l':
             print(
-                "%2.0f" % model,
+                # "%2.0f" % model,
                 '|', "%.2f" % self.mdot_[i],
                 '|', "%.1f" % self.xm_[i],
                 '|', "%.4f" % self.r_[i],
@@ -3249,7 +3339,7 @@ class Read_SM_data_file:
                 '|', "%.3f" % np.log10(self.C12_[i]))
         if y_name == 'lm':
             print(
-                "%2.0f" % model,
+                # "%2.0f" % model,
                 '|', "%.2f" % self.mdot_[i],
                 '|', "%.1f" % self.xm_[i],
                 '|', "%.4f" % self.r_[i],
@@ -3285,7 +3375,7 @@ class Read_SM_data_file:
         print('\t__Note: vars:[', v_n_arr, '] returned arr:', res.shape)
         return res
 
-class Read_SP_data_file:
+class Read_SP_data_file_OLD:
 
     def __init__(self, sp_data_file, out_dir = '../data/output/', plot_dir = '../data/plots/'):
 
@@ -3392,3 +3482,172 @@ class Read_SP_data_file:
             return Physics.loglm(self.l, self.m, True)
 
         raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, self.list_of_v_n))
+
+class Read_SP_data_file:
+
+    list_of_names = ['log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp' ,'t-sp', 'Tau', 'R_wind', 'T_eff', 'kappa-sp', 'L/Ledd-sp', 'rho-sp']
+
+    # log(L)  M(Msun)     Yc     Ys      l(Mdot)   Rs(Rsun) log(Ts) kappa-sp L/Ledd-sp rho-sp
+
+    def __init__(self, sp_data_file, out_dir = '../data/output/', plot_dir = '../data/plots/'):
+
+        self.files = sp_data_file
+        self.out_dir = out_dir
+        self.plot_dir = plot_dir
+
+
+        # self.list_of_v_n = ['l', 'm', 't', 'mdot', 'tau', 'r', 'Yc', 'k']
+
+        self.table = []
+        with open(sp_data_file, 'r') as f:
+            for line in f:
+                # if '#' not in line.split() and line.strip():  # if line is not empty and does not contain '#'
+                self.table.append(line)
+
+        self.names = self.table[0].split()[1:] # getting rid of '#' which is the first element in a row
+        self.num_colls = len(self.table) - 1  # as first row is of var names
+
+        if len(self.names) != len(self.table[1].split()):
+            print('\t___Error. Number of vars in list({}) != number of cols in observ.data file({}) '
+                  '|Read_Observables, __init__|'.format(len(self.names), len(self.table[1].split())))
+        print('\t__Note: Data include following paramters:\n\t | {} |'.format(self.names))
+
+        self.table.remove(self.table[0])  # removing the var_names line from the array. (only actual values left)
+
+        tmp = np.zeros(len(self.names))
+        for row in self.table:
+            tmp = np.vstack((tmp, np.array(row.split(), dtype=np.float)))
+        self.table = np.delete(tmp, 0, 0)
+
+        print('File: {} has been loaded successfully.'.format(sp_data_file))
+
+
+
+
+    def v_n_to_v_n(self, v_n):
+        if v_n == 'm': return 'M(Msun)'
+        if v_n == 'l': return 'log(L)'
+        if v_n == 'yc' or v_n == 'Yc': return 'Yc'
+        if v_n == 'ys': return 'Ys'
+        if v_n == 'mdot': return 'mdot'
+        if v_n == 'r': return 'r-sp'
+        if v_n == 't': return 't-sp'
+        if v_n == 'k' or v_n == 'kappa': return 'kappa-sp'
+        if v_n == 'gamma' or v_n == 'L/Ledd': return 'L/Ledd-sp'
+        if v_n == 'rho': return 'rho-sp'
+        if v_n == 'tau': return 'Tau'
+        if v_n == 'R_wind': return 'R_wind'
+        if v_n == 't_eff': return 'T_eff'
+        raise NameError('Translation for v_n({}) not provided'.format(v_n))
+
+    def get_crit_value(self, v_n):
+        if v_n == 'lm':
+            l = self.table[0, self.names.index(self.v_n_to_v_n('l'))]
+            m = self.table[0, self.names.index(self.v_n_to_v_n('m'))]
+            return Physics.loglm(l, m)
+        else:
+            return self.table[0, self.names.index(self.v_n_to_v_n(v_n))]
+
+    def get_sonic_cols(self, v_n):
+        if v_n == 'lm':
+            l = self.table[1:, self.names.index(self.v_n_to_v_n('l'))]
+            m = self.table[1:, self.names.index(self.v_n_to_v_n('m'))]
+            return Physics.loglm(l, m, True)
+        else:
+            return self.table[1:, self.names.index(self.v_n_to_v_n(v_n))]
+
+        # --- Critical values ---
+
+        # self.l_cr = np.float(self.table[0, 0])  # mass array is 0 in the sp file
+        # self.m_cr = np.float(self.table[0, 1])  # mass array is 1 in the sp file
+        # self.yc_cr = np.float(self.table[0, 2])  # mass array is 2 in the sp file
+        # self.ys_cr = np.float(self.table[0, 3])  # mass array is 2 in the sp file
+        # self.lmdot_cr = np.float(self.table[0, 4])  # mass array is 3 in the sp file
+        # self.r_cr = np.float(self.table[0, 5])  # mass array is 4 in the sp file
+        # self.t_cr = np.float(self.table[0, 6])  # mass array is 4 in the sp file
+        # self.tau_cr = np.float(self.table[0, 7])
+        #
+        # # --- Sonic Point Values ---
+        #
+        # self.l = np.array(self.table[1:, 0])
+        # self.m = np.array(self.table[1:, 1])
+        # self.yc = np.array(self.table[1:, 2])
+        # self.ys = np.array(self.table[1:, 3])
+        # self.lmdot = np.array(self.table[1:, 4])
+        # self.rs = np.array(self.table[1:, 5])
+        # self.ts = np.array(self.table[1:, 6])
+        # self.tau = np.array(self.table[1:, 7])
+        # self.k = np.array(self.table[1:, 8])
+        # self.rho = np.array(self.table[1:, 9])
+
+        # self.k = np.array(self.table[1:, 6])
+        # self.rho = np.array(self.table[1:, 8])
+
+
+    #
+    #
+    # def get_crit_value(self, v_n):
+    #     if v_n == 'l':
+    #         return np.float( self.l_cr )
+    #
+    #     if v_n =='m' or v_n == 'xm':
+    #         return np.float( self.m_cr )
+    #
+    #     if v_n == 't':
+    #         return np.float( self.t_cr )
+    #
+    #     if v_n == 'mdot':
+    #         return np.float( self.lmdot_cr)
+    #
+    #     if v_n == 'r':
+    #         return np.float(self.r_cr)
+    #
+    #     if v_n == 'Yc':
+    #         return np.float(self.yc_cr)
+    #
+    #     if v_n == 'ys':
+    #         return np.float(self.ys_cr)
+    #
+    #     if v_n == 'tau':
+    #         return self.tau_cr
+    #
+    #     if v_n == 'lm':
+    #         return np.float(Physics.loglm(self.l_cr, self.m_cr, False) )
+    #
+    #     raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, self.list_of_v_n))
+    #
+    # def get_sonic_cols(self, v_n):
+    #     if v_n == 'l':
+    #         return self.l
+    #
+    #     if v_n =='m' or v_n == 'xm':
+    #         return self.m
+    #
+    #     if v_n == 't':
+    #         return self.ts
+    #
+    #     if v_n == 'mdot':
+    #         return self.lmdot
+    #
+    #     if v_n == 'r':
+    #         return self.rs
+    #
+    #     if v_n == 'Yc':
+    #         return self.yc
+    #
+    #     if v_n == 'ys':
+    #         return self.ys
+    #
+    #     if v_n == 'k':
+    #         return self.k
+    #
+    #     if v_n == 'rho':
+    #         return self.rho
+    #
+    #     if v_n == 'tau':
+    #         return self.tau
+    #
+    #     if v_n == 'lm':
+    #         return Physics.loglm(self.l, self.m, True)
+    #
+    #     raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, self.list_of_v_n))

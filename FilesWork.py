@@ -278,7 +278,7 @@ class Opacity_Bump:
         t_fe_bump1  = 5.18
         t_fe_bump2  = 5.4
 
-        t_he2_bump1 = 4.75
+        t_he2_bump1 = 4.65
         t_he2_bump2 = 5.00
 
         if bump_name == 'HeII':
@@ -1014,7 +1014,7 @@ class SP_file_work():
         return x_y_z_final
 
     @staticmethod
-    def x_y_z2d(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit = True):
+    def x_y_z2d(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit = True, interp_method = 'IntUni'):
         '''
         cls = set of classes of sp. files with the same Yc.
         :param cls:
@@ -1028,12 +1028,22 @@ class SP_file_work():
             y = cl.get_crit_value(y_v_n)  # Y should be unique value for a given Yc (like m, l/lm, or Yc)
             z = cl.get_sonic_cols(z_v_n)
 
-            if False:
+            if append_crit:
                 x = np.append(x, cl.get_crit_value(x_v_n))
                 z = np.append(z, cl.get_crit_value(z_v_n))
             xi, zi = Math.x_y_z_sort(x, z)
 
-            z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+            z_grid = []
+            if interp_method == 'IntUni':
+                z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+            if interp_method == 'Uni':
+                z_grid = interpolate.UnivariateSpline(xi, zi)(x_grid)
+            if interp_method == '1dCubic':
+                z_grid = interpolate.interp1d(xi, zi, kind='cubic')(x_grid)
+            if interp_method == '1dLinear':
+                z_grid = interpolate.interp1d(xi, zi, kind='linear')(x_grid)
+            if len(z_grid) == 0:
+                raise NameError('IntMethod is not recognised (or interpolation is failed)')
             # z_grid = interpolate.interp1d(xi, zi, kind='cubic', bounds_error=False)(x_grid)
 
             y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
@@ -1119,7 +1129,7 @@ class SP_file_work():
 
         return x_y_z
 
-    def save_x_y_z(self, x_v_n, y_v_n, z_v_n, depth, min_or_max = 'min', append_crit = True):
+    def save_x_y_z(self, x_v_n, y_v_n, z_v_n, depth, min_or_max = 'min', append_crit = True, interp_method = 'IntUni'):
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
 
         x_y_z3d = []
@@ -1135,7 +1145,7 @@ class SP_file_work():
             x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
             y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
 
-            x_y_z = self.x_y_z2d(cls[yc_index], x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
+            x_y_z = self.x_y_z2d(cls[yc_index], x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit, interp_method)
             x_y_z[0, 0] = yc_val
             x_y_z3d = np.append(x_y_z3d, x_y_z)
 

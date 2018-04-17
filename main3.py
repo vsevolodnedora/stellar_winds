@@ -76,7 +76,7 @@ lmc_spfiles = get_files('../data/sp2_files/', ['10z0008/', '11z0008/', '12z0008/
                                               '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
                                               '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
                                               '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/',
-                                              '30z0008/' ], [], '.data')
+                                              ], [], '.data')
 tst_spfiles = get_files('../data/sp2_files/', ['10z0008/'], [], '.data')
 
 lmc_obs_file = '../data/obs/lmc_wne.data'
@@ -88,7 +88,7 @@ gal_opal_file = '../data/opal/table8.data'
 tst_opal_file = ''
 
 
-smfiles = get_files(sse_locaton + 'ga_z0008/10sm/', ['y10/sp/'], ['4.00', '5.00'], 'sm.data')
+smfiles = get_files(sse_locaton + 'ga_z0008/15sm/', ['y10/sp/'], ['3.50', '4.60', '4.00', '5.00', '5.40'], 'sm.data')
 # smfiles = get_files(sse_locaton, ['zams_004/hecore/t1/'], [], 'sm.data')
 
 # lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
@@ -246,6 +246,7 @@ def gray_analysis2(z, m_set, y_set, plot):
             print('m:{}, y:{} DONE'.format(m,y))
 
 # gray_analysis2('0008', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], [10], False)
+# gray_analysis('002', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], [10,9,8,7,6,5,4,3,2,1], False)
 # gray_analysis('0008', [10], [10], True)
 
 '''======================================================TAU========================================================='''
@@ -289,8 +290,8 @@ spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
 
 # spcls.save_x_y_yc_evol_relation('m', 'lm')
 
-spcls.plot_x_y_z_for_yc('mdot', 'lm', 'tau', 1.0, 100, 'min', True)
-# spcls.save_x_y_z('t', 'lm', 'r', 500, 'min', True)
+# spcls.plot_x_y_z_for_yc('mdot', 'lm', 'tau', 1.0, 100, 'min', True)
+# spcls.save_x_y_z('mdot', 'lm', 't_eff', 500, 'min', False, 'IntUni') #    Uni, IntUni, 1dLinear, 1dCubic methods availabel
 # spcls.plot_x_y_z('t', 'lm', 'r', [0.4], 100, 'min', True)
 
 # spcls.plot_t_llm_mdot_for_yc(1.0, 'lm', 'min', True)
@@ -313,13 +314,13 @@ comb.obs_files = obsfile
 comb.plot_files = plotfiles
 # comb.m_l_relation=0.993
 
-# comb.set_files()
+comb.set_files()
 
 
 # comb.table()
 # comb.sp_xy_last_points('m','l','mdot', 4)
 
-# comb.xy_profile('r','u','mdot','lm')
+comb.xy_profile('r','rho','mdot','lm')
 # comb.xyy_profile('r','rho','kappa','mdot','xm','t', True)
 # comb.xy_last_points('lm','He4','mdot',False)
 # comb.hrd('lm')
@@ -344,7 +345,7 @@ mdot.obs_files = obsfile
 # mdot.plot_test_min_mdot(1.0)
 # mdot.save_yc_llm_mdot_cr()
 # mdot.save_yc_llm_mdot_cr_const_r(1.0)
-# mdot.min_mdot_sp_set('lm', [1.0], 1.0, None)
+# mdot.min_mdot_sp_set('lm', [1.0], None, None)
 
 # --- --- ---
 
@@ -373,7 +374,7 @@ pmm.yc   =  [1.0, 1.0]
 pmm.opal =  [opalfile, opalfile]
 pmm.y_coord=['lm', 'lm']
 
-# pmm.plot_crit_mdots()
+# pmm.plot_crit_mdots('t_eff')
 
 from main_methods import Plot_Tow_Sonic_HRDs
 pts = Plot_Tow_Sonic_HRDs([obsfile], [opalfile])

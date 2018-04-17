@@ -85,7 +85,7 @@ class Combine:
         ax1 = fig.add_subplot(111)
 
         tlt = v_n2 + '(' + v_n1 + ') profile'
-        plt.title(tlt)
+        # plt.title(tlt)
 
         for i in range(len(self.sm_files)):
 
@@ -94,15 +94,19 @@ class Combine:
             label1 = self.mdl[i].get_col(var_for_label1)[-1]
             label2 = self.mdl[i].get_col(var_for_label2)[-1]
 
+            if v_n2 == 'kappa':
+                y = 10**y
+
             print('\t __Core H: {} , core He: {} File: {}'.
                   format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.sm_files[i]))
 
             lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
+
             ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
-            ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
             ax1.plot(x[-1], y[-1], 'x',   color='C' + str(Math.get_0_to_max([i], 9)[i]))
 
-            ax1.annotate(str('%.2e' % 10**self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')
+            ax1.annotate(str('%.1f' % self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')
 
 
             if sonic and v_n2 == 'u':
@@ -111,7 +115,12 @@ class Combine:
 
                 xc, yc = Math.interpolated_intercept(x,y, u_s)
                 # print('Sonic r: {} | Sonic u: {} | {}'.format( np.float(xc),  np.float(yc), len(xc)))
-                plt.plot(xc, yc, 'X', color='red', label='Intersection')
+                plt.plot(xc, yc, 'X', color='red')
+
+            if v_n2 == 'kappa':
+                k_edd = 10**Physics.edd_opacity(self.mdl[i].get_col('xm')[-1],
+                                            self.mdl[i].get_col('l')[-1])
+                ax1.plot(ax1.get_xlim(), [k_edd, k_edd], color='black', label='Model: {}, k_edd: {}'.format(i, k_edd))
 
         ax1.set_xlabel(Labels.lbls(v_n1))
         ax1.set_ylabel(Labels.lbls(v_n2))
@@ -120,7 +129,9 @@ class Combine:
         ax1.grid(which='minor', alpha=0.2)
         ax1.grid(which='major', alpha=0.2)
 
-        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+        ax1.set_xlim(1.1, 1.141)
+
+        # ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
         plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
         plt.savefig(plot_name)
         plt.show()
@@ -177,7 +188,7 @@ class Combine:
 
         plt.title(tlt, loc='left')
         fig.tight_layout()
-        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+        # ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
         plot_name = self.plot_dir + v_n1 + '_' + v_n2 + '_' + v_n3 + '_profile.pdf'
         plt.savefig(plot_name)
         plt.show()
@@ -2050,9 +2061,8 @@ class Crit_Mdot:
 
                 Plots.plot_color_background(ax, mdot_llm_z, 'mdot', l_or_lm, v_n_background, 'Yc:{}'.format(yc_val))
 
-
-
-
+        # --- --- WATER MARK --- --- ---
+        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
         plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
         plot_name = self.plot_dir + 'minMdot_l.pdf'
         plt.savefig(plot_name)
@@ -2323,19 +2333,20 @@ class Plot_Multiple_Crit_Mdots:
     bump = []
     yc   = []
 
-    def __init__(self, obs_files, opal_for_obs):
+    def __init__(self, obs_files, opal_for_obs_background):
         '''
         Table name expected: ' yc_0.8lm_mdot_cr_r_1.0__HeII_table_x '
         :param tables:
         :param yc:
         :param obs_files:
         '''
+        self.opal_def = opal_for_obs_background
         self.obs = []
         self.obs_files = obs_files
         for i in range(len(obs_files)):
-            self.obs.append( Read_Observables(obs_files[i], opal_for_obs[i]) )
+            self.obs.append(Read_Observables(obs_files[i], opal_for_obs_background[i]))
 
-    def plot_crit_mdots(self):
+    def plot_crit_mdots(self, v_n_background = None):
 
         n = len(self.y_coord)
 
@@ -2392,7 +2403,7 @@ class Plot_Multiple_Crit_Mdots:
         for i in range(n):
 
 
-            ax.text(0.2, 0.9-(i/10), lbl[i], style='italic',
+            ax.text(0.3, 0.9-(i/10), lbl[i], style='italic',
                     bbox={'facecolor': 'C'+str(i+1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
                     verticalalignment='center', transform=ax.transAxes)
 
@@ -2400,6 +2411,18 @@ class Plot_Multiple_Crit_Mdots:
             l_or_lm = self.y_coord[i]
             yc = self.yc[i]
             Plots.plot_obs_mdot_llm(ax, self.obs[i], l_or_lm, yc)
+
+        # --- --- BACKGROUND --- --- ---
+        if v_n_background != None:
+            yc_mdot_llm_z = Save_Load_tables.load_3d_table(self.opal[0],
+                                                           'yc_mdot_{}_{}'.format(self.y_coord[0], v_n_background),
+                                                           'yc', 'mdot', self.y_coord[0], v_n_background, self.output_dir)
+
+            yc_ind = Physics.ind_of_yc(yc_mdot_llm_z[:, 0, 0], self.yc[0])
+            mdot_llm_z = yc_mdot_llm_z[yc_ind, :, :]
+
+            Plots.plot_color_background(ax, mdot_llm_z, 'mdot', self.y_coord[0], v_n_background, self.opal[0], '', 0.6)
+
 
         # --- --- WATER MARK -- -- --
         fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
@@ -2852,6 +2875,9 @@ class Sonic_HRD:
             ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
                     bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                     verticalalignment='center', transform=ax.transAxes)
+
+        # --- --- WATER MARK --- --- ---
+        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
 
         plt.gca().invert_xaxis()
         plt.show()
@@ -3424,8 +3450,8 @@ class Plot_Tow_Sonic_HRDs:
         # fig.set_size_inches(18.5, 10.5)
         # fig.set_size_inches(10, 4.5)
 
-        ax1 = fig.add_subplot(1, 2, 1, aspect="equal")
-        ax2 = fig.add_subplot(1, 2, 2, aspect="equal", sharey=ax1)  # Share y-axes with subplot 1
+        ax1 = fig.add_subplot(1, 2, 1, )
+        ax2 = fig.add_subplot(1, 2, 2, sharey=ax1)  # Share y-axes with subplot 1
 
         # Set y-ticks of subplot 2 invisible
         plt.setp(ax2.get_yticklabels(), visible=False)
@@ -3458,9 +3484,12 @@ class Plot_Tow_Sonic_HRDs:
         cbar2 = fig.colorbar(cf2, cax=cax2)
         cbar2.ax.set_title(Labels.lbls('mdot'))
 
+        # --- --- WATER MARK -- -- --
+        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+
         # Adjust the widths between the subplots
         # plt.title('SONIC HR DIAGRAM', loc='center')
-        plt.subplots_adjust(wspace=-0.1)
+        plt.subplots_adjust(wspace=-0.0)
         ax1.invert_xaxis()
         ax2.invert_xaxis()
         plt.show()

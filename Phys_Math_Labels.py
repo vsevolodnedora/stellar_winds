@@ -1547,7 +1547,7 @@ class Plots:
         plt.show()
 
     @staticmethod
-    def plot_color_background(ax, table, v_n_x, v_n_y, v_n_z, opal_used, label = None, alpha = 1.0):
+    def plot_color_background(ax, table, v_n_x, v_n_y, v_n_z, opal_used, label = None, alpha = 1.0, clean=False):
 
 
 
@@ -1577,9 +1577,10 @@ class Plots:
         ax.set_title('SONIC HR DIAGRAM')
 
         # print('Yc:{}'.format(yc_val))
-        ax.text(0.9, 0.9, label, style='italic',
-                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
-                verticalalignment='center', transform=ax.transAxes)
+        if not clean:
+            ax.text(0.9, 0.9, label, style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
 
 
         # plt.ylabel(l_or_lm)
@@ -1589,7 +1590,7 @@ class Plots:
         return ax
 
     @staticmethod
-    def plot_obs_mdot_llm(ax, obs_cls, l_or_lm, yc_val):
+    def plot_obs_mdot_llm(ax, obs_cls, l_or_lm, yc_val, clean = False):
         '''
 
         :param ax:
@@ -1627,14 +1628,16 @@ class Plots:
                     # obs_cls.get_star_llm_evol_err(star_n, l_or_lm, yc_val, 1.0, 0.1)                  # ERRORS L/LM
                 # mdot1, mdot2 = obs_cls.get_star_mdot_err(star_n, l_or_lm, yc_val, 1.0, 0.1, 'nugis')           # ERRORS Mdot
                 mdot = obs_cls.get_num_par('mdot', star_n)
-                ax.plot([mdot, mdot], [llm1, llm2], '-', color=obs_cls.get_class_color(star_n))
+                ax.plot([mdot, mdot], [llm1, llm2], '-', color='white')
+                #color=obs_cls.get_class_color(star_n)
 
                 # ax.errorbar(mdot_obs[i], llm_obs[i], yerr=[[llm1],  [llm2]], fmt='--.', color=obs_cls.get_class_color(star_n))
 
 
             ax.plot(mdot_obs[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
                      color=obs_cls.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
-            ax.annotate('{}'.format(int(star_n)), xy=(mdot_obs[i], llm_obs[i]),textcoords='data')  # plot numbers of stars
+            if not clean:
+                ax.annotate('{}'.format(int(star_n)), xy=(mdot_obs[i], llm_obs[i]),textcoords='data')  # plot numbers of stars
 
             # t = obs_cls.get_num_par('t', star_n)
             # ax.annotate('{}'.format("%.2f" % t), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plot numbers of stars
@@ -1676,9 +1679,11 @@ class Plots:
         ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
 
         print('Yc:{}'.format(yc_val))
-        ax.text(0.9, 0.9, 'Yc:{}'.format(yc_val), style='italic',
-                bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
-                verticalalignment='center', transform=ax.transAxes)
+
+        if not clean:
+            ax.text(0.9, 0.9, 'Yc:{}'.format(yc_val), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
 
         return ax
         # ax.text(min_mdot, max_llm, 'Yc:{}'.format(yc_val), style='italic',
@@ -1690,7 +1695,7 @@ class Plots:
         # ax.plot(Physics.yoon(l_grid, 10 ** 0.02), l_grid, '-.', color='green', label='Yoon 2017')
 
     @staticmethod
-    def plot_obs_t_llm_mdot_int(ax, t_llm_mdot, obs_cls, l_or_lm, lim_t1 = None, lim_t2 = None, show_legend = True):
+    def plot_obs_t_llm_mdot_int(ax, t_llm_mdot, obs_cls, l_or_lm, lim_t1 = None, lim_t2 = None, show_legend = True, clean = False):
 
         if lim_t1 == None: lim_t1 = t_llm_mdot[0, 1:].min()
         if lim_t2 == None: lim_t2 = t_llm_mdot[0, 1:].max()
@@ -1715,8 +1720,9 @@ class Plots:
 
                     ax.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
                              color=obs_cls.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
-                    ax.annotate(int(star_n), xy=(xyz[0, i], xyz[1, i]),
-                                textcoords='data')  # plot numbers of stars
+                    if not clean:
+                        ax.annotate(int(star_n), xy=(xyz[0, i], xyz[1, i]),
+                                    textcoords='data')  # plot numbers of stars
 
                     if obs_cls.get_star_class(star_n) not in classes:
                         ax.plot(xyz[0, i], xyz[1, i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
@@ -1729,8 +1735,9 @@ class Plots:
                     ts1_b, ts2_b, ts1_t, ts2_t = obs_cls.get_star_ts_obs_err(star_n, t_llm_mdot, yc_val, lim_t1, lim_t2)
                     ts_coord = [ts1_b, ts2_b, ts2_t, ts1_t]
                     lm_coord = [lm_err1, lm_err1, lm_err2, lm_err2]
-                    ax.add_patch(patches.Polygon(xy=list(zip(ts_coord, lm_coord)), fill=True, alpha=.4,
+                    ax.add_patch(patches.Polygon(xy=list(zip(ts_coord, lm_coord)), fill=True, alpha=.7,
                                                  color=obs_cls.get_class_color(star_n)))
+
                     # ax.plot([xyz[0, i], xyz[0, i]], [lm_err1, lm_err2], '-',
                     #         color='gray')
 
@@ -1748,8 +1755,8 @@ class Plots:
                     if l_or_lm == 'lm':
                         lm1, lm2 = obs_cls.get_star_lm_err(star_n, yc_val)
                         ts1, ts2 = obs_cls.get_star_ts_err(star_n, t_llm_mdot, yc_val, lim_t1, lim_t2)
-                        ax.plot([ts1, ts2], [lm1, lm2], '-',
-                                color=obs_cls.get_class_color(star_n))
+                        ax.plot([ts1, ts2], [lm1, lm2], '-', color='white')
+                                # color=obs_cls.get_class_color(star_n))
 
                         # ax.plot([xyz[0, i], xyz[0, i]], [lm1, lm2], '-',
                         #         color=obs_cls.get_class_color(star_n))
@@ -1949,7 +1956,7 @@ class Levels:
             if v_n == 't_eff':
                 return [4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1]
             if v_n == 'tau':
-                return [0, 1, 2, 4, 8, 16, 32]
+                return [2, 4, 8, 16, 32]
                 # return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
 
 

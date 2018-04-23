@@ -129,9 +129,9 @@ class Combine:
         ax1.grid(which='minor', alpha=0.2)
         ax1.grid(which='major', alpha=0.2)
 
-        ax1.set_xlim(1.1, 1.141)
-
-        # ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+        # ax1.set_xlim(0.78, 0.92)
+        ax1.set_xlim(4.0, 6.2)
+        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
         plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
         plt.savefig(plot_name)
         plt.show()
@@ -2346,7 +2346,7 @@ class Plot_Multiple_Crit_Mdots:
         for i in range(len(obs_files)):
             self.obs.append(Read_Observables(obs_files[i], opal_for_obs_background[i]))
 
-    def plot_crit_mdots(self, v_n_background = None):
+    def plot_crit_mdots(self, clean = False, v_n_background = None):
 
         n = len(self.y_coord)
 
@@ -2398,19 +2398,18 @@ class Plot_Multiple_Crit_Mdots:
             max_lm = np.append(max_lm, llm.max())
 
             ax.plot(mdot, llm, '-', color='C'+str(i+1))
-            # ax.fill_between(mdot, llm, color="lightgray")
+            ax.fill_between(mdot, llm, color="lightgray")
 
-        for i in range(n):
-
-
-            ax.text(0.3, 0.9-(i/10), lbl[i], style='italic',
-                    bbox={'facecolor': 'C'+str(i+1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
-                    verticalalignment='center', transform=ax.transAxes)
+        if not clean:
+            for i in range(n):
+                ax.text(0.3, 0.9-(i/10), lbl[i], style='italic',
+                        bbox={'facecolor': 'C'+str(i+1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
 
         for i in range(len(self.obs_files)):
             l_or_lm = self.y_coord[i]
             yc = self.yc[i]
-            Plots.plot_obs_mdot_llm(ax, self.obs[i], l_or_lm, yc)
+            Plots.plot_obs_mdot_llm(ax, self.obs[i], l_or_lm, yc, clean)
 
         # --- --- BACKGROUND --- --- ---
         if v_n_background != None:
@@ -2421,7 +2420,9 @@ class Plot_Multiple_Crit_Mdots:
             yc_ind = Physics.ind_of_yc(yc_mdot_llm_z[:, 0, 0], self.yc[0])
             mdot_llm_z = yc_mdot_llm_z[yc_ind, :, :]
 
-            Plots.plot_color_background(ax, mdot_llm_z, 'mdot', self.y_coord[0], v_n_background, self.opal[0], '', 0.6)
+            # mdot_llm_z = Math.extrapolate(mdot_llm_z, 10, 0, 0, 0, 500)
+
+            Plots.plot_color_background(ax, mdot_llm_z, 'mdot', self.y_coord[0], v_n_background, self.opal[0], '', 0.6, clean)
 
 
         # --- --- WATER MARK -- -- --
@@ -2856,7 +2857,7 @@ class Sonic_HRD:
     #     plt.show()
 
 
-    def plot_sonic_hrd(self, yc_val, l_or_lm):
+    def plot_sonic_hrd(self, yc_val, l_or_lm, alpha=1.0, clean=False):
         yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, self.bump,
                                                        'yc_t_{}{}_mdot'.format(self.coeff, l_or_lm),
                                                        'yc', 't', str(self.coeff) + l_or_lm, 'mdot')
@@ -2868,13 +2869,14 @@ class Sonic_HRD:
 
         fig = plt.figure(figsize=plt.figaspect(0.8))
         ax = fig.add_subplot(111) # , projection='3d'
-        Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used, 'Yc:{}'.format(yc_val))
-        Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, self.lim_t1, self.lim_t2)
+        Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used, 'Yc:{}'.format(yc_val), alpha, clean)
+        Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, self.lim_t1, self.lim_t2, True, clean)
 
-        if self.coeff != 1.0:
-            ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
-                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
-                    verticalalignment='center', transform=ax.transAxes)
+        if not clean:
+            if self.coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
 
         # --- --- WATER MARK --- --- ---
         fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
@@ -3385,7 +3387,7 @@ class Plot_Tow_Sonic_HRDs:
         for i in range(len(obs_files)):
             self.obs.append(Read_Observables(obs_files[i], opal_for_obs[i]))
 
-    def plot_srhd(self):
+    def plot_srhd(self, clean):
 
         n = len(self.y_coord)
         if n > 2: raise ValueError('Only 2 sHRDs available now')
@@ -3450,7 +3452,7 @@ class Plot_Tow_Sonic_HRDs:
         # fig.set_size_inches(18.5, 10.5)
         # fig.set_size_inches(10, 4.5)
 
-        ax1 = fig.add_subplot(1, 2, 1, )
+        ax1 = fig.add_subplot(1, 2, 1 ) # aspect='equal'
         ax2 = fig.add_subplot(1, 2, 2, sharey=ax1)  # Share y-axes with subplot 1
 
         # Set y-ticks of subplot 2 invisible
@@ -3461,10 +3463,10 @@ class Plot_Tow_Sonic_HRDs:
         im2, cf2 = plot_background(ax2, t_llm_mdot2, self.opal[1])
 
 
-        ax1_stars = Plots.plot_obs_t_llm_mdot_int(ax2, t_llm_mdot2, self.obs[0], self.y_coord[1], None, None, False)
+        ax1_stars = Plots.plot_obs_t_llm_mdot_int(ax2, t_llm_mdot2, self.obs[0], self.y_coord[1], None, None, False, clean)
         ax1_stars.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2)
 
-        ax2_stars = Plots.plot_obs_t_llm_mdot_int(ax1, t_llm_mdot1, self.obs[0], self.y_coord[0], None, None, False)
+        ax2_stars = Plots.plot_obs_t_llm_mdot_int(ax1, t_llm_mdot1, self.obs[0], self.y_coord[0], None, None, False, clean)
         ax2_stars.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
 
 
@@ -3489,6 +3491,8 @@ class Plot_Tow_Sonic_HRDs:
 
         # Adjust the widths between the subplots
         # plt.title('SONIC HR DIAGRAM', loc='center')
+        ax1.set_xlabel(Labels.lbls('t'))
+        ax1.set_ylabel(Labels.lbls('lm'))
         plt.subplots_adjust(wspace=-0.0)
         ax1.invert_xaxis()
         ax2.invert_xaxis()

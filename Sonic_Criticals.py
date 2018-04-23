@@ -40,6 +40,7 @@ from OPAL import New_Table
 from FilesWork import Read_Observables
 from FilesWork import Read_Plot_file
 from FilesWork import Read_SM_data_file
+from FilesWork import Read_Wind_file
 
 class Criticals:
     def __init__(self, smfiles, out_dir, plot_dir, dirs_not_to_be_included):
@@ -2274,6 +2275,1368 @@ class Criticals2:
     #
     #     return arr_
 
+class Criticals3:
+
+    out_dir = '../data/output/'
+    plot_dir = '../data/plots/'
+
+    def __init__(self, sp_smfiles, suca_files, dirs_not_to_be_included, out_dir):
+
+        self.input_dirs = sp_smfiles[0].split('/')[:-1]
+        # print(self.input_dirs)
+        self.dirs_not_to_be_included = dirs_not_to_be_included # name of folders that not to be in the name of out. file.
+
+        self.out_dir = out_dir
+
+        # self.ga_smfls = ga_smfiles
+        # self.ga_mdl = []
+        # self.ga_smdl =[]
+
+        self.sp_smfls = sp_smfiles
+        self.sp_mdl = []
+        self.sp_smdl =[]
+        self.wndcls = []
+
+        # for file in ga_smfiles:
+        #     self.ga_mdl.append(Read_SM_data_file.from_sm_data_file(file))
+
+        for file in sp_smfiles:
+            self.sp_mdl.append(Read_SM_data_file.from_sm_data_file(file))
+
+        for file in suca_files:
+            self.wndcls.append(Read_Wind_file.from_wind_dat_file(file))
+
+
+
+        # self.sort_ga_smfiles('mdot', -1)
+        self.sort_sp_smfiles('mdot', -1)
+
+    def get_boundary(self, u_min):
+        '''
+        RETURNS ' bourders.min() ' - min radius among all the models, where u exceeds the 'u_min'
+        :param u_min:
+        :return:
+        '''
+        bourders = []
+
+        for i in range(len(self.ga_smfls)):
+            u = self.ga_smdl[i].get_col('u')
+            r = self.ga_smdl[i].get_col('r')
+            for i in range(len(r)):
+                if u[i] > u_min:
+                    # ax1.axvline(x=r[i], color='red')
+                    bourders = np.append(bourders, r[i])
+                    break
+
+        return bourders.min()
+
+    # def sort_ga_smfiles(self, v_n, where = -1, descending=True):
+    #     '''
+    #
+    #     :param v_n: what value to use to sort sm.files
+    #     :param where: where value si caken (surface -1 or core 0 )
+    #     :param descending: if True, sm.files are sorted by descending order of the chosen parameter.
+    #     :return: NOTHING (changes the smdl[])
+    #     '''
+    #
+    #
+    #     i_and_mdots = []
+    #     for i in range(len(self.ga_smfls)):
+    #         i_and_mdots = np.append(i_and_mdots, [i, self.ga_mdl[i].get_col(v_n)[where]])
+    #
+    #     i_and_mdots_sorted = np.sort(i_and_mdots.view('f8, f8'), order=['f1'], axis=0).view(np.float)
+    #     i_and_mdots_reshaped = np.reshape(i_and_mdots_sorted, (len(self.ga_smfls), 2))
+    #
+    #     if descending:
+    #         i_and_mdots_reshaped_inversed = np.flip(i_and_mdots_reshaped, 0) # flip for ascending order
+    #     else:
+    #         i_and_mdots_reshaped_inversed = i_and_mdots_reshaped # no flipping
+    #
+    #
+    #     sorted_by_mdot_files = []
+    #     for i in range(len(self.ga_smfls)):
+    #         sorted_by_mdot_files.append(self.ga_smfls[np.int(i_and_mdots_reshaped_inversed[i][0])])
+    #
+    #     def get_i(file):
+    #         for i in range(len(self.ga_smfls)):
+    #             if file == self.ga_smfls[i]:
+    #                 return i
+    #
+    #     for file in sorted_by_mdot_files:
+    #
+    #         self.ga_smdl.append(self.ga_mdl[get_i(file)])
+    #
+    #     # for i in range(len(self.num_files)):
+    #     #     print(self.smdl[i].get_col(v_n)[where])
+
+    def sort_sp_smfiles(self, v_n, where = -1, descending=True):
+        '''
+
+        :param v_n: what value to use to sort sm.files
+        :param where: where value si caken (surface -1 or core 0 )
+        :param descending: if True, sm.files are sorted by descending order of the chosen parameter.
+        :return: NOTHING (changes the smdl[])
+        '''
+
+
+        i_and_mdots = []
+        for i in range(len(self.sp_smfls)):
+            i_and_mdots = np.append(i_and_mdots, [i, self.sp_mdl[i].get_col(v_n)[where]])
+
+        i_and_mdots_sorted = np.sort(i_and_mdots.view('f8, f8'), order=['f1'], axis=0).view(np.float)
+        i_and_mdots_reshaped = np.reshape(i_and_mdots_sorted, (len(self.sp_smfls), 2))
+
+        if descending:
+            i_and_mdots_reshaped_inversed = np.flip(i_and_mdots_reshaped, 0) # flip for ascending order
+        else:
+            i_and_mdots_reshaped_inversed = i_and_mdots_reshaped # no flipping
+
+
+        sorted_by_mdot_files = []
+        for i in range(len(self.sp_smfls)):
+            sorted_by_mdot_files.append(self.sp_smfls[np.int(i_and_mdots_reshaped_inversed[i][0])])
+
+        def get_i(file):
+            for i in range(len(self.sp_smfls)):
+                if file == self.sp_smfls[i]:
+                    return i
+
+        for file in sorted_by_mdot_files:
+
+            self.sp_smdl.append(self.sp_mdl[get_i(file)])
+
+        # for i in range(len(self.num_files)):
+        #     print(self.smdl[i].get_col(v_n)[where])
+
+    # def analyze_ga_sm_fls(self, depth, add_sonic_vals, show_plot):
+    #     def get_boundary(u_min):
+    #         '''
+    #         RETURNS ' bourders.min() ' - min radius among all the models, where u exceeds the 'u_min'
+    #         :param u_min:
+    #         :return:
+    #         '''
+    #         bourders = []
+    #
+    #         for i in range(len(self.ga_smfls)):
+    #             u = self.ga_smdl[i].get_col('u')
+    #             r = self.ga_smdl[i].get_col('r')
+    #             for i in range(len(r)):
+    #                 if u[i] > u_min:
+    #                     # ax1.axvline(x=r[i], color='red')
+    #                     bourders = np.append(bourders, r[i])
+    #                     break
+    #
+    #         return bourders.min()
+    #
+    #     def crop_ends(x, y):
+    #         '''
+    #         In case of 'wierd' vel/temp profile with rapidly rising end, first this rising part is to be cut of
+    #         before maximum can be searched for.
+    #         :param x:
+    #         :param y:
+    #         :return:
+    #         '''
+    #         x_mon = x
+    #         y_mon = y
+    #
+    #         non_monotonic = True
+    #
+    #         while non_monotonic:
+    #
+    #             if len(x_mon) <= 10:
+    #                 return x, y
+    #                 # raise ValueError('Whole array is removed in a searched for monotonic part.')
+    #
+    #             if y_mon[-1] > y_mon[-2]:
+    #                 y_mon = y_mon[:-1]
+    #                 x_mon = x_mon[:-1]
+    #                 # print(x_mon[-1], y_mon[-1])
+    #             else:
+    #                 non_monotonic = False
+    #
+    #         return Math.find_nearest_index(x, x_mon[-1])
+    #
+    #     def all_values_array(i_model, rs_p, ts_p, min_indx, add_sonic_vals):
+    #
+    #         out_array = []
+    #
+    #         # --- --- GET ARRAYS AND VALUES AND APPENDING TO OUTPUT ARRAY --- --- --- --- --- --- --- ---
+    #
+    #         r = self.ga_smdl[i_model].get_col('r')[min_indx:]
+    #         t = self.ga_smdl[i_model].get_col('t')[min_indx:]
+    #
+    #         out_array = np.append(out_array, self.ga_smdl[i_model].get_col('l')[-1])  # appending 'l'    __1__
+    #         out_array = np.append(out_array, self.ga_smdl[i_model].get_col('xm')[-1])  # appending 'xm'   __2__
+    #         out_array = np.append(out_array, self.ga_smdl[i_model].get_col('He4')[0])  # appending 'Yc'   __3__
+    #
+    #         out_array = np.append(out_array, self.ga_smdl[i_model].get_col('mdot')[-1])  # appending 'mdot' __4__
+    #         out_array = np.append(out_array, rs_p)  # appending 'mdot' __5__
+    #         out_array = np.append(out_array, ts_p)  # appending 'mdot' __6__
+    #
+    #         # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    #
+    #         val_array = []
+    #         for v_n_cond in add_sonic_vals:
+    #
+    #             if len(v_n_cond.split('-')) > 2:
+    #                 raise NameError(
+    #                     'For *add_sonic_vals* use format *var_name-location*, (given: {}) where var_name is '
+    #                     'one of the BEC sm.data variables and location is *core = [-1] surface=[0]',
+    #                     'sp = [sonic_point_interpolated]'.format(v_n_cond))
+    #
+    #             v_n = v_n_cond.split('-')[0]
+    #             cond = v_n_cond.split('-')[-1]
+    #
+    #             if cond != 'sp':
+    #                 var_val = self.ga_smdl[i_model].get_cond_value(v_n,
+    #                                                                cond)  # assuming that condition is not required interp
+    #
+    #             else:
+    #                 ''' Here The Interpolation of v_n is Done'''
+    #
+    #                 v_n_val_arr = self.ga_smdl[i_model].get_col(v_n)[min_indx:]
+    #                 f = interpolate.InterpolatedUnivariateSpline(r, v_n_val_arr)
+    #                 var_val = f(rs_p)
+    #
+    #                 if len([var_val]) > 1:
+    #                     raise ValueError('More than one solution found for *{}* sonic value: ({})'.format(v_n, var_val))
+    #
+    #             val_array = np.append(val_array, var_val)
+    #
+    #         if len(val_array) != len(add_sonic_vals):
+    #             raise ValueError('len(val_array)[{}] != len(add_sonic_vals)[{}]'
+    #                              .format(len(val_array), len(add_sonic_vals)))
+    #
+    #         for i in range(len(val_array)):  # 5 is a number of main values: [ l, m, Yc, ts, rs ]
+    #             out_array = np.append(out_array, val_array[i])  # appending 'v_ns' __n__
+    #
+    #         return out_array
+    #
+    #     fig = plt.figure()
+    #     ax1 = fig.add_subplot(111)
+    #     ax2 = ax1.twinx()
+    #
+    #     tlt = 'VELOCITY PROFILE'
+    #     plt.title(tlt, loc='left')
+    #
+    #     mdots   = np.array([0.])
+    #     # rs_ts   = np.array([0.,0.])
+    #     r_u_mdot_max = np.array([0., 0., 0.])
+    #     r_t_mdot_max = np.array([0., 0., 0.])
+    #     # rs_ts_mdot   = np.array([0.,0.,0.])
+    #
+    #     out_array = np.zeros(len(add_sonic_vals) + 6) # where 6 are: [l, m, Yc, mdot, rs, ts] # always include
+    #
+    #     min_ind = 0
+    #     max_ind = -1
+    #     r_min = get_boundary(0.1) # setting the lower value of r that above which the analysis will take place
+    #     for i in range(len(self.ga_smfls)):
+    #         r = self.ga_smdl[i].get_col('r')
+    #         u = self.ga_smdl[i].get_col('u')
+    #         t = self.ga_smdl[i].get_col('t')
+    #         min_ind = Math.find_nearest_index(r, r_min)
+    #         max_ind = crop_ends(r, u)
+    #
+    #         ax1.plot(r[min_ind:], u[min_ind:], '.', color='black')
+    #         ax2.plot(r[min_ind:], t[min_ind:], '.', color='orange')
+    #
+    #
+    #     '''------------------------------------------MAIN CYCLE------------------------------------------------------'''
+    #     for i in range(len(self.ga_smfls)):
+    #
+    #         r  = self.ga_smdl[i].get_col('r')
+    #         u  = self.ga_smdl[i].get_col('u')
+    #         mu = self.ga_smdl[i].get_col('mu')
+    #         t  = self.ga_smdl[i].get_col('t')
+    #         u_s= self.ga_smdl[i].get_sonic_u()
+    #         mdot_u=self.ga_smdl[i].get_col('mdot')[-1]
+    #         mdots = np.append(mdots, mdot_u)
+    #         print('\t__Initical Array Length: {}'.format(len(r)))
+    #
+    #
+    #         min_ind = Math.find_nearest_index(r, r_min)
+    #
+    #
+    #         # ----------------------- R U ----------------------------
+    #         r  = r[min_ind:max_ind]
+    #         u  = u[min_ind:max_ind]
+    #         u_s= u_s[min_ind:max_ind]
+    #         t = t[min_ind:max_ind]
+    #         mu = mu[min_ind:max_ind]
+    #
+    #         print('\t__Cropped Array Length: {}'.format(len(r)))
+    #
+    #         int_r  = np.mgrid[r[0]:r[-1]:depth*1j]
+    #         int_u  = Math.interp_row(r, u, int_r)
+    #
+    #         # ax1.plot(r, u, '.', color='black')
+    #         ax1.plot(r, u_s, '--', color='black')
+    #         ax1.annotate(str('%.2f' % mdot_u), xy=(r[-1], u[-1]), textcoords='data')
+    #         ax1.plot(int_r, int_u, '-', color='gray')
+    #
+    #         # ------------------------R T --------------------------------
+    #
+    #         ts_arr = np.log10((mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b)
+    #
+    #
+    #         int_r = np.mgrid[r[0]:r[-1]:depth * 1j]
+    #         int_t  = Math.interp_row(r, t, int_r)
+    #         int_ts_arr=Math.interp_row(r, ts_arr, int_r)
+    #
+    #         ax2.plot(r, ts_arr, '.', color='orange')
+    #         ax2.plot(int_r, int_t,'-',color='orange')
+    #         ax2.plot(int_r, int_ts_arr, '--', color='orange')
+    #
+    #
+    #         r_u_max_p, u_max_p = Math.get_max_by_interpolating(int_r, int_u)      # MAXIMUM VALUES OF VELOCITY
+    #         r_u_mdot_max = np.vstack((r_u_mdot_max, [r_u_max_p[0], u_max_p[0], mdot_u]))
+    #         r_t_max_p, t_max_p = Math.get_max_by_interpolating(int_r, int_ts_arr) # MAXIMUM VALUES OF TEMPERATURE
+    #         r_t_mdot_max = np.vstack((r_t_mdot_max, [r_t_max_p[0], t_max_p[0], mdot_u]))
+    #
+    #         ax1.plot(r_u_max_p, u_max_p, 'x', color='red')
+    #         ax2.plot(r_t_max_p, t_max_p, 'x', color='red')
+    #
+    #
+    #         # --- --- ---| SONIC POINT PARAMTERS |--- --- ---
+    #         rs_p, ts_p = Math.interpolated_intercept(int_r, int_ts_arr, int_t)     # SONIC TEPERATURE
+    #         if rs_p.any():
+    #             rs_p = rs_p[0][0]
+    #             ts_p = ts_p[0][0]
+    #             ax2.plot(rs_p, ts_p, 'X', color='red')
+    #             ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
+    #
+    #             row = all_values_array(i, rs_p, ts_p, min_ind, add_sonic_vals)
+    #             out_array = np.vstack((out_array, row))
+    #
+    #
+    #
+    #     r_u_mdot_max = np.delete(r_u_mdot_max, 0, 0) # removing the 0th row with zeros
+    #     r_t_mdot_max = np.delete(r_t_mdot_max, 0, 0)
+    #     mdots = np.delete(mdots, 0, 0)
+    #
+    #
+    #     if len(mdots) != len(r_u_mdot_max[:,0]):
+    #         raise ValueError('len(mdots){} != len(r_u_mdot_max[:,0]){}'.format(len(mdots), len(r_u_mdot_max[:,0])))
+    #
+    #     if len(mdots) ==0:
+    #         raise ValueError('len(mdots) = 0')
+    #
+    #     ax1.plot(r_u_mdot_max[:,0],  r_u_mdot_max[:,1],  '-.', color='blue')
+    #
+    #     # plt.show()
+    #     # print(out_array)
+    #
+    #
+    #
+    #
+    #     def cross(mdot, r1, u1, r2, u2, mdot_maxs, u_ot_t = 'u'):
+    #         '''
+    #         Finds the delta = (u_i_max - cs_i) where u_i is a maximum of u profile along the r, cs_i - point along sonic
+    #         velocity profile, that lies on the line thac connects the u_i maximums.
+    #         As close the mass loss to a critical one, the closer delta to 0 ( u_i_max = cs_i at the critical
+    #         (deflection) point)
+    #
+    #         :param mdot:
+    #         :param r1: full length of a sonic profile (r)
+    #         :param u1: values of sonic velocity along (r)
+    #         :param r2: set of 'r' points for maximums of velocity profiles for every mass loss
+    #         :param u2: values of velocity at 'r' points
+    #         :param mdot_maxs: mdot values of every point 'r,u' above
+    #         :return:
+    #         '''
+    #
+    #
+    #
+    #         r1_u1 = []
+    #         for i in range(len(r1)):
+    #             r1_u1 = np.append(r1_u1, [r1[i], u1[i]])
+    #
+    #         r1_u1 = np.sort(r1_u1.view('f8, f8'), order=['f1'], axis=0).view(np.float)
+    #         r1_u1_sort = np.reshape(r1_u1, (len(r1), 2))
+    #
+    #
+    #         r2_u2_mdot = []
+    #         for i in range(len(r2)):
+    #             r2_u2_mdot = np.append(r2_u2_mdot, [r2[i], u2[i], mdot_maxs[i]])
+    #
+    #         r2_u2_mdot = np.sort(r2_u2_mdot.view('f8, f8, f8'), order=['f1'], axis=0).view(np.float)
+    #         r2_u2_mdot_sort = np.reshape(r2_u2_mdot, (len(r2), 3))
+    #
+    #         r1 = r1_u1_sort[:,0]
+    #         u1 = r1_u1_sort[:,1]
+    #
+    #         r2    = r2_u2_mdot_sort[:,0]
+    #         u2    = r2_u2_mdot_sort[:,1]
+    #         mdots = r2_u2_mdot_sort[:,2]
+    #
+    #         #
+    #         # u_rmax1 = u1[np.where(r1 == r1.max())]
+    #         # u_rmax2 = u2[np.where(r2 == r2.max())]
+    #         #
+    #         # r_umin1_i = r1[np.where(u1 == u1.min())]
+    #         # r_umin2_i = r2[np.where(u2 == u2.min())]
+    #
+    #
+    #         i_u2_where_u1_max = Math.find_nearest_index(u2, u1.max()) # needed to avoide violent behaviour in high mdot
+    #         u2_crop = u2[:i_u2_where_u1_max]            # otherwise there was crossing with sonic profiles at temps 5.9,
+    #         r2_crop = r2[:i_u2_where_u1_max]
+    #
+    #
+    #         u_lim1 = np.array([u1.min(), u2_crop.min()]).max()
+    #         u_lim2 = np.array([u1.max(), u2_crop.max()]).min()
+    #
+    #         if u_lim2 < u_lim1:
+    #             raise ValueError('u_lim1({}) < u_lim2({})'.format(u_lim1, u_lim2))
+    #
+    #         u_grid = np.mgrid[u_lim2:u_lim1:1000*1j]
+    #
+    #         if u_grid.max() > u2.max() or u_grid.max() > u1.max():
+    #             raise ValueError('u_grid.max({}) > u2.max({}) or u_grid.max({}) > u1.max({})'
+    #                              .format(u_grid.max(), u2.max(), u_grid.max(), u1.max()))
+    #         #
+    #         # if u_grid.min() < u2.min() or u_grid.min() < u1.min():
+    #         #     raise ValueError('u_grid.min({}) < u2.min({}) or u_grid.min({}) < u1.min({})'
+    #         #                      .format(u_grid.min(), u2.min(), u_grid.min(), u1.min()))
+    #
+    #
+    #         f1 = interpolate.InterpolatedUnivariateSpline(u1, r1)
+    #         r1_grid = f1(u_grid)
+    #
+    #         # if u_ot_t == 't':
+    #             # print('\t')
+    #             # print('u1:[{} {}] u_lim1:{} u_lim2:{}'.format(u1.min(), u1.max(), u_lim1, u_lim2))
+    #             # print('u2:[{} {}] u_lim1:{} u_lim2:{}'.format(u2.min(), u2.max(), u_lim1, u_lim2))
+    #             #
+    #
+    #
+    #             # ax2.plot(r2_crop, u2_crop, 'o', color='magenta')
+    #
+    #         f2 = interpolate.InterpolatedUnivariateSpline(u2_crop, r2_crop) # cropping is done to cut the high mdot prob
+    #         r2_grid = f2(u_grid)
+    #
+    #         # r1_grid = Math.interp_row(u1, r1, u_grid)
+    #         # r2_grid = Math.interp_row(u2, r2, u_grid)
+    #
+    #         if u_ot_t == 'u':
+    #             ax1.plot(r1_grid, u_grid, '-.', color='green')
+    #             ax1.plot(r2_grid, u_grid, '-.', color='green')
+    #         else:
+    #             ax2.plot(r1_grid, u_grid, '-.', color='green')
+    #             ax2.plot(r2_grid, u_grid, '-.', color='green')
+    #
+    #         uc, rc = Math.interpolated_intercept(u_grid, r1_grid, r2_grid)
+    #         if uc.any():  # if there is an intersections between sonic vel. profile and max.r-u line
+    #             uc0 = uc[0][0]
+    #             rc0 = rc[0][0]
+    #
+    #             if u_ot_t == 'u':
+    #                 ax1.plot(rc0, uc0, 'X', color='green')
+    #                 ax1.annotate(str('%.2f' % mdot), xy=(rc0, uc0), textcoords='data')
+    #             if u_ot_t == 't':
+    #                 ax2.plot(rc0, uc0, 'X', color='green')
+    #                 ax2.annotate(str('%.2f' % mdot), xy=(rc0, uc0), textcoords='data')
+    #
+    #             delta = u2[np.where(mdots == mdot)] - uc0
+    #             # print(uc, rc, '\t', delta)
+    #             # print('Delta: ' , delta_ut, )
+    #
+    #             return delta
+    #
+    #
+    #         # if u_min2 < u_min1:        # if there is a common area in terms of radii
+    #         #     if r_umin1 > r_umin2:   # if there is a common area in case of velocity
+    #         #         u_lim1 = u_min1
+    #         #         u_lim2 = u_max1
+    #         #
+    #         #         u_grid = np.mgrid[u_lim2:u_lim1:1000*1j]
+    #         #
+    #         #         r1_grid = Math.interp_row(u1, r1, u_grid)
+    #         #         r2_grid = Math.interp_row(u2, r2, u_grid)
+    #         #
+    #         #         ax1.plot(r1_grid, u_grid, '-', color='green')
+    #         #         ax1.plot(r2_grid, u_grid, '-', color='green')
+    #         #
+    #         #         uc, rc = Math.interpolated_intercept(u_grid, r1_grid, r2_grid)
+    #         #         if uc.any(): # if there is an intersections between sonic vel. profile and max.r-u line
+    #         #
+    #         #             uc0 = uc[0][0]
+    #         #             rc0 = rc[0][0]
+    #         #
+    #         #             ax1.plot(rc0, uc0, 'X', color='green')
+    #         #             ax1.annotate(str('%.2f' % mdot), xy=(rc0, uc0), textcoords='data')
+    #         #
+    #         #             delta = u2[np.where(mdots == mdot)] - uc0
+    #         #
+    #         #             # print('Delta: ' , delta_ut, )
+    #         #
+    #         #             return delta
+    #         #         else:
+    #         #             print('\t__Warning. No common area in velocity found: '
+    #         #                   'r_at_u_min1:{} > r_at_u_min2{}'.format(r_umin1, r_umin2))
+    #         #     else:
+    #         #         print('\t__Warning. No common area in radii found: '
+    #         #               'r_at_u_min2:{} < r_at_u_min2{}'.format(r_umin1, r_umin2))
+    #
+    #     def get_mdot_delta(r_ut_mdot_max, u_or_t):
+    #
+    #         mdot_delta_ut = []
+    #
+    #         n = 0
+    #         for i in range(len(self.ga_smfls)):
+    #             r = self.ga_mdl[i].get_col('r')[min_ind:]
+    #             # u = self.mdl[i].get_col('u')[min_ind:]
+    #             # mu = self.mdl[i].get_col('mu')[min_ind:]
+    #             t = self.ga_mdl[i].get_col('t')[min_ind:]
+    #             # ts_arr = np.log10((mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b)[min_ind:]
+    #             u_s = self.ga_mdl[i].get_sonic_u()[min_ind:]
+    #
+    #             mdot = self.ga_mdl[i].get_col('mdot')[-1]
+    #
+    #             if u_or_t == 'u':
+    #                 delta_ut = cross(mdot, r, u_s, r_ut_mdot_max[1:, 0], r_ut_mdot_max[1:, 1], r_ut_mdot_max[1:, 2], u_or_t)
+    #                 # print(delta_ut, u_or_t)
+    #             else:
+    #                 delta_ut = cross(mdot, r, t,   r_ut_mdot_max[1:, 0], r_ut_mdot_max[1:, 1], r_ut_mdot_max[1:, 2], u_or_t)
+    #                 # print(delta_ut, u_or_t)
+    #
+    #             if delta_ut != None:
+    #                 mdot_delta_ut = np.append(mdot_delta_ut, [mdot, delta_ut])
+    #                 n = n + 1
+    #
+    #         if len(mdot_delta_ut) == 0:
+    #             raise ValueError('mdot_delta_ut is not found at all for <{}>'.format(u_or_t))
+    #
+    #         mdot_delta_ut = np.sort(mdot_delta_ut.view('f8, f8'), order=['f0'], axis=0).view(np.float)
+    #         mdot_delta_ut_shape = np.reshape(mdot_delta_ut, (n, 2))
+    #
+    #         mdot     = mdot_delta_ut_shape[:, 0]
+    #         delta_ut = mdot_delta_ut_shape[:, 1]
+    #
+    #         crit_mdot_u = Math.solv_inter_row(mdot, delta_ut, 0.)  # Critical Mdot when the delta_ut == 0
+    #
+    #         print('\t\t crit_mdot_u', crit_mdot_u)
+    #
+    #         if not crit_mdot_u.any():
+    #             raise ValueError('Critical Mdot is not found.')
+    #         else:
+    #             print('\t__Critical Mdot: {} (for: {})'.format(crit_mdot_u, u_or_t))
+    #
+    #         return mdot, delta_ut
+    #
+    #
+    #     mdot_arr, delta_arr = get_mdot_delta(r_u_mdot_max, 'u')
+    #
+    #     if delta_arr.min() > 0. and delta_arr.max() > 0.:
+    #         raise ValueError('if delta_arr.min({}) and delta_arr.max({}) > 0 : '
+    #                          'peak of vel. profs do not cross sonic. vel.'.format(delta_arr.min(), delta_arr.max()))
+    #
+    #     if delta_arr.min() < 0. and delta_arr.max() < 0.:
+    #         raise ValueError('if delta_arr.min({}) and delta_arr.max({}) < 0 : '
+    #                          'vel. profile does not crossing the sonic val.'.format(delta_arr.min(), delta_arr.max()))
+    #
+    #     crit_mdot_u = Math.solv_inter_row(mdot_arr, delta_arr, 0.)
+    #     if len(crit_mdot_u) > 1:
+    #         raise ValueError('More than one mdot_cr. found. {}'.format(crit_mdot_u))
+    #
+    #     ax3 = fig.add_axes([0.18, 0.18, 0.25, 0.25])
+    #     ax3.set_xlabel(Labels.lbls('mdot'))
+    #     ax3.set_ylabel('$u_i - cs_i$')
+    #     ax3.grid()
+    #
+    #     ax3.plot(mdot_arr, delta_arr, '-', color='black')
+    #     ax3.plot(crit_mdot_u, 0., 'x', color='black')
+    #     ax3.annotate('({}, {})'.format('%.3f' % crit_mdot_u, 0. ), xy=(crit_mdot_u, 0.),
+    #                  textcoords='data')
+    #
+    #
+    #     mdot_arr, delta_arr = get_mdot_delta(r_t_mdot_max, 't')
+    #     crit_mdot_t = Math.solv_inter_row(mdot_arr, delta_arr, 0.)
+    #
+    #
+    #     # --- --- FROM CRITICAL MDOT GET CRITICAL R, T, OTHERS --- --- ---
+    #
+    #     r_u_mdot_max = np.sort(r_u_mdot_max.view('f8, f8, f8'), order=['f2'], axis=0).view(np.float)
+    #     r_u_mdot_max = np.reshape(r_u_mdot_max, (len(self.ga_smfls), 3))
+    #
+    #     r_t_mdot_max = np.sort(r_t_mdot_max.view('f8, f8, f8'), order=['f2'], axis=0).view(np.float)
+    #     r_t_mdot_max = np.reshape(r_t_mdot_max, (len(self.ga_smfls), 3))
+    #
+    #
+    #     f = interpolate.InterpolatedUnivariateSpline(r_t_mdot_max[:, 2], r_t_mdot_max[:, 1])  # t_crit
+    #     crit_t = f(crit_mdot_t)
+    #
+    #     f = interpolate.InterpolatedUnivariateSpline(r_u_mdot_max[:, 2], r_u_mdot_max[:, 0])  # r_crit
+    #     crit_r = f(crit_mdot_u)
+    #
+    #     ax2.plot(r_t_mdot_max[:, 0], r_t_mdot_max[:, 1], '-.', color='red')
+    #     ax2.plot(crit_r, crit_t, 'X', color='red')
+    #     ax1.annotate('({}, {})'.format('%.2f' % crit_r, '%.2f' % crit_t), xy=(crit_r, crit_t), textcoords='data')
+    #     print('\t__Criticals: r={}, t={}, mdot={}'.format('%.4f' % crit_r, '%.4f' % crit_t, '%.4f' % crit_mdot_u))
+    #
+    #
+    #     '''----------------------------------------------SUBPLOTS----------------------------------------------------'''
+    #
+    #     ax4 = fig.add_axes([0.18, 0.50, 0.25, 0.25])
+    #     ax4.set_xlabel(Labels.lbls('mdot'))
+    #     ax4.set_ylabel('$u_i - cs_i$')
+    #     ax4.grid()
+    #     ax4.set_xlabel(Labels.lbls('mdot'))
+    #     ax4.set_ylabel(Labels.lbls('t'), color='r')
+    #
+    #     ax4.plot(r_t_mdot_max[:, 2], r_t_mdot_max[:, 1], '-', color='red')
+    #     ax4.plot(crit_mdot_t, crit_t, 'x', color='red')
+    #     ax4.annotate('({}, {})'.format('%.3f' % crit_mdot_t, '%.3f' % crit_t, ), xy=(crit_mdot_t, crit_t),
+    #                  textcoords='data')
+    #     ax4.tick_params('y', colors='r')
+    #
+    #     ax5 = ax4.twinx()
+    #     ax5.plot(r_u_mdot_max[:, 2], r_u_mdot_max[:, 0], '-', color='blue')
+    #     ax5.plot(crit_mdot_u, crit_r, 'x', color='blue')
+    #     ax5.annotate('({}, {})'.format('%.3f' % crit_mdot_u, '%.3f' % crit_r,), xy=(crit_mdot_u, crit_r),
+    #                  textcoords='data')
+    #     ax5.set_xlabel(Labels.lbls('mdot'))
+    #     ax5.set_ylabel(Labels.lbls('r'), color='b')
+    #     ax5.tick_params('y', colors='b')
+    #
+    #     ax2.set_ylabel(Labels.lbls('ts'), color='r')
+    #     ax2.tick_params('u', colors='r')
+    #     ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+    #
+    #     ax1.tick_params('u', colors='b')
+    #     ax1.set_xlabel(Labels.lbls('r'))
+    #     ax1.set_ylabel(Labels.lbls('u'))
+    #     ax1.grid(which='both')
+    #     ax1.grid(which='minor', alpha=0.2)
+    #     ax1.grid(which='major', alpha=0.2)
+    #     ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+    #     plot_name = self.plot_dir + 'critical_radius.pdf'
+    #     plt.savefig(plot_name, dpi=240, format='pdf')
+    #
+    #     if show_plot:
+    #         plt.show()
+    #
+    #
+    #     l = out_array[-1,0]  # choosing the last mpdel to get l, m, yc as low mdot would affect these them the least
+    #     m = out_array[-1,1]
+    #     yc= out_array[-1,2]
+    #
+    #     out_array[0,0] = l   # inserting l, m, yc into the first row of the output array
+    #     out_array[0,1] = m
+    #     out_array[0,2] = yc
+    #
+    #     out_array[0,3] = crit_mdot_u # inserting criticals in the first row
+    #     out_array[0,4] = crit_r
+    #     out_array[0,5] = crit_t
+    #
+    #
+    #     print(out_array)
+    #
+    #     print('\t__Note. Critical Values are found and written in the FIRST row (out of {}) in output file.'.
+    #           format(len(self.ga_smfls) + 1))
+    #
+    #     tablehead = '{} {} {} {} {} {}'\
+    #         .format('log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp')
+    #
+    #
+    #     tmp = ''
+    #     for v_n in add_sonic_vals:
+    #         tmp = tmp + ' {}'.format(v_n)
+    #
+    #     extended_head = tablehead + tmp
+    #     print(extended_head)
+    #
+    #     # --- --- --- MAKING A OUTPUT FILE NAME OUT OF FOLDERS THE SM.DATA FILES CAME FROM --- --- ---
+    #     # out_name = 'SP'
+    #     # for i in range(len(self.input_dirs)):
+    #     #     if self.input_dirs[i] not in self.dirs_not_to_be_included and self.input_dirs[i] != '..':
+    #     #         out_name = out_name + self.input_dirs[i]
+    #     #         if i < len(self.input_dirs) - 1:
+    #     #             out_name = out_name + '_'
+    #     # out_name = out_name + '.data'
+    #
+    #     # print('Results are saved in: {}'.format(self.out_dir + out_name))
+    #     # np.savetxt(self.out_dir + out_name, out_array, '%.5f', '  ', '\n', extended_head, '')
+    #
+    #
+    #     return extended_head.split(' '), out_array
+
+    def analyze_sp_sm_fls(self, depth, add_sonic_vals, show_plot):
+        '''
+
+        :param depth:
+        :param add_sonic_vals:
+        :param show_plot:
+        :return:
+        '''
+
+        def crop_ends(x, y):
+            '''
+            In case of 'wierd' vel/temp profile with rapidly rising end, first this rising part is to be cut of
+            before maximum can be searched for.
+            :param x:
+            :param y:
+            :return:
+            '''
+            x_mon = x
+            y_mon = y
+
+            non_monotonic = True
+
+            while non_monotonic:
+
+                if len(x_mon) <= 10:
+                    return x, y
+                    # raise ValueError('Whole array is removed in a searched for monotonic part.')
+
+                if y_mon[-1] > y_mon[-2]:
+                    y_mon = y_mon[:-1]
+                    x_mon = x_mon[:-1]
+                    # print(x_mon[-1], y_mon[-1])
+                else:
+                    non_monotonic = False
+
+            return Math.find_nearest_index(x, x_mon[-1])
+
+        def get_boundary(u_min):
+            '''
+            RETURNS ' bourders.min() ' - min radius among all the models, where u exceeds the 'u_min'
+            :param u_min:
+            :return:
+            '''
+            bourders = []
+
+            for i in range(len(self.sp_smfls)):
+                u = self.sp_smdl[i].get_col('u')
+                r = self.sp_smdl[i].get_col('r')
+                for i in range(len(r)):
+                    if u[i] > u_min:
+                        # ax1.axvline(x=r[i], color='red')
+                        bourders = np.append(bourders, r[i])
+                        break
+
+            return bourders.min()
+
+        def all_values_array(cls, min_indx, rs_p, ts_p, add_sonic_vals):
+
+            out_array = []
+
+            mdot = cls.get_col('mdot')[-1]
+
+            # --- --- GET ARRAYS AND VALUES AND APPENDING TO OUTPUT ARRAY --- --- --- --- --- --- --- ---
+
+            r = cls.get_col('r')[min_indx:]
+            t = cls.get_col('t')[min_indx:]
+
+            out_array = np.append(out_array, cls.get_col('l')[-1])  # appending 'l'         __1__
+            out_array = np.append(out_array, cls.get_col('xm')[-1])  # appending 'xm'       __2__
+            out_array = np.append(out_array, cls.get_col('He4')[0])  # appending 'Yc'       __3__
+
+            out_array = np.append(out_array, cls.get_col('mdot')[-1])  # appending 'mdot'   __4__
+            out_array = np.append(out_array, rs_p)  # appending 'rs' __5__
+            out_array = np.append(out_array, ts_p)  # appending 'ts' __6__
+
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+            val_array = []
+            for v_n_cond in add_sonic_vals:
+
+                if len(v_n_cond.split('-')) > 2:
+                    raise NameError(
+                        'For *add_sonic_vals* use format *var_name-location*, (given: {}) where var_name is '
+                        'one of the BEC sm.data variables and location is *core = [-1] surface=[0]',
+                        'sp = [sonic_point_interpolated]'.format(v_n_cond))
+
+                v_n = v_n_cond.split('-')[0]
+                cond = v_n_cond.split('-')[-1]
+
+                if cond != 'sp':
+                    var_val = cls.get_cond_value(v_n, cond)  # assuming that condition is not required interp
+
+                else:
+                    ''' Here The Interpolation of v_n is Done'''
+
+                    v_n_val_arr = cls.get_col(v_n)[min_indx:]
+                    if rs_p < r.min() or rs_p > r.max():
+                        raise ValueError('rs ({}) outside of r region ({},{})'.format(rs_p, r.min(), r.max()))
+
+                    f = interpolate.InterpolatedUnivariateSpline(r, v_n_val_arr)
+                    var_val = f(rs_p)
+
+                    if len([var_val]) > 1:
+                        raise ValueError('More than one solution found for *{}* sonic value: ({})'.format(v_n, var_val))
+
+                val_array = np.append(val_array, var_val)
+
+            if len(val_array) != len(add_sonic_vals):
+                raise ValueError('len(val_array)[{}] != len(add_sonic_vals)[{}]'
+                                 .format(len(val_array), len(add_sonic_vals)))
+
+            for i in range(len(val_array)):  # 5 is a number of main values: [ l, m, Yc, ts, rs ]
+                out_array = np.append(out_array, val_array[i])  # appending 'v_ns' __n__
+
+            return out_array
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        ax2 = ax1.twinx()
+
+        tlt = 'VELOCITY PROFILE'
+        plt.title(tlt, loc='left')
+
+        mdots = np.array([0.])
+
+        r_min = get_boundary(0.1)  # setting the lower value of r that above which the analysis will take place
+
+        '''---PLOTTING TH U(R) PROFILES---'''
+        for cl in self.sp_smdl:
+            r = cl.get_col('r')
+            u = cl.get_col('u')
+            t = cl.get_col('t')
+            min_ind = Math.find_nearest_index(r, r_min)
+
+            ax1.plot(r[min_ind:], u[min_ind:], '.', color='black')
+            ax2.plot(r[min_ind:], t[min_ind:], '.', color='orange')
+
+
+        '''---INTERPOLATING THE SONIC VALUES---'''
+
+        out_array = np.zeros(len(add_sonic_vals) + 6)  # where 6 are: [l, m, Yc, mdot, rs, ts] # always include
+        for cl in self.sp_smdl:
+
+            r  = cl.get_col('r')
+            u  = cl.get_col('u')
+            mu = cl.get_col('mu')
+            t  = cl.get_col('t')
+            u_s= cl.get_sonic_u()
+            mdot_u=cl.get_col('mdot')[-1]
+            mdots = np.append(mdots, mdot_u)
+            print('\t__Initical Array Length: {}'.format(len(r)))
+
+            min_ind = Math.find_nearest_index(r, r_min)
+
+            # ----------------------- R U ----------------------------
+            r  = r[min_ind:]
+            u  = u[min_ind:]
+            u_s= u_s[min_ind:]
+            t = t[min_ind:]
+            mu = mu[min_ind:]
+
+            print('\t__Cropped Array Length: {}'.format(len(r)))
+
+            int_r  = np.mgrid[r[0]:r[-1]:depth*1j]
+            int_u  = Math.interp_row(r, u, int_r)
+
+            ax1.plot(r, u_s, '--', color='black')
+            ax1.annotate(str('%.2f' % mdot_u), xy=(r[-1], u[-1]), textcoords='data')
+            ax1.plot(int_r, int_u, '-', color='gray')
+
+            # ------------------------R T --------------------------------
+
+            ts_arr = np.log10((mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b)
+
+
+            int_r = np.mgrid[r[0]:r[-1]:depth * 1j]
+            int_t  = Math.interp_row(r, t, int_r)
+            int_ts_arr=Math.interp_row(r, ts_arr, int_r)
+
+            ax2.plot(r, ts_arr, '.', color='orange')
+            ax2.plot(int_r, int_t,'-',color='orange')
+            ax2.plot(int_r, int_ts_arr, '--', color='orange')
+
+            # --- --- ---| SONIC POINT PARAMTERS |--- --- ---
+
+            rs_p, ts_p = Math.interpolated_intercept(int_r, int_ts_arr, int_t)     # SONIC TEPERATURE
+            if rs_p.any():
+                # if len(rs_p)>1:
+                #     raise ValueError('Multiple sonic points in SP_BEC file(?) : Rs:{}'.format(rs_p))
+                # if rs_p > int_r[-1] or rs_p < int_r[-1]/2:
+                #     rs_p = int_r[-1]
+                #     ts_p = int_t[-1]
+                # else:
+                rs_p = rs_p[0][0]
+                ts_p = ts_p[0][0]
+                # pass
+            else:
+                rs_p = int_r[-1]
+                ts_p = int_t[-1]
+
+            print('\t__         Rs ({}) AND   R region ({},{})'.format(rs_p, r.min(), r.max()))
+            if rs_p < r.min() or rs_p > r.max():
+                raise ValueError('rs ({}) outside of r region ({},{})'.format(rs_p, r.min(), r.max()))
+
+            ax2.plot(rs_p, ts_p, 'X', color='red')
+            ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
+            # print('--Rs{} Ts{}'.format(rs_p, ts_p))
+            row = all_values_array(cl, min_ind, rs_p, ts_p, add_sonic_vals)
+
+            out_array = np.vstack((out_array, row))
+
+        if show_plot:
+            plt.show()
+
+        # tablehead = '{} {} {} {} {} {} {} {} {}' \
+        #     .format('log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp')#-----------------------
+
+        tablehead = ['log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp']
+
+        # tmp = ''
+        # for v_n in add_sonic_vals:
+        #     tmp = tmp + ' {}'.format(v_n)
+
+        for v_n in add_sonic_vals:
+            tablehead.append(v_n)
+
+        # extended_head = tablehead + tmp
+        print(tablehead)
+        out_array = np.delete(out_array, 0, 0)
+        return tablehead, out_array
+
+    def analyze_wind_fls(self, v_n_arr, append0=False, append1=False):
+        '''
+        Returns a 2d array with mdot - first col, other cols for v_n at a point where tau=2/3 (photoshphere)
+        :param v_n_arr:
+        :return:
+        '''
+
+        def get_arr_of_val_0_1_ph(v_n_arr, append0=False, append1=False):
+            '''
+            Returns a 2d array with mdot a first row, and rest - rows for v_n,
+            (if append0 or append1 != False: it will append before photosph. value, also the 0 or/and 1 value.
+            '''
+
+            out_arr = np.zeros(2 + len(v_n_arr))
+            if append0:
+                out_arr = np.zeros(2 + len(v_n_arr) * 2) # mdot, val0 val1, val_ph
+            if append1:
+                out_arr = np.zeros(2 + len(v_n_arr) * 3)
+
+            for cl in self.wndcls:
+                arr = []
+                arr = np.append(arr, cl.get_value('mdot', 10))   # Mass loss ( for future combining)
+                tau = cl.get_value('tau', 0)
+                if tau == -np.inf or tau == np.inf:
+                    raise ValueError('tau == inf')
+                arr = np.append(arr, tau)    # Optical depth at the sonic point
+
+                for v_n in v_n_arr:
+                    if v_n == 'mdot':
+                        raise NameError('Mdot is already appended')
+                    if v_n == 'tau':
+                        raise NameError('Tau is appended by default as a first value of')
+
+                    arr = np.append(arr, cl.get_value(v_n, 'ph'))
+                    if append0:
+                        arr = np.append(arr, cl.get_value(v_n, 0))  # mdot, val0 val1, val_ph
+                    if append1:
+                        arr = np.append(arr, cl.get_value(v_n, 1))
+
+                out_arr = np.vstack((out_arr, arr))
+
+
+            out_arr = np.delete(out_arr, 0, 0)
+
+            # --- HEAD of the table (array)
+
+            head = []
+            head.append('mdot')
+            head.append('tau-sp')
+            for v_n in v_n_arr:
+                head.append('{}-{}'.format(v_n, 'ph'))
+                if append0:
+                    head.append('{}-{}'.format(v_n, 0))  # mdot, val0 val1, val_ph
+                if append1:
+                    head.append('{}-{}'.format(v_n, 1))
+
+            return head, out_arr
+        # vals = get_arr_of_val_0_1_ph(['t','r','tau'])
+        # print('a')
+
+        # for cl in self.wndcls:
+        #     atm_p = cl.get_col('gp') # the grid point where is photosphere
+        #
+        #     t0 = cl.get_col('t')[0]
+        #     t1 = cl.get_col('t')[1]
+        #     tph= cl.get_col('t')[np.int(atm_p)]
+        #     r0 = cl.get_col('r')[0]
+        #     r1 = cl.get_col('r')[1]
+        #     rph= cl.get_col('r')[np.int(atm_p)]
+        #
+        #
+        #
+        #     ax = plt.subplot(111)
+        #     x_wind = cl.get_col('t')
+        #     tau = cl.get_col('tau')
+        #     ax.plot(x_wind, tau, '.', color='gray')
+        #     atm_p = cl.get_col('gp')
+        #     x_wind_atm = cl.get_col('t')[np.int(atm_p)]
+        #
+        #     ax.axvline(x=x_wind_atm, label='Atmosphere')
+        #
+        #     ax.set_yscale("log", nonposy='clip')
+        #     ax.grid()
+        #     ax.set_xlabel(Labels.lbls('t'))
+        #     ax.set_ylabel(Labels.lbls('tau'))
+        #     # ax.set_yscale("log", nonposy='clip')
+        #     ax.legend()
+        #     plt.show()
+
+        return get_arr_of_val_0_1_ph(v_n_arr, append0, append1)
+
+
+        # for cl in self.wndcls:
+        #     atm_p = cl.get_col('gp') # the grid point where is photosphere
+        #
+        #     t0 = cl.get_col('t')[0]
+        #     t1 = cl.get_col('t')[1]
+        #     tph= cl.get_col('t')[np.int(atm_p)]
+        #     r0 = cl.get_col('r')[0]
+        #     r1 = cl.get_col('r')[1]
+        #     rph= cl.get_col('r')[np.int(atm_p)]
+        #
+        #
+        #
+        #     ax = plt.subplot(111)
+        #     x_wind = cl.get_col('t')
+        #     tau = cl.get_col('tau')
+        #     ax.plot(x_wind, tau, '.', color='gray')
+        #     atm_p = cl.get_col('gp')
+        #     x_wind_atm = cl.get_col('t')[np.int(atm_p)]
+        #
+        #     ax.axvline(x=x_wind_atm, label='Atmosphere')
+        #
+        #     ax.set_yscale("log", nonposy='clip')
+        #     ax.grid()
+        #     ax.set_xlabel(Labels.lbls('t'))
+        #     ax.set_ylabel(Labels.lbls('tau'))
+        #     # ax.set_yscale("log", nonposy='clip')
+        #     ax.legend()
+        #     plt.show()
+    @staticmethod
+    def where(arr, value):
+        for i in range(len(arr)):
+            if arr[i] == value:
+                return i
+        raise ValueError('arr[{}] == value[{}] | not found'.format(arr, value))
+
+
+    @staticmethod
+    def where_mdot(arr, value, precision=.2):
+        for i in range(len(arr)):
+            if "%{}f".format(precision) % arr[i] == "%{}f".format(precision) % value:
+                return i
+        return None
+        # raise ValueError('arr[{}] == value[{}] | not found'.format(arr, value))
+
+    def combine_save(self, depth, add_sonic_vals, show_plot):
+
+        sp_head, sp_table = self.analyze_sp_sm_fls(depth, add_sonic_vals, show_plot)
+        wd_head, wd_arr = self.analyze_wind_fls(['t', 'r'], False, False) # do not append 0th and 1st values on the WIND
+
+        def combine_two_tables_by_mdot(head1, table1, head2, table2):
+
+            i_mdot1_name = self.where(head1, 'mdot')
+            i_mdot2_name = self.where(head2, 'mdot')
+            mdot1_arr = table1[:, i_mdot1_name]
+            mdot2_arr = table2[:, i_mdot2_name]
+
+            if len(mdot1_arr) != len(mdot2_arr):
+                raise ValueError('len(mdot1_arr)[{}] != len(mdot2_arr)[{}]'.format(len(mdot1_arr), len(mdot2_arr)))
+
+            out_arr = []
+
+            n_mdot_avl = 0
+            for i in range(len(mdot1_arr)):
+
+                i_mdot1 = self.where_mdot(mdot1_arr, mdot1_arr[i])
+                i_mdot2 = self.where_mdot(mdot2_arr, mdot1_arr[i])
+
+                if i_mdot1 == None or i_mdot2 == None:
+                    break
+                else:
+                    n_mdot_avl = n_mdot_avl + 1
+
+                two_tables = []
+                two_tables = np.hstack((two_tables, table1[i_mdot1, :]))
+                two_tables = np.hstack((two_tables, table2[i_mdot2, 1:]))
+
+                out_arr = np.append(out_arr, two_tables)
+
+            out_array = np.reshape(out_arr, (n_mdot_avl, len(table1[0,:])+len(table2[0, 1:])))
+
+            head = head1
+            for i in range(1, len(head2)): # starting from 1, as the table2 also has mdot, which is not needed twice
+                head.append(head2[i])
+
+            if len(head) != len(out_array[0, :]):
+                raise ValueError('Something is wrong here...')
+            return head, out_array
+        head, table = combine_two_tables_by_mdot(sp_head, sp_table, wd_head, wd_arr)
+
+        def create_file_name(first_part='SP3'):
+            '''Creates name like:
+            SP3_ga_z0008_10sm_y10
+            using the initial folders, where the sm.data files are located
+            '''
+            out_name = first_part
+            for i in range(len(self.input_dirs)):
+                if self.input_dirs[i] not in self.dirs_not_to_be_included and self.input_dirs[i] != '..':
+                    out_name = out_name + self.input_dirs[i]
+                    if i < len(self.input_dirs) - 1:
+                        out_name = out_name + '_'
+            out_name = out_name + '.data'
+            return out_name
+        fname = create_file_name('SP3')
+
+        print('Results are saved in: {}'.format(self.out_dir + fname))
+
+        tmp = ''
+        for i in range(len(head)):
+            tmp = tmp + head[i] + ' '
+        head__ = tmp
+
+        np.savetxt(self.out_dir + fname, table, '%.5f', '  ', '\n', head__, '')
+
+
+        print('a')
+
+
+
+
+    # def combine_ga_sp(self, depth, add_sonic_vals, show_plot, way_to_interp_tau='Uni'):
+    #     '''
+    #     Interpolates tau to get the critical value, based on the mdot_critical, obtained from analysis of GA models,
+    #     returns the column of tau, where the first value is the critical value.
+    #     OUT: 2d table with Sonic point values from SONIC-BEC and critical values from NORMAL-BEC (+ tau)
+    #
+    #     :param depth:
+    #     :param add_sonic_vals:
+    #     :param show_plot:
+    #     :param way_to_interp_tau: IntUni, Uni, poly4, ploy3, poly2, poly1,
+    #     :return:
+    #     '''
+    #     ga_head, ga_table = self.analyze_ga_sm_fls(depth, add_sonic_vals, show_plot)
+    #     sp_head, sp_table = self.analyze_sp_sm_and_plot_fls(depth, add_sonic_vals, show_plot)
+    #
+    #     def compare_sonic_values():
+    #         '''
+    #         Combines the [-sp] values from ga and sp tables, estimating the error for each pair, returning the
+    #         3d array [v_n:, mdot:, [mdot_val, ga_val, sp_val, err, err in %]]
+    #         :return:
+    #         '''
+    #         ga_sp_v_n = []
+    #         ga_i_val = []
+    #         for i in range(len(ga_head)):
+    #             print(ga_head[i].split('-'))
+    #             if 'sp' in ga_head[i].split('-'):
+    #                 ga_sp_v_n.append(ga_head[i].split('-')[0])
+    #                 ga_i_val = np.append(ga_i_val, np.int(i))
+    #
+    #         sp_sp_v_n = []
+    #         sp_i_val = []
+    #         for i in range(len(sp_head)):
+    #             print(sp_head[i].split('-'))
+    #             if 'sp' in sp_head[i].split('-'):
+    #                 sp_sp_v_n.append(sp_head[i].split('-')[0])
+    #                 sp_i_val = np.append(sp_i_val, np.int(i))
+    #
+    #         if ga_sp_v_n != sp_sp_v_n:
+    #             raise NameError('Sonic Point names (SP): {}\n Sonic Point names (GA): {}\n NOT THE SAME'
+    #                             .format(sp_sp_v_n, ga_sp_v_n))
+    #         print('\t__{} =? {}'.format(len(ga_i_val), len(sp_i_val)))
+    #
+    #
+    #         print('Mdot | {}'.format(ga_sp_v_n))
+    #
+    #         mdot_row = []
+    #         for i in range(len(ga_table[:,3])): # mdot
+    #             ga_mdot = ga_table[i,3]
+    #             if ga_mdot in sp_table[:,3]: # if [ga_mdot] is in [sp_mdot]
+    #                 mdot_row = np.append(mdot_row, ga_table[i,3])
+    #
+    #         arr = []
+    #         for i in range(len(ga_sp_v_n)):
+    #             # print('\n')
+    #             arr_mdots = np.zeros(5)
+    #             for j in range(len(mdot_row)):
+    #                 ga_mdot_i = Math.find_nearest_index(ga_table[:, 3], mdot_row[j])
+    #                 sp_mdot_i = Math.find_nearest_index(sp_table[:, 3], mdot_row[j])
+    #                 ga_val = ga_table[ga_mdot_i, np.int(ga_i_val[i])]
+    #                 sp_val = sp_table[sp_mdot_i, np.int(sp_i_val[i])]
+    #
+    #                 err = np.abs(ga_val - sp_val)
+    #                 err2= (ga_val - err) / 100      # in % with respect to GA
+    #
+    #                 arr_mdots = np.vstack((arr_mdots, [mdot_row[i], ga_val, sp_val, err, err2]))
+    #
+    #             arr = np.append(arr, np.delete(arr_mdots, 0, 0))
+    #
+    #         arr = np.reshape(arr, (len(ga_sp_v_n), len(mdot_row), 5))
+    #
+    #         return arr
+    #
+    #     def extrapolate_crit_val(v_n, way_to_interp_tau):
+    #
+    #         grid_mdot = sp_table[1:, 3] # mdot
+    #         mdot = sp_table[:, 3]
+    #         tau = []
+    #
+    #         if not v_n in sp_head:
+    #             raise NameError('v_n: {} is not in sp_head: {}'.format(v_n, sp_head))
+    #
+    #         for i in range(len(sp_head)):
+    #             if sp_head[i] == v_n:
+    #                 tau = sp_table[:, i]
+    #                 break
+    #         # print(mdot, tau)
+    #
+    #         md_tau = []
+    #         for i in range(len(mdot)):
+    #             md_tau = np.append(md_tau, [mdot[i], tau[i]])
+    #
+    #         md_tau_sort = np.sort(md_tau.view('f8, f8'), order=['f0'], axis=0).view(np.float)
+    #         md_tau_sh = np.reshape(md_tau_sort, (np.int(len(md_tau)/2), 2))
+    #
+    #
+    #
+    #         tau_grid1 = interpolate.InterpolatedUnivariateSpline(md_tau_sh[:,0], md_tau_sh[:,1])(grid_mdot)
+    #         tau_cr1 = interpolate.InterpolatedUnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(ga_table[0, 3])
+    #
+    #         # tau_grid2 = interpolate.UnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(grid_mdot)
+    #         # tau_cr2 = interpolate.UnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(ga_table[0, 3])
+    #         #
+    #         # tmp, tau_grid3 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+    #         # tmp, tau_cr3 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 4, 0, np.array([ga_table[0, 3]]))
+    #         #
+    #         # tmp, tau_grid4 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 3, 0, grid_mdot)
+    #         # tmp, tau_cr4 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 3, 0, np.array([ga_table[0, 3]]))
+    #         #
+    #         # tmp, tau_grid5 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 2, 0, grid_mdot)
+    #         # tmp, tau_cr5 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 2, 0, np.array([ga_table[0, 3]]))
+    #         #
+    #         # tmp, tau_grid6 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 1, 0, grid_mdot)
+    #         # tmp, tau_cr6 = Math.fit_plynomial(md_tau_sh[:, 0], md_tau_sh[:, 1], 1, 0, np.array([ga_table[0, 3]]))
+    #
+    #
+    #         plt.plot(md_tau_sh[:,0], md_tau_sh[:,1], '.', color = 'black')
+    #         plt.plot(grid_mdot, tau_grid1, '--', color='gray', label = '{}_cr(IntUn)  = {}'.format(v_n, "%.2f" % ( tau_cr1)))
+    #         # plt.plot(grid_mdot, tau_grid2, '--', color='blue', label = '{}_cr(Univ) = {}'.format(v_n, "%.2f" % ( tau_cr2)))
+    #         # plt.plot(grid_mdot, tau_grid3, '--', color='orange', label='{}_cr(ploy4) = {}'.format(v_n, "%.2f" % ( tau_cr3)))
+    #         # plt.plot(grid_mdot, tau_grid4, '--', color='red', label='{}_cr(ploy3) = {}'.format(v_n, "%.2f" % ( tau_cr4)))
+    #         # plt.plot(grid_mdot, tau_grid5, '--', color='cyan', label='{}_cr(ploy2) = {}'.format(v_n, "%.2f" % ( tau_cr5)))
+    #         # plt.plot(grid_mdot, tau_grid6, '--', color='black', label='{}_cr(ploy1) = {}'.format(v_n, "%.2f" % ( tau_cr6)))
+    #
+    #         plt.axvline(x=ga_table[0, 3], label='Critical point')
+    #         plt.legend()
+    #         plt.grid()
+    #         plt.xlabel(Labels.lbls('mdot'))
+    #         plt.ylabel(v_n)
+    #         if show_plot:
+    #             plt.show()
+    #
+    #
+    #
+    #         if way_to_interp_tau == 'IntUni':
+    #             return tau_cr1, np.append(np.array([tau_cr1]), tau_grid1)
+    #
+    #         # if way_to_interp_tau == 'Uni':
+    #         #     return tau_cr2, np.append(np.array([tau_cr2]), tau_grid2)
+    #         #
+    #         # if way_to_interp_tau == 'poly4':
+    #         #     return tau_cr3, np.append(np.array([tau_cr3]), tau_grid3)
+    #         #
+    #         # if way_to_interp_tau == 'poly3':
+    #         #     return tau_cr4, np.append(np.array([tau_cr4]), tau_grid4)
+    #         #
+    #         # if way_to_interp_tau == 'poly2':
+    #         #     return tau_cr5, np.append(np.array([tau_cr5]), tau_grid5)
+    #         #
+    #         # if way_to_interp_tau == 'poly1':
+    #         #     return tau_cr6, np.append(np.array([tau_cr6]), tau_grid6)
+    #
+    #         raise NameError('Given way_to_interp_tau ({}) is not availabel. '
+    #                         'Use only: IntUni, Uni, poly4, poly3, poly2, poly1'.format(way_to_interp_tau))
+    #
+    #
+    #
+    #
+    #     arr = compare_sonic_values()
+    #
+    #     print(way_to_interp_tau)
+    #     # 'log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp', 'R_wind', 'T_eff', 'Tau'
+    #     tau, tau_row = extrapolate_crit_val('Tau', way_to_interp_tau)
+    #
+    #     ga_head.insert(6,'Tau')
+    #     tmp = ''
+    #     for i in range(len(ga_head)):
+    #         tmp = tmp + ' ' + ga_head[i]
+    #
+    #     ga_head = tmp
+    #     ga_table = np.insert(ga_table, 6, tau, 1)
+    #
+    #
+    #     # --- --- --- MAKING A OUTPUT FILE NAME OUT OF FOLDERS THE SM.DATA FILES CAME FROM --- --- ---
+    #     out_name = 'SP2'
+    #     for i in range(len(self.input_dirs)):
+    #         if self.input_dirs[i] not in self.dirs_not_to_be_included and self.input_dirs[i] != '..':
+    #             out_name = out_name + self.input_dirs[i]
+    #             if i < len(self.input_dirs) - 1:
+    #                 out_name = out_name + '_'
+    #     out_name = out_name + '.data'
+    #
+    #     print('Results are saved in: {}'.format(self.out_dir + out_name))
+    #
+    #     # np.savetxt(self.out_dir + out_name, ga_table, '%.5f', '  ', '\n', ga_head, '')
+    #
+    #     # sp_head.insert(6, 'Tau')
+    #
+    #     crit_row = np.zeros(len(sp_head))
+    #     crit_row[0] = ga_table[0,0] # L
+    #     crit_row[1] = ga_table[0,1] # M
+    #     crit_row[2] = ga_table[0,2] # Yc
+    #     crit_row[3] = ga_table[0,3] # mdot
+    #     crit_row[4] = ga_table[0,4] # R
+    #     crit_row[5] = ga_table[0,5] # T
+    #     crit_row[6] = tau
+    #
+    #     tmp = ''
+    #     for i in range(len(sp_head)):
+    #         tmp = tmp + ' ' + sp_head[i]
+    #     sp_head = tmp
+    #
+    #     sp_table_and_crit_row = np.insert(sp_table, 0, crit_row, 0)
+    #     np.savetxt(self.out_dir + out_name, sp_table_and_crit_row, '%.5f', '  ', '\n', sp_head, '')
+    #
+    #
+    #     # print(arr)
+    #
+    #     print('a')
+
+    # def extract_mdot_tau(self, mdot1, mdot2, mdot_step):
+    #
+    #     self.mdot_grid = np.flip(np.arange(mdot1, mdot2, mdot_step), 0)
+    #
+    #     arr = np.empty((len(self.mdot_grid), 3))
+    #     arr[:] = np.nan
+    #
+    #     for i in range(len(self.plt_files)):
+    #         l = self.plotmdl[i].l_[-1]
+    #         m = self.plotmdl[i].m_[-1]
+    #         mdot = self.plotmdl[i].mdot_[-1]
+    #         tau = self.plotmdl[i].tauatR[-1]
+    #
+    #         if not np.float("%.2f" % mdot) in list([np.float("%.2f" % mdot) for mdot in self.mdot_grid]):
+    #             raise ValueError('Value of mdot from .plot file ({}) is not in a grid \n {}'.format(mdot, self.mdot_grid))
+    #         else:
+    #             # j = np.where( list([np.float("%.2f" % mdot) for mdot in self.mdot_grid]) == np.float("%.2f" % mdot) )[0]
+    #             j = Math.find_nearest_index(np.array(list([np.float("%.2f" % mdot) for mdot in self.mdot_grid])), np.float("%.2f" % mdot))
+    #             arr[j, 0] = l
+    #             arr[j, 1] = m
+    #             arr[j, 2] = tau
+    #
+    #     arr_ = np.vstack((self.mdot_grid, arr.T)).T
+    #
+    #     return arr_
+
 class Tau_Map:
 
     def __init__(self, mdot1, mdot2, mdot_step, plotfiles, smfiles, out_dir, plot_dir, dirs_not_to_be_included):
@@ -2324,9 +3687,6 @@ class Tau_Map:
         arr_ = np.vstack((self.mdot_grid, arr.T)).T
 
         return arr_
-
-
-
 
     def interpolation_tau(self):
         # arr_ = np.flip(tmp, 0)

@@ -1024,6 +1024,16 @@ class SP_file_work():
         y_zg = np.zeros(len(x_grid) + 1)  # +1 for y-value (l,lm,m,Yc)
 
         for cl in cls:  # INTERPOLATING EVERY ROW to achive 'depth' number of points
+
+            def cut_inf_in_y(x_arr, y_arr):
+                new_x = []
+                new_y = []
+                for i in range(len(y_arr)):
+                    if y_arr[i] != np.inf and y_arr[i] != -np.inf:
+                        new_x = np.append(new_x, x_arr[i])
+                        new_y = np.append(new_y, y_arr[i])
+                return new_x, new_y
+
             x = cl.get_sonic_cols(x_v_n)
             y = cl.get_crit_value(y_v_n)  # Y should be unique value for a given Yc (like m, l/lm, or Yc)
             z = cl.get_sonic_cols(z_v_n)
@@ -1031,7 +1041,9 @@ class SP_file_work():
             if append_crit:
                 x = np.append(x, cl.get_crit_value(x_v_n))
                 z = np.append(z, cl.get_crit_value(z_v_n))
+
             xi, zi = Math.x_y_z_sort(x, z)
+            xi, zi = cut_inf_in_y(xi, zi)
 
             z_grid = []
             if interp_method == 'IntUni':
@@ -2583,7 +2595,33 @@ class Read_Plot_file:
             self.windform_24 = plot_table[:i_stop, 24]          # v0+(vinf-v0)*(1-R(N)/rwindluca)
     # def
 
-
+    def get_col(self, v_n):
+        if v_n == 'time':
+            return self.time
+        if v_n == 't_c':
+            return self.t_c
+        if v_n == 'yc':
+            return self.y_c
+        if v_n == 'l_h':
+            return self.l_h
+        if v_n == 'l_he':
+            return self.l_he
+        if v_n == 'm':
+            return self.m_
+        if v_n == 'gp':
+            return np.int(self.gp[0])
+        if v_n == 'mdot':
+            return self.mdot_
+        if v_n == 't':
+            return self.t_eff
+        if v_n == 'l':
+            return self.l_
+        if v_n == 'rwindluca':
+            return self.rwindluca
+        if v_n == 'teffluca':
+            return self.teffluca
+        if v_n == 'tauatR':
+            return self.tauatR
 
     @classmethod
     def from_file(cls, plot_file_name, sonic_bec = False):
@@ -3545,9 +3583,9 @@ class Read_SP_data_file:
         if v_n == 'k' or v_n == 'kappa': return 'kappa-sp'
         if v_n == 'gamma' or v_n == 'L/Ledd': return 'L/Ledd-sp'
         if v_n == 'rho': return 'rho-sp'
-        if v_n == 'tau': return 'Tau'
+        if v_n == 'tau': return 'tau-sp'
         if v_n == 'R_wind': return 'R_wind'
-        if v_n == 't_eff': return 'T_eff'
+        if v_n == 't_eff': return 't-ph'
         raise NameError('Translation for v_n({}) not provided'.format(v_n))
 
     def get_crit_value(self, v_n):
@@ -3559,6 +3597,7 @@ class Read_SP_data_file:
             return self.table[0, self.names.index(self.v_n_to_v_n(v_n))]
 
     def get_sonic_cols(self, v_n):
+
         if v_n == 'lm':
             l = self.table[1:, self.names.index(self.v_n_to_v_n('l'))]
             m = self.table[1:, self.names.index(self.v_n_to_v_n('m'))]
@@ -3661,3 +3700,94 @@ class Read_SP_data_file:
     #         return Physics.loglm(self.l, self.m, True)
     #
     #     raise NameError('v_n {} is not in the list: {} (for critical values)'.format(v_n, self.list_of_v_n))
+
+class Read_Wind_file:
+    def __init__(self, suca_table):
+
+        self.table = suca_table
+        self.v = suca_table[:, 1]/100000
+        self.r = suca_table[:, 2]/Constants.solar_r
+        self.rho=np.log10(suca_table[:, 3])
+        self.t = np.log10(suca_table[:, 4])
+        self.kappa=suca_table[:, 5]
+        self.tau = suca_table[:, 6]
+        self.gp = suca_table[:, 7]
+        self.mdot=suca_table[:, 8]
+        self.nine=suca_table[:, 9]
+        self.ten = suca_table[:,10]
+        self.eleven=suca_table[:, 11]
+        self.kappa_eff=suca_table[:,12]
+        self.thirteen=suca_table[:, 13]
+
+    def get_col(self, v_n):
+        if v_n == 'u':
+            return self.v
+        if v_n == 'r':
+            return self.r
+        if v_n == 'rho':
+            return self.rho
+        if v_n == 't':
+            return self.t
+        if v_n == 'kappa':
+            return self.kappa
+        if v_n == 'tau':
+            return self.tau
+        if v_n == 'gp':
+            return np.int(self.gp[0])
+        if v_n == 'mdot':
+            return np.log10(self.mdot/Constants.smperyear)
+        if v_n == '9':
+            return self.nine
+        if v_n == '10':
+            return self.ten
+        if v_n == '11':
+            return self.eleven
+        if v_n == 'kappa_eff':
+            return self.kappa_eff
+        if v_n == '13':
+            return self.thirteen
+
+    def get_value(self, v_n, condition='ph'):
+        '''
+        Condtitions: 0, 1, ... Special: 'ph'
+        :param v_n:
+        :param condition:
+        :return:
+        '''
+        if condition == 'ph':
+            i = self.get_col('gp')
+            return self.get_col(v_n)[i]
+        else:
+            return self.get_col(v_n)[condition]
+
+
+    @classmethod
+    def from_wind_dat_file(cls, name):
+        '''
+        0 col - Zeors, 1 col - u, 2 col r and so forth
+        :param name: name of the sm.data file (without sm.data part!)
+        :return: class
+        '''
+        full_name = name # + Read_SM_data_File.compart
+
+        f = open(full_name, 'r').readlines()
+        elements = len(np.array(f[0].replace("D", "E").split()))
+        raws = f.__len__()
+        table = np.zeros((raws, elements))
+
+        for i in range(raws): # WARNING ! RADING ROWS N-1! BECAUSE the last row can have 'infinity'
+            if not 'Infinity' in f[i].split(' '):
+                if '0.14821969375237-322' in f[i].split(' '):
+                    parts = f[i].split('0.14821969375237-32')
+                    res = parts[0] + '0.00000000000000D+00' + parts[-1]         # In case the vierd value is there :(
+                    print('\t__Replaced Row in WIND file')
+                    table[i, :] = np.array(res.replace("D", "E").split())
+                else:
+                    table[i, :] = np.array(f[i].replace("D", "E").split())
+        f.clear()
+
+        # print('\t__Note: file *',full_name,'* has been loaded successfully.')
+        # attached an empty raw to match the index of array
+        return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T)
+
+

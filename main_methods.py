@@ -130,10 +130,10 @@ class Combine:
         ax1.grid(which='major', alpha=0.2)
 
         # ax1.set_xlim(0.78, 0.92)
-        ax1.set_xlim(4.0, 6.2)
-        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+        # ax1.set_xlim(4.0, 6.2)
+        ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
-        plt.savefig(plot_name)
+        # plt.savefig(plot_name)
         plt.show()
 
     def xyy_profile(self, v_n1, v_n2, v_n3, var_for_label1, var_for_label2, var_for_label3, edd_kappa = True):
@@ -150,7 +150,8 @@ class Combine:
         #     ax1.plot(x[-1], y[-1], 'x', color=color)
 
         fig, ax1 = plt.subplots()
-        tlt = v_n2 + ' , '+ v_n3 + ' = f(' + v_n1 + ') profile'
+
+        tlt ='M:10, Z:0.008'
         plt.title(tlt)
 
         ax1.set_xlabel(v_n1)
@@ -168,27 +169,42 @@ class Combine:
             lbl3 =  self.mdl[i].get_col(var_for_label3)[-1]
 
             color = 'C' + str(Math.get_0_to_max([i], 9)[i])
-            lbl = '{}:{} , {}:{} , {}:{}'.format(var_for_label1, '%.2f' % lbl1, var_for_label2, '%.2f' % lbl2,
-                                                 var_for_label3, '%.2f' % lbl3)
 
-            ax1.plot(xyy2[:, 0],  xyy2[:, 1],  '-', color=color, label=lbl)
+
+            t_par = Physics.opt_depth_par2(self.mdl[i].get_col('rho'), self.mdl[i].get_col('t'),
+                                           self.mdl[i].get_col('r'), self.mdl[i].get_col('u'), self.mdl[i].get_col('kappa'), self.mdl[i].get_col('mu'))
+
+            prameter = 10**(2*(self.mdl[i].get_col('mfp')[-1] - self.mdl[i].get_col('HP')[-1]))
+
+            lbl = '{}:{} , {}:{} , {}:{}, {}:{}, {}:{}'.format(var_for_label1, '%.2f' % lbl1, var_for_label2, '%.2f' % lbl2,
+                                                               var_for_label3, '%.2f' % lbl3,'AnisPar', '%.2f' % (prameter),
+                                                 't_par', '%.2f' % t_par)
+
+
+
+            ax1.plot(xyy2[:, 0],  xyy2[:, 1],  '-', color='blue', label=lbl)
             ax1.plot(xyy2[-1, 0], xyy2[-1, 1], 'x', color=color)
             ax1.annotate(str('%.2f' % lbl1), xy=(xyy2[-1, 0], xyy2[-1, 1]), textcoords='data')
+            # ax2.annotate(str('%.2f' % lbl1), xy=(xyy2[-1, 0], xyy2[-1, 1]), textcoords='data')
 
             if edd_kappa and v_n3 == 'kappa':
                 k_edd = Physics.edd_opacity(self.mdl[i].get_col('xm')[-1],
-                                            self.mdl[i].get_col('l')[-1])
+                                            self.mdl[i].get_col('l')[-1], )
                 ax2.plot(ax1.get_xlim(), [k_edd, k_edd], color='black', label='Model: {}, k_edd: {}'.format(i, k_edd))
 
-            ax2.plot(xyy2[:, 0],  xyy2[:, 2], '--', color=color)
+            ax2.plot(xyy2[:, 0],  xyy2[:, 2], '--', color='red')
             ax2.plot(xyy2[-1, 0], xyy2[-1, 2], 'o', color=color)
+
+        # ax1.text(0.3, 0.9, lbl[i], style='italic',
+        #          bbox={'facecolor': 'C' + str(i + 1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
+        #          verticalalignment='center', transform=ax.transAxes)
 
         ax2.set_ylabel(v_n3, color='r')
         ax2.tick_params('y', colors='r')
 
         plt.title(tlt, loc='left')
         fig.tight_layout()
-        # ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
         plot_name = self.plot_dir + v_n1 + '_' + v_n2 + '_' + v_n3 + '_profile.pdf'
         plt.savefig(plot_name)
         plt.show()
@@ -2346,7 +2362,7 @@ class Plot_Multiple_Crit_Mdots:
         for i in range(len(obs_files)):
             self.obs.append(Read_Observables(obs_files[i], opal_for_obs_background[i]))
 
-    def plot_crit_mdots(self, clean = False, v_n_background = None):
+    def plot_crit_mdots(self, clean = False, v_n_background = None, plfls=list()):
 
         n = len(self.y_coord)
 
@@ -2428,6 +2444,44 @@ class Plot_Multiple_Crit_Mdots:
         # --- --- WATER MARK -- -- --
         fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
 
+        # --- --- TESTINGS --- --- ---
+
+        def get_yc_min_for_m_init(m_in, m_yc_ys_lims):
+            m_vals = m_yc_ys_lims[1:, 0]
+            yc_vals = m_yc_ys_lims[0, 1:]
+            ys_arr = m_yc_ys_lims[1:, 1:]
+
+            if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
+
+            ind = Math.find_nearest_index(m_vals, m_in)
+            for i in range(len(yc_vals)):
+                if ys_arr[ind, i] < ys_arr[ind, 0]: # if the surface compostion has changed
+                    return yc_arr[i-1] # return the yc for which ys has not yet changed
+            return yc_arr[0]
+            # for i in range(len(m_vals)):
+
+
+        if len(plfls) > 1:
+            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.opal_def[0], '')
+            plcls = []
+            for i in range(len(plfls)):
+                plcls.append(Read_Plot_file.from_file(plfls[i]))
+                yc_plot = plcls[i].y_c
+                lm_plot = plcls[i].lm_
+                m_init = plcls[i].m_[0]
+                mdot_plot = plcls[i].mdot_
+
+                yc_min = get_yc_min_for_m_init(m_init, m_yc_ys_lims)
+
+                mdot_plot2 = []
+                lm_plot2 = []
+                for i in range(len(yc_plot)):
+                    if yc_plot[i] > yc_min:
+                        mdot_plot2 = np.append(mdot_plot2, mdot_plot[i])
+                        lm_plot2 = np.append(lm_plot2, lm_plot[i])
+
+                ax.plot(mdot_plot2, lm_plot2, '-.', color='black')
+                ax.annotate('M:{}'.format("%.1f"%m_init), xy=(mdot_plot2[0], lm_plot2[0]), textcoords='data')
 
         plt.xlim(min_mdot.min(), max_mdot.max())
         plt.ylim(min_lm.min(), max_lm.max())

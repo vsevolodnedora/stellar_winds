@@ -121,6 +121,7 @@ class Constants:
     grav_const = np.float ( 6.67259 * (10 ** (-8) )  ) # cm3 g^-1 s^-2
     k_b     =  np.float ( 1.380658 * (10 ** (-16) ) )  # erg k^-1
     m_H     =  np.float ( 1.6733 * (10 ** (-24) ) )    # g
+    m_He    =  np.float ( 6.6464764 * (10 ** (-24) ) ) # g
     c_k_edd =  np.float ( 4 * light_v * np.pi * grav_const * ( solar_m / solar_l ) )# k = c_k_edd*(M/L) (if M and L in solar units)
 
     yr      = np.float( 31557600. )
@@ -1223,6 +1224,40 @@ class Physics:
         return np.log10(c * o)
 
     @staticmethod
+    def opt_depth_par2(rho_, t_, r_, u_, kap_, mu_):
+
+        u_ = u_ * 100000    # return to cm/s (cgs)
+        r_ = r_ * Constants.solar_r # return to cm
+        # t = 10**t_          # return to kelvin
+        # rho=10**rho_        # return to cgs
+
+        t_mean =   10**t_[-1]   #+ np.abs((10**t_[-2] - 10**t_[-1]) / 2)
+        rho_mean = 10**rho_[-1] #+ np.abs((10**rho_[-2] - 10**rho_[-1]) / 2)
+        kap_mean = 10**kap_[-1] #+ np.abs((10**kap_[-2] - 10**kap_[-1]) / 2)
+        mu_mean = mu_[-1] #+ np.abs((mu_[-2] - mu_[-1]) / 2)
+
+        def therm_vel(t):
+            '''
+            Computes classical thermal velocity, where
+            :param t:
+            :return: v_th in km/s (!)
+            '''
+
+            return (np.sqrt( 2 * Constants.k_b*(t) / (mu_mean * Constants.m_H)))
+
+        du = u_[-1] - u_[-2]
+        dr = r_[-1] - r_[-2]
+        drdu = dr/du
+
+        xh = 0. # hydrogen fraction in the envelope
+        kap_es = 0.2 * (1 + xh) # cm^2 / g
+        v_th = therm_vel(t_mean)
+
+        return kap_mean * v_th * rho_mean * drdu
+
+        pass
+
+    @staticmethod
     def opt_depth_par(i, rho_arr, kap_arr, u_arr, r_arr, t_arr, mu_arr):
 
         i = i - 1
@@ -1956,7 +1991,7 @@ class Levels:
             if v_n == 't_eff':
                 return [4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1]
             if v_n == 'tau':
-                return [2, 4, 8, 16, 32]
+                return [0, 1 ,2, 4, 8, 16, 32]
                 # return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
 
 
@@ -2021,6 +2056,27 @@ class Labels:
 
         if v_n == 'tau':
             return r'$\tau$'
+
+
+        if v_n == 'Pr':
+            return r'$P_{rad}$'
+
+        if v_n == 'Pg':
+            return r'$P_{gas}$'
+
+        if v_n == 'Pg/P_total':
+            return r'$P_{gas}/P_{total}$'
+
+        if v_n == 'Pr/P_total':
+            return r'$P_{rad}/P_{total}$'
+
+
+        if v_n == 'mfp':
+            return r'$\log(\lambda)$'
+
+        if v_n == 'HP' or v_n == 'Hp':
+            return r'$H_{p}$'
+
 
 class Get_Z:
     def __init__(self):

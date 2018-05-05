@@ -208,6 +208,7 @@ class Criticals:
             out_array = np.append(out_array, rs_p)  # appending 'mdot' __6__
             out_array = np.append(out_array, ts_p)  # appending 'mdot' __7__
 
+
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
             val_array = []
@@ -226,7 +227,7 @@ class Criticals:
                     var_val = cls.get_cond_value(v_n, cond)  # assuming that condition is not required interp
 
                 else:
-                    ''' Here The Interpolation of v_n is Done'''
+                    ''' Here The Interpolation of v_n is Done '''
 
                     v_n_val_arr = cls.get_col(v_n)[min_indx:]
                     f = interpolate.InterpolatedUnivariateSpline(r, v_n_val_arr)
@@ -3130,6 +3131,17 @@ class Criticals3:
             ax1.annotate(str('%.2f' % mdot_u), xy=(r[-1], u[-1]), textcoords='data')
             ax1.plot(int_r, int_u, '-', color='gray')
 
+            # Check if the vel. profile is bad':)
+            subson_prof = True
+            check = 0
+            for i in range(len(r)):
+                if u[i] > u_s[i]:
+                    check = check + 1
+                    # print('                  u[{}] > u_s[{}]'.format( u[i] ,))
+            if check > 3:
+                print('                 Check: {}'.format(check))
+                subson_prof = False
+
             # ------------------------R T --------------------------------
 
             ts_arr = np.log10((mu * Constants.m_H * (u * 100000) ** 2) / Constants.k_b)
@@ -3144,33 +3156,38 @@ class Criticals3:
             ax2.plot(int_r, int_ts_arr, '--', color='orange')
 
             # --- --- ---| SONIC POINT PARAMTERS |--- --- ---
+            if subson_prof: # if the cel profile stays subsonic
 
-            rs_p, ts_p = Math.interpolated_intercept(int_r, int_ts_arr, int_t)     # SONIC TEPERATURE
-            if rs_p.any():
-                # if len(rs_p)>1:
-                #     raise ValueError('Multiple sonic points in SP_BEC file(?) : Rs:{}'.format(rs_p))
-                # if rs_p > int_r[-1] or rs_p < int_r[-1]/2:
-                #     rs_p = int_r[-1]
-                #     ts_p = int_t[-1]
-                # else:
-                rs_p = rs_p[0][0]
-                ts_p = ts_p[0][0]
-                # pass
-            else:
-                rs_p = int_r[-1]
-                ts_p = int_t[-1]
+                rs_p, ts_p = Math.interpolated_intercept(int_r, int_ts_arr, int_t)     # SONIC TEPERATURE
+                if rs_p.any():
+                    # if len(rs_p)>1:
+                    #     raise ValueError('Multiple sonic points in SP_BEC file(?) : Rs:{}'.format(rs_p))
+                    # if rs_p > int_r[-1] or rs_p < int_r[-1]/2:
+                    #     rs_p = int_r[-1]
+                    #     ts_p = int_t[-1]
+                    # else:
+                    rs_p = rs_p[0][0]
+                    ts_p = ts_p[0][0]
+                    # pass
+                else:
+                    rs_p = int_r[-1]
+                    ts_p = int_t[-1]
 
-            print('\t__         Rs ({}) AND   R region ({},{})'.format(rs_p, r.min(), r.max()))
-            if rs_p < r.min() or rs_p > r.max():
-                raise ValueError('rs ({}) outside of r region ({},{})'.format(rs_p, r.min(), r.max()))
+                print('\t__         Rs ({}) AND   R region ({},{})'.format(rs_p, r.min(), r.max()))
+                if rs_p < r.min() or rs_p > r.max():
+                    raise ValueError('rs ({}) outside of r region ({},{})'.format(rs_p, r.min(), r.max()))
 
-            ax2.plot(rs_p, ts_p, 'X', color='red')
-            ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
-            # print('--Rs{} Ts{}'.format(rs_p, ts_p))
-            row = all_values_array(cl, min_ind, rs_p, ts_p, add_sonic_vals)
+                ax2.plot(rs_p, ts_p, 'X', color='red')
+                ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
+                # print('--Rs{} Ts{}'.format(rs_p, ts_p))
 
-            out_array = np.vstack((out_array, row))
 
+                row = all_values_array(cl, min_ind, rs_p, ts_p, add_sonic_vals)
+                out_array = np.vstack((out_array, row))
+
+
+        tlt = 'M:{} Yc:{} Ys:{}'.format("%.1f"%self.sp_smdl[0].get_col('xm')[-1], "%.2f"%self.sp_smdl[0].get_col('He4')[0], "%.2f"%self.sp_smdl[0].get_col('He4')[-1])
+        plt.title(tlt)
         if show_plot:
             plt.show()
 
@@ -3339,8 +3356,8 @@ class Criticals3:
             mdot1_arr = table1[:, i_mdot1_name]
             mdot2_arr = table2[:, i_mdot2_name]
 
-            if len(mdot1_arr) != len(mdot2_arr):
-                raise ValueError('len(mdot1_arr)[{}] != len(mdot2_arr)[{}]'.format(len(mdot1_arr), len(mdot2_arr)))
+            # if len(mdot1_arr) != len(mdot2_arr):
+            #     raise ValueError('len(mdot1_arr)[{}] != len(mdot2_arr)[{}]'.format(len(mdot1_arr), len(mdot2_arr)))
 
             out_arr = []
 

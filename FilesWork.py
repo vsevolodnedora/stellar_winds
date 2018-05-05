@@ -665,7 +665,7 @@ class SP_file_work():
 
         # yc_llm_m_pol
 
-    def save_x_y_yc_evol_relation(self, y_v_tmp, z_v_n_tmp):
+    def save_x_y_yc_evol_relation(self, y_v_tmp, z_v_n_tmp, wne=True):
         '''
         Retruns EVOLUTION: 'Yc:[0,1:]  |  y_v_n(ZAMS vales):[1:,0]  |  z_v_n(zams->last Yc)
         :param z_v_n_tmp:
@@ -711,7 +711,7 @@ class SP_file_work():
         y_arr = np.array(["%.2f" % val for val in y_all[:,-1]])
         res = Math.combine(yc_all[0,:], y_arr, x_all)
 
-        Save_Load_tables.save_table(res, self.opal_used, 'evol_yc_{}_{}'.format(y_v_tmp, z_v_n_tmp),
+        Save_Load_tables.save_table(res, self.opal_used,'', 'evol_yc_{}_{}'.format(y_v_tmp, z_v_n_tmp),
                                     'evol_yc', y_v_tmp, z_v_n_tmp)
 
     @staticmethod
@@ -2577,6 +2577,7 @@ class Read_Plot_file:
         self.unknown = plot_table[:i_stop,7]        # esdissp
         self.t_eff= np.log10(plot_table[:i_stop,8]) # t(n)
         self.l_     = plot_table[:i_stop,9]         # dlog10(sl(n-1)/3.83d33)
+        self.lm_    = Physics.loglm(self.l_, self.m_,True)
         self.rho_c  = plot_table[:i_stop,10]        # dlog10(ro(1))
         self.l_carb = plot_table[:i_stop,11]        # escop
         self.l_nu  = plot_table[:i_stop,12]         # esnyp
@@ -2669,6 +2670,9 @@ class Read_Plot_file:
             max_l = lm.max()
 
         return (min_l, max_l)
+
+    # def get_wne_val(self, v_n):
+    #     he_surf0 = self.
 
 class Read_SM_data_file:
     '''
@@ -2979,6 +2983,12 @@ class Read_SM_data_file:
 
         return ts_llm_mdot_coord
 
+    def get_tpar(self):
+
+        return Physics.opt_depth_par2(self.rho_, self.t_, self.r_, self.u_, self.kappa_, self.mu_)
+                               # self.mdl[i].get_col('r'), self.mdl[i].get_col('u'), self.mdl[i].get_col('kappa'),
+                               # self.mdl[i].get_col('mu'))
+
     def get_col(self, v_n):
         '''
             The following data are available in file sm.data
@@ -3272,6 +3282,15 @@ class Read_SM_data_file:
         if v_n == 84 or v_n == self.var_names[84]: # 'tau_ph':
             return self.tau_ph_
 
+        if v_n == 'Pg/P_total':
+            return self.Pg_/self.P_total_
+
+        if v_n == 'Pr/P_total':
+            return self.Pr_/self.P_total_
+
+        if v_n == 'mfp':
+            return -(self.rho_ + self.kappa_)
+
         if v_n == '-': # to fill the empty arrays, (mask arrays)
             return np.zeros(self.t_.shape)
 
@@ -3347,6 +3366,10 @@ class Read_SM_data_file:
         :param condition:
         :return:
         '''
+
+        if v_n == 'tpar' and condition == '': # optical depth parameter can be estimated only at a point, as it requires dr/du
+            return Physics.opt_depth_par2(self.rho_,self.t_,self.r_,self.u_,self.kappa_,self.mu_)
+
         ind = self.ind_from_condition(condition)
         return np.float(self.get_col(v_n)[ind])
 
@@ -3586,6 +3609,10 @@ class Read_SP_data_file:
         if v_n == 'tau': return 'tau-sp'
         if v_n == 'R_wind': return 'R_wind'
         if v_n == 't_eff': return 't-ph'
+        if v_n == 'ys'or v_n == 'Ys': return 'Ys'
+        if v_n == 'hp' or v_n == 'HP': return 'HP-sp' # log(Hp)
+        if v_n == 'tpar': return 'tpar-'
+        if v_n == 'mfp': return 'mfp-sp' # log(mfp)
         raise NameError('Translation for v_n({}) not provided'.format(v_n))
 
     def get_crit_value(self, v_n):

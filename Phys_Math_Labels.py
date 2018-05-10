@@ -127,7 +127,7 @@ class Constants:
     yr      = np.float( 31557600. )
     smperyear = np.float(solar_m / yr)
 
-
+    steph_boltz = np.float(5.6704*10**(-5)) # erg cm−2 s−1 K−4.
 
     def __init__(self):
         pass
@@ -418,7 +418,7 @@ class Math:
         return xc, yc
 
     @staticmethod
-    def get_max_by_interpolating(x, y):
+    def get_max_by_interpolating(x, y, crop_rising_end=True, guess=None):
 
         x = np.array(x, dtype=float)
         y = np.array(y, dtype=float)
@@ -452,7 +452,8 @@ class Math:
 
             return x_mon, y_mon
 
-        x, y = crop_ends(x, y)
+        if crop_rising_end:
+            x, y = crop_ends(x, y)
 
         # create the interpolating function
         print(len(x), len(y))
@@ -467,7 +468,9 @@ class Math:
         # print(y_new)
 
         # print(x.min(), x.max())
-        guess = x[np.where(y == y.max())]
+        if guess == None:
+            guess = x[np.where(y == y.max())]
+        # guess = x[np.where(y == y.max())]
         # print(guess)
         print('Gues:', guess)
 
@@ -1293,6 +1296,17 @@ class Physics:
         return (v_s / mfp) / dvdr #( km/s / r_sol) / (km/s / r_sol) - No units.
 
     @staticmethod
+    def steph_boltz_law_t_eff(logl, r):
+        '''
+        The law: L = 4 pi R^2 sigma T^4 => (L/4 \pi R^2)^1/4
+        :return:
+        '''
+        l = (10**logl)*Constants.solar_l # in cgs
+        r = r*Constants.solar_r # in cgs
+
+        return 0.25*np.log10( l/(4*np.pi * Constants.steph_boltz* r**2))
+
+    @staticmethod
     def model_yz_to_xyz(x_1d_arr, y_1d_arr, z_2d_arr, star_y_coord, star_z_coord, num_of_model, lim_x1 = None, lim_x2 = None):
         '''
         Return: np.vstack(( int_star_x_coord, y_fill, mdot)) | [0,:] - ts
@@ -1995,9 +2009,16 @@ class Levels:
                 # return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
 
 
+        if v_n == 'vrho': return [-4.4, -4.0, -3.6, -3.2, -2.8, -2.4, -2.0, -1.6, -1.2, -0.8, -0.4, 0.4]
+            # return [0.4, 0.0, -0.4, -0.8, -1.2, -1.6, -2.0, -2.4, -2.8, -3.2, -3.6, -4.0, -4.4]
 
         if v_n == 'Ys' or v_n == 'ys':
             return [0.5, 0.55, 0.6, 0.65, 0.7,0.75,0.8,0.85,0.9,0.95,1.0]
+
+        if v_n == 'm_env':
+            return [-10.0,-9.9,-9.8,-9.7,-9.6,-9.5,-9.4,-9.3,-9.2,-9.1,-9.0]
+        if v_n == 'r_env':
+            return [0.0025,0.0050,0.0075,0.01,0.0125,0.0150,0.0175]
 
         raise NameError('Levels are not found for <{}> Opal:{}'.format(v_n, opal_used))
 
@@ -2077,6 +2098,8 @@ class Labels:
         if v_n == 'HP' or v_n == 'Hp':
             return r'$H_{p}$'
 
+        if v_n == 'L/Ledd':
+            return r'$L/L_{Edd}$'
 
 class Get_Z:
     def __init__(self):

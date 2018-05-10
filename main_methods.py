@@ -79,7 +79,62 @@ class Combine:
         self.obs = Read_Observables(self.obs_files, self.opal_used)
 
     # --- METHODS THAT DO NOT REQUIRE OPAL TABLES ---
-    def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = True):
+    def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = True, clean = False):
+
+        def get_m_r_envelope(smcl, t_lim1=5.1, t_lim2=5.3):
+            '''
+            Looks for a loal extremum between t_lim1 and t_lim2, and, if the extremem != sonic point: returns
+            length and mass of whatever is left
+            :param smcl:
+            :param t_lim1:
+            :param t_lim2:
+            :return:
+            '''
+
+            def get_envelope_l_or_m(v_n, cls, t_start, depth = 1000):
+                t = cls.get_col('t')
+                ind = Math.find_nearest_index(t,t_start) - 1 # just before the limit, so we don't need to interpolate across the whole t range
+                t = t[ind:]
+                var = cls.get_col(v_n)
+                var = var[ind:]
+
+
+                value = interpolate.InterpolatedUnivariateSpline(t[::-1], var[::-1])(t_start)
+
+                # print('-_-: {}'.format(var[-1]-value))
+
+                return (var[-1]-value)
+
+            t = smcl.get_col('t')  # x - axis
+            u = smcl.get_col('u')  # y - axis
+
+            # if t.min() > t_lim1 and t_lim2 > t.min():
+            # i1 = Math.find_nearest_index(t, t_lim2)
+            # i2 = Math.find_nearest_index(t, t_lim1)
+
+            # t_cropped= t[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t,
+            #                                                                          t_lim1)][::-1]   # t_lim2 > t_lim1 and t is Declining
+            # u_cropped = u[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t, t_lim1)][::-1]
+
+            # print('<<<<<<<<<<<SIZE: {} {} (i1:{}, i2:{}) >>>>>>>>>>>>>>>>'.format(len(t), len(u), i1, i2))
+
+            tp, up = Math.get_max_by_interpolating(t, u, False, 5.2)
+            if Math.find_nearest_index(t,tp) < len(t)-1: # if the tp is not the last point of the t array ( not th sonic point)
+
+                print('<<<<<<<<<<<Coord: {} {} >>>>>>>>>>>>>>>>'.format("%.2f" % tp, "%.2f" % up))
+
+                print('L_env: {}'.format(get_envelope_l_or_m('r', smcl, tp)))
+                print('M_env: {}'.format(np.log10(get_envelope_l_or_m('xm', smcl, tp))))
+
+                # var = get_envelope_l_or_m('r', smcl, tp)
+                return tp, up
+            else:
+                return None, None
+
+
+
+            # else: return None, None
+
 
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
@@ -103,7 +158,7 @@ class Combine:
             lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
 
             ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
-            ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            # ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
             ax1.plot(x[-1], y[-1], 'x',   color='C' + str(Math.get_0_to_max([i], 9)[i]))
 
             ax1.annotate(str('%.1f' % self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')
@@ -122,6 +177,15 @@ class Combine:
                                             self.mdl[i].get_col('l')[-1])
                 ax1.plot(ax1.get_xlim(), [k_edd, k_edd], color='black', label='Model: {}, k_edd: {}'.format(i, k_edd))
 
+            if v_n2 == 'Pg/P_total':
+                plt.axhline(y=0.15, color='black')
+
+
+            tp, up = get_m_r_envelope(self.mdl[i])
+            if tp != None:
+
+                ax1.plot(tp, up, 'X', color='black')
+
         ax1.set_xlabel(Labels.lbls(v_n1))
         ax1.set_ylabel(Labels.lbls(v_n2))
 
@@ -131,12 +195,103 @@ class Combine:
 
         # ax1.set_xlim(0.78, 0.92)
         # ax1.set_xlim(4.0, 6.2)
-        ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        if not clean:
+            ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
         # plt.savefig(plot_name)
         plt.show()
 
-    def xyy_profile(self, v_n1, v_n2, v_n3, var_for_label1, var_for_label2, var_for_label3, edd_kappa = True):
+    def dxdy_profile(self, dv_n1, v_n2, var_for_label1, var_for_label2, sonic = False, clean=False):
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+
+        tlt = v_n2 + '(' + dv_n1 + ') profile'
+        # plt.title(tlt)
+
+        # dx/dydx
+
+        def diff(x, y):
+            
+            if len(x) != len(y): raise ValueError('ERROR')
+            dx = []
+            for i in range(len(x)-1):
+                dx = np.append(dx, (x[i+1]-x[i]))
+            
+            res = []
+            for i in range(len(y)-1):
+                dy = np.append(y, (y[i+1]-y[i]))
+            
+                res = np.append(res, dx[i]/dy[i])
+            
+            return res
+
+
+        for i in range(len(self.sm_files)):
+
+
+            x = self.mdl[i].get_col(dv_n1)
+            y = self.mdl[i].get_col(v_n2)  # simpler syntaxis
+
+            dydx = diff(y,x)
+
+            # for velocity: dydx = y[:-1]*diff(y,x)
+
+
+
+            # dydx = diff(y, y)
+
+            dx = x[:-1]
+
+            label1 = self.mdl[i].get_col(var_for_label1)[-1]
+            label2 = self.mdl[i].get_col(var_for_label2)[-1]
+
+            if v_n2 == 'kappa':
+                dydx = 10 ** dydx
+
+            print('\t __Core H: {} , core He: {} File: {}'.
+                  format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.sm_files[i]))
+
+            lbl = '{}:{} , {}:{}'.format(var_for_label1, '%.2f' % label1, var_for_label2, '%.2f' % label2)
+
+            ax1.plot(dx, dydx, '-', color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            ax1.plot(dx, dydx, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            ax1.plot(dx[-1], dydx[-1], 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+
+            ax1.annotate(str('%.1f' % self.mdl[i].get_col('mdot')[-1]), xy=(dx[-1], dydx[-1]), textcoords='data')
+
+            if sonic and v_n2 == 'u':
+                u_s = self.mdl[i].get_sonic_u()
+                ax1.plot(dx, u_s, '-', color='black')
+
+                xc, yc = Math.interpolated_intercept(dx, dydx, u_s)
+                # print('Sonic r: {} | Sonic u: {} | {}'.format( np.float(xc),  np.float(yc), len(xc)))
+                plt.plot(xc, yc, 'X', color='red')
+
+            if v_n2 == 'kappa':
+                k_edd = 10 ** Physics.edd_opacity(self.mdl[i].get_col('xm')[-1],
+                                                  self.mdl[i].get_col('l')[-1])
+                ax1.plot(ax1.get_xlim(), [k_edd, k_edd], color='black', label='Model: {}, k_edd: {}'.format(i, k_edd))
+
+            if v_n2 == 'Pg/P_total':
+                plt.axhline(y=0.15, color='black')
+
+        ax1.set_xlabel(Labels.lbls(dv_n1))
+        ax1.set_ylabel(Labels.lbls(v_n2))
+
+        ax1.grid(which='both')
+        ax1.grid(which='minor', alpha=0.2)
+        ax1.grid(which='major', alpha=0.2)
+
+        # ax1.set_xlim(0.78, 0.92)
+        # ax1.set_xlim(4.0, 6.2)
+        if not clean:
+            ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = self.plot_dir + dv_n1 + '_vs_' + v_n2 + '_profile.pdf'
+        # plt.savefig(plot_name)
+        plt.show()
+
+    def xyy_profile(self, v_n1, v_n2, v_n3, var_for_label1, var_for_label2, var_for_label3, edd_kappa = True, clean = False):
 
         # for i in range(self.nmdls):
         #     x = self.mdl[i].get_col(v_n1)
@@ -154,9 +309,9 @@ class Combine:
         tlt ='M:10, Z:0.008'
         plt.title(tlt)
 
-        ax1.set_xlabel(v_n1)
+        ax1.set_xlabel(Labels.lbls(v_n1))
         # Make the y-axis label, ticks and tick labels match the line color.
-        ax1.set_ylabel(v_n2, color='b')
+        ax1.set_ylabel(Labels.lbls(v_n2), color='b')
         ax1.tick_params('y', colors='b')
         ax1.grid()
         ax2 = ax1.twinx()
@@ -195,18 +350,43 @@ class Combine:
             ax2.plot(xyy2[:, 0],  xyy2[:, 2], '--', color='red')
             ax2.plot(xyy2[-1, 0], xyy2[-1, 2], 'o', color=color)
 
+            if v_n2 == 'Pg/P_total':
+                ax1.plot(ax1.get_xlim(), [0.15, 0.15], color='orange')
+            if v_n3 == 'Pg/P_total':
+                ax2.plot(ax1.get_xlim(), [0.15, 0.15], color='orange')
+
+
+            if v_n2 == 'u':
+                u_s = self.mdl[i].get_sonic_u()
+                ax1.plot(xyy2[:, 0], u_s, color = 'gray')
+            if v_n3 == 'u':
+                u_s = self.mdl[i].get_sonic_u()
+                ax2.plot(xyy2[:, 0], u_s, color = 'gray')
+
+            if v_n2 == 'L/Ledd':
+                ax1.plot(ax1.get_xlim(), [1.0, 1.0], color='black')
+            if v_n3 == 'L/Ledd':
+                ax2.plot(ax1.get_xlim(), [1.0, 1.0], color='black')
+
+
         # ax1.text(0.3, 0.9, lbl[i], style='italic',
         #          bbox={'facecolor': 'C' + str(i + 1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
         #          verticalalignment='center', transform=ax.transAxes)
 
-        ax2.set_ylabel(v_n3, color='r')
+        ax2.set_ylabel(Labels.lbls(v_n3), color='r')
         ax2.tick_params('y', colors='r')
+
+
 
         plt.title(tlt, loc='left')
         fig.tight_layout()
-        ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
-        plot_name = self.plot_dir + v_n1 + '_' + v_n2 + '_' + v_n3 + '_profile.pdf'
+        if not clean:
+            ax1.legend(bbox_to_anchor=(0, 1), loc='upper left', ncol=1)
+        plot_name = self.plot_dir  + 'xyy_profile.pdf'
         plt.savefig(plot_name)
+
+
+
         plt.show()
 
     def mdot_check(self):
@@ -236,9 +416,115 @@ class Combine:
         array_shaped = np.reshape(array, (np.int(len(array)/6), 6))
         print(array_shaped)
 
-    def hrd(self, l_or_lm):
+    def hrd2(self, l_or_lm, clean=False):
 
         fig, ax = plt.subplots(1, 1)
+        ax.set_title('HRD')
+        ax.set_xlabel(Labels.lbls('t_eff'))
+        ax.set_ylabel(Labels.lbls(l_or_lm))
+
+
+        def get_yc_min_for_m_init(m_in, m_yc_ys_lims):
+            m_vals = m_yc_ys_lims[1:, 0]
+            yc_vals = m_yc_ys_lims[0, 1:]
+            ys_arr = m_yc_ys_lims[1:, 1:]
+
+
+            m_ind = Math.find_nearest_index(m_vals, m_in)
+            if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
+
+            ys_row = ys_arr[m_ind, ::-1]
+            yc_row = yc_vals[::-1]
+            ys_zams= ys_arr[m_ind, -1]
+
+
+
+            for i in range(len(ys_row)):
+                if ys_row[i] < ys_zams:
+                    print('----------------------- {} {} -------------------------'.format(m_in, yc_vals[i]))
+                    return yc_row[i-1]
+            print('----------------------- {} -------------------------'.format(yc_row[-1]))
+            return yc_row[-1]
+
+
+            #
+            #
+            # if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
+            #
+            # ind = Math.find_nearest_index(m_vals, m_in)
+            # for i in range(len(yc_vals)):
+            #     if ys_arr[ind, i] < ys_arr[ind, -1]: # if the surface compostion has changed
+            #         print('----------------------- {} {} -------------------------'.format( m_in, yc_vals[i]))
+            #         return yc_vals[i-1] # return the yc for which ys has not yet changed
+            # print('----------------------- {} -------------------------'.format(yc_vals[0]))
+            # return yc_vals[0]
+            # # for i in range(len(m_vals)):
+
+
+        if len(self.plot_files) > 1:
+            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.opal_used, '')
+            plcls = []
+            for i in range(len(self.plot_files)):
+                plcls.append(Read_Plot_file.from_file(self.plot_files[i]))
+
+
+                if l_or_lm == 'l':
+                    llm_plot = plcls[i].l_
+                else:
+                    llm_plot = plcls[i].lm_
+
+                m_init = plcls[i].m_[0]
+                teff_plot = plcls[i].t_eff
+                yc_plot = plcls[i].y_c
+                # ys_plot =
+
+                # ================================ PLOTTING THE NORMAN FULL TRACKS =====================================
+
+                if not clean:
+
+                    ax.plot(teff_plot, llm_plot, '-', color='gray')
+
+                    for j in range(10):
+                        ind = Math.find_nearest_index(plcls[i].y_c, (j / 10))
+                        # print(plfl.y_c[i], (i/10))
+                        x_p = teff_plot[ind]
+                        y_p = llm_plot[ind]
+                        plt.plot(x_p, y_p, '.', color='red')
+                        if not clean:
+                            ax.annotate('{} {}'.format("%.2f" % plcls[i].y_c[ind], "%.2f" % plcls[i].mdot_[ind]), xy=(x_p, y_p),
+                                        textcoords='data')
+
+                # ================================== PLOTTING ONLY THE WNE PHASE =======================================
+
+                yc_min = get_yc_min_for_m_init(m_init, m_yc_ys_lims)
+
+                teff_plot2 = []
+                llm_plot2 = []
+                yc_plot2 = []
+                for k in range(len(yc_plot)):
+                    if yc_plot[k] > yc_min:
+                        teff_plot2 = np.append(teff_plot2, teff_plot[k])
+                        llm_plot2 = np.append(llm_plot2, llm_plot[k])
+                        yc_plot2 = np.append(yc_plot2, yc_plot[k])
+
+                ax.plot(teff_plot2, llm_plot2, '-.', color='black')
+                ax.annotate('M:{}'.format("%.1f"%m_init), xy=(teff_plot2[0], llm_plot2[0]), textcoords='data', horizontalalignment='left')
+                ax.annotate('Yc:{}'.format("%.1f" % yc_min), xy=(teff_plot2[-1], llm_plot2[-1]), textcoords='data')
+
+        plt.gca().invert_xaxis()  # inverse x axis
+        if not clean:
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = self.output_dir + 'hrd.pdf'
+        plt.savefig(plot_name)
+        plt.show()
+
+
+    def hrd(self, l_or_lm, clean=False):
+
+        fig, ax = plt.subplots(1, 1)
+
+
+
 
         plt.title('HRD')
         plt.xlabel(Labels.lbls('t_eff'))
@@ -246,7 +532,8 @@ class Combine:
 
         # plt.xlim(t1, t2)
         ax.grid(which='major', alpha=0.2)
-        plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+        if not clean:
+            plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
 
         # res = self.obs.get_x_y_of_all_observables('t', 'l', 'type')
         #
@@ -260,6 +547,7 @@ class Combine:
         #              label='WN' + str(int(res[1][j, 3])))
 
         ind_arr = []
+
         for j in range(len(self.plot_files)):
             ind_arr.append(j)
             col_num = Math.get_0_to_max(ind_arr, 9)
@@ -289,10 +577,14 @@ class Combine:
             imx  = Math.find_nearest_index( plfl.y_c, plfl.y_c.max() )
 
 
-            plt.plot(mod_x[imx], mod_y[imx], 'x')
-            ax.annotate("%.4f" % plfl.y_c.max(), xy=(mod_x[imx], mod_y[imx]), textcoords='data')
+            # plt.plot(mod_x[imx], mod_y[imx], 'x')
 
-            plt.plot()
+            # ax.annotate("%.4f" % plfl.y_c.max(), xy=(mod_x[imx], mod_y[imx]), textcoords='data')
+
+            # plt.plot()
+
+            print(str(np.int(plfl.m_[0])))
+            ax.annotate("%.1f"%plfl.m_[0], xy=(mod_x[0], mod_y[0]), fontsize=12, textcoords='data')
 
             for i in range(10):
                 ind = Math.find_nearest_index(plfl.y_c, (i / 10))
@@ -300,8 +592,11 @@ class Combine:
                 x_p = mod_x[ind]
                 y_p = mod_y[ind]
                 plt.plot(x_p, y_p, '.', color='red')
-                ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % plfl.mdot_[ind]), xy=(x_p, y_p),
+                if not clean:
+                    ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % plfl.mdot_[ind]), xy=(x_p, y_p),
                             textcoords='data')
+
+
                 # ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % (time[ind]/time_max)) , xy=(x_p, y_p), textcoords='data')
 
         ax.grid(which='both')
@@ -310,8 +605,8 @@ class Combine:
         plt.gca().invert_xaxis() # inverse x axis
 
         plt.grid()
-
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        if not clean:
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
         plot_name = self.output_dir + 'hrd.pdf'
         plt.savefig(plot_name)
 
@@ -516,6 +811,26 @@ class Combine:
         for mdl in self.mdl:
 
             mdl.get_par_table('l')
+
+
+        # print(
+        #     '| Mdot'
+        #     '\t| Mass'
+        #     '\t| R/Rs '
+        #     '\t| L/Ls'
+        #     '\t| kappa'
+        #     '\t| l(Rho)'
+        #     '\t| Temp'
+        #     '\t| mfp  '
+        #     '\t| vel '
+        #     '\t| gamma'
+        #     '\t| tpar '
+        #     '\t| HP '
+        #     '\t| tau '
+        #     '\t|')
+        # for mdl in self.mdl:
+        #
+        #     mdl.get_par_table('l')
 
     # --- METHODS THAT DO REQUIRE OPAL TABLES ---
     def sp_get_r_lt_table2(self, v_n, l_or_lm, plot=True, ref_t_llm_vrho=np.empty([])):
@@ -1612,6 +1927,83 @@ class Combine:
     #     plt.show()
 
 
+class Table:
+
+    def __init__(self, smfiles):
+        self.smfiles = smfiles
+        self.mdl = []
+        for file in self.smfiles:
+            self.mdl.append(Read_SM_data_file.from_sm_data_file(file))
+
+
+    def latex_table(self, v_n_conds, precis):
+        '''
+
+        :param v_ns:
+        :return:
+
+        \begin{center}
+        \begin{tabular}{||c c c c||}
+        \hline
+        Col1 & Col2 & Col2 & Col3 \\ [0.5ex]
+        \hline\hline
+        1 & 6 & 87837 & 787 \\
+        \hline
+        2 & 7 & 78 & 5415 \\
+        \hline
+        3 & 545 & 778 & 7507 \\
+        \hline
+        4 & 545 & 18744 & 7560 \\
+        \hline
+        5 & 88 & 788 & 6344 \\ [1ex]
+        hline
+        \end{tabular}
+        \end{center}
+
+        '''
+        if len(v_n_conds) != len(precis): raise NameError('len(v_ns) != len(precis)')
+
+        size='{'
+        head = ''
+        for i in range(len(v_n_conds)):
+            size = size + 'c'
+            head = head + '{}'.format(v_n_conds[i])
+            if i != len(v_n_conds) - 1: size = size + ' '
+            if i != len(v_n_conds) - 1: head = head + ' & '
+            # if i % 2 == 0: size = size + ' '
+        head = head + ' \\\\' # = \\
+
+        size=size+'}'
+
+        print('\\begin{table}[h!]')
+        print('\\begin{center}')
+        print('\\begin{tabular}'+'{}'.format(size))
+        print('\\hline')
+        print(head)
+        print('\\hline\\hline')
+
+
+        for i in range(len(self.smfiles)):
+            # 1 & 6 & 87837 & 787 \\
+            row = ''
+            for j in range(len(v_n_conds)):
+                val = "%{}f".format(precis[j]) % self.mdl[i].get_cond_value(v_n_conds[j].split('-')[0], v_n_conds[j].split('-')[-1])
+                row = row + val
+                if j != len(v_n_conds) - 1: row = row + ' & '
+            row = row + ' \\\\'  # = \\
+            print(row)
+
+        print('\\hline')
+        print('\\end{tabular}')
+        print('\\end{center}')
+        print('\\caption{NAME_ME}')
+        print('\\label{tbl:1}')
+        print('\\end{table}')
+
+
+
+
+
 class Crit_Mdot:
     output_dir = '../data/output/'
     plot_dir = '../data/plots/'
@@ -2451,14 +2843,36 @@ class Plot_Multiple_Crit_Mdots:
             yc_vals = m_yc_ys_lims[0, 1:]
             ys_arr = m_yc_ys_lims[1:, 1:]
 
-            if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
 
-            ind = Math.find_nearest_index(m_vals, m_in)
-            for i in range(len(yc_vals)):
-                if ys_arr[ind, i] < ys_arr[ind, 0]: # if the surface compostion has changed
-                    return yc_arr[i-1] # return the yc for which ys has not yet changed
-            return yc_arr[0]
-            # for i in range(len(m_vals)):
+            m_ind = Math.find_nearest_index(m_vals, m_in)
+            if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
+
+            ys_row = ys_arr[m_ind, ::-1]
+            yc_row = yc_vals[::-1]
+            ys_zams= ys_arr[m_ind, -1]
+
+
+
+            for i in range(len(ys_row)):
+                if ys_row[i] < ys_zams:
+                    print('----------------------- {} {} -------------------------'.format(m_in, yc_vals[i]))
+                    return yc_row[i-1]
+            print('----------------------- {} -------------------------'.format(yc_row[-1]))
+            return yc_row[-1]
+
+
+            #
+            #
+            # if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
+            #
+            # ind = Math.find_nearest_index(m_vals, m_in)
+            # for i in range(len(yc_vals)):
+            #     if ys_arr[ind, i] < ys_arr[ind, -1]: # if the surface compostion has changed
+            #         print('----------------------- {} {} -------------------------'.format( m_in, yc_vals[i]))
+            #         return yc_vals[i-1] # return the yc for which ys has not yet changed
+            # print('----------------------- {} -------------------------'.format(yc_vals[0]))
+            # return yc_vals[0]
+            # # for i in range(len(m_vals)):
 
 
         if len(plfls) > 1:

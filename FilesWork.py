@@ -1472,6 +1472,68 @@ class SP_file_work():
                                        str(coeff) + l_or_lm, 'mdot_rs_{}'.format(rs), self.out_dir)
 
 
+    # -------------------------------------------------
+    def test(self, yc_val = 1.0):
+        yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+        if yc_val in yc:
+            yc_index = Math.find_nearest_index(yc, yc_val)
+        else:
+            raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
+
+        cl = cls[yc_index]
+
+        arr = []
+
+        for c in cl:
+            mdot = c.get_crit_value('mdot')
+            r = c.get_crit_value('r')
+            m = c.get_crit_value('m')
+            l = c.get_crit_value('l')
+
+
+            arr = np.append(arr, [mdot, r, m , l])
+
+            # print(cl)
+
+        arr_sort = np.sort(arr.view('f8, f8, f8, f8'), order=['f3'], axis=0).view(np.float)
+        arr_shaped = np.reshape(arr_sort, (np.int(len(arr_sort)/4), 4))
+
+        var = (1/arr_shaped[:,1])*(arr_shaped[:,2]/arr_shaped[:,3])*arr_shaped[:,0]
+
+        plt.plot(arr_shaped[:,0], var, '.', color='black')
+        plt.grid()
+        plt.xlabel('mdot')
+        plt.ylabel('MY')
+        plt.show()
+
+        t_lm_rho = Save_Load_tables.load_table('t_1.0lm_rho','t','1.0lm','rho',self.opal_used,'Fe')
+        t = t_lm_rho[0, 1:]
+        lm = t_lm_rho[1:, 0]
+        k = Physics.loglm_logk(lm, True)
+        rho = t_lm_rho[1:, 1:]
+        vrho = Physics.get_vrho(t, rho, 2)
+
+        t_k_vrho = Math.combine(t,k,vrho)
+        mdot = Physics.vrho_mdot(vrho,1.0,'')
+        mins = Math.get_maxs_in_every_row(t,k,vrho,5000)
+
+        fig = plt.figure(figsize=plt.figaspect(0.8))
+        ax = fig.add_subplot(111)  # , projection='3d'
+
+        Plots.plot_color_background(ax, t_k_vrho,'t','k','vrho',self.opal_used)
+        ax.plot(mins[0,:],mins[1,:])
+        plt.show()
+
+        var2 = []
+        for i in range(len(mins[0,:])):
+            var2 = np.append(var2, mins[1,i]*mins[2,i])
+
+
+
+
+        print(var)
+        print('haha: {}'.format(Constants.light_v*Constants.grav_const/np.sqrt(Constants.k_b/Constants.m_H)))
+
     # def save_y_yc_z_relation_sp(self, x_v_n, y_v_n, z_v_n, save, plot=False, depth=100):
     #     append_crit = True
     #     if not y_v_n in ['m', 'l', 'lm', 'Yc']:
@@ -3291,8 +3353,12 @@ class Read_SM_data_file:
         if v_n == 'mfp':
             return -(self.rho_ + self.kappa_)
 
+        if v_n == 'mfp/c':
+            return 10**(-(self.rho_ + self.kappa_))/Constants.light_v
+
         if v_n == '-': # to fill the empty arrays, (mask arrays)
             return np.zeros(self.t_.shape)
+
 
         raise NameError('\t__Error. Variable < {} > is not found |get_col|. Available name list:\n\t {}'
                  .format(v_n,self.var_names))
@@ -3359,6 +3425,7 @@ class Read_SM_data_file:
     def get_lm_col(self):
         return Physics.loglm(self.l_, self.xm_, True)
 
+
     def get_cond_value(self, v_n, condition):
         '''
         CONDITIONS: 'sp'(v==v_s); 't=5.2' or any v_n=number
@@ -3367,8 +3434,30 @@ class Read_SM_data_file:
         :return:
         '''
 
+        if v_n == 'teff'and condition == '':
+            ind = self.ind_from_condition(condition)
+            l = self.get_col('l')[ind]
+            r = self.get_col('r')[ind]
+            return Physics.steph_boltz_law_t_eff(l, r)
+
+        if v_n == 'teff/ts4' and condition =='':
+            ind = self.ind_from_condition(condition)
+            l = self.get_col('l')[ind]
+            r = self.get_col('r')[ind]
+            ts = 10**self.get_col('t')[ind]
+            teff = 10**Physics.steph_boltz_law_t_eff(l, r)
+
+
+            return ((teff/ts)**4)*100 # in %
+
         if v_n == 'tpar' and condition == '': # optical depth parameter can be estimated only at a point, as it requires dr/du
             return Physics.opt_depth_par2(self.rho_,self.t_,self.r_,self.u_,self.kappa_,self.mu_)
+
+        # if v_n == 'r_env' and condition == '':
+        #     return self.get_m_r_envelope('r')
+        #
+        # if v_n == 'm_env' and condition == '':
+        #     return self.get_m_r_envelope('xm')
 
         ind = self.ind_from_condition(condition)
         return np.float(self.get_col(v_n)[ind])
@@ -3603,6 +3692,8 @@ class Read_SP_data_file:
         if v_n == 'mdot': return 'mdot'
         if v_n == 'r': return 'r-sp'
         if v_n == 't': return 't-sp'
+        if v_n == 'r_env': return 'r_env'
+        if v_n == 'm_env': return 'm_env'
         if v_n == 'k' or v_n == 'kappa': return 'kappa-sp'
         if v_n == 'gamma' or v_n == 'L/Ledd': return 'L/Ledd-sp'
         if v_n == 'rho': return 'rho-sp'
@@ -3613,15 +3704,22 @@ class Read_SP_data_file:
         if v_n == 'hp' or v_n == 'HP': return 'HP-sp' # log(Hp)
         if v_n == 'tpar': return 'tpar-'
         if v_n == 'mfp': return 'mfp-sp' # log(mfp)
+
+        # if v_n == 'lm': return 'lm'
         raise NameError('Translation for v_n({}) not provided'.format(v_n))
 
     def get_crit_value(self, v_n):
+
         if v_n == 'lm':
             l = self.table[0, self.names.index(self.v_n_to_v_n('l'))]
             m = self.table[0, self.names.index(self.v_n_to_v_n('m'))]
             return Physics.loglm(l, m)
-        else:
-            return self.table[0, self.names.index(self.v_n_to_v_n(v_n))]
+
+
+        v_n_tr = self.v_n_to_v_n(v_n)
+        if not v_n_tr in self.names:
+            raise NameError('v_n_traslated({}) not in the list of names from file ({})'.format(v_n_tr, self.names))
+        return self.table[0, self.names.index(self.v_n_to_v_n(v_n))]
 
     def get_sonic_cols(self, v_n):
 

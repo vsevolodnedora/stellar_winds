@@ -2961,6 +2961,8 @@ class Criticals3:
     #
     #     return extended_head.split(' '), out_array
 
+
+
     def analyze_sp_sm_fls(self, depth, add_sonic_vals, show_plot):
         '''
 
@@ -3017,7 +3019,7 @@ class Criticals3:
 
             return bourders.min()
 
-        def all_values_array(cls, min_indx, rs_p, ts_p, add_sonic_vals):
+        def all_values_array(cls, min_indx, rs_p, ts_p, rp_env, xmp_env, add_sonic_vals):
 
             out_array = []
 
@@ -3027,15 +3029,23 @@ class Criticals3:
 
             r = cls.get_col('r')[min_indx:]
             t = cls.get_col('t')[min_indx:]
+            xm = cls.get_col('xm')[-1]
 
-            out_array = np.append(out_array, cls.get_col('l')[-1])  # appending 'l'         __1__
+            out_array = np.append(out_array, cls.get_col('l')[-1])   # appending 'l'        __1__
             out_array = np.append(out_array, cls.get_col('xm')[-1])  # appending 'xm'       __2__
+            # out_array = np.append(out_array, cls.get_col('xm')[-1])
             out_array = np.append(out_array, cls.get_col('He4')[0])  # appending 'Yc'       __3__
 
             out_array = np.append(out_array, cls.get_col('mdot')[-1])  # appending 'mdot'   __4__
             out_array = np.append(out_array, rs_p)  # appending 'rs' __5__
             out_array = np.append(out_array, ts_p)  # appending 'ts' __6__
-
+            if rp_env != 0.:
+                out_array = np.append(out_array, r[-1] - rp_env)         # appending 'renv' __7__ (length of the envelope)
+                out_array = np.append(out_array, np.log10(xm-xmp_env))   # appending 'renv' __8__ (length of the envelope)
+                # raise ValueError('-------{}-{}--------'.format(r[-1] - rp_env, np.log10(xm-xmp_env)))
+            else:
+                out_array = np.append(out_array, 0.)  # appending 'renv' __7__ (length of the envelope)
+                out_array = np.append(out_array, 0.)  # appending 'renv' __8__ (length of the envelope)
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
             val_array = []
@@ -3072,11 +3082,83 @@ class Criticals3:
                 raise ValueError('len(val_array)[{}] != len(add_sonic_vals)[{}]'
                                  .format(len(val_array), len(add_sonic_vals)))
 
-            for i in range(len(val_array)):  # 5 is a number of main values: [ l, m, Yc, ts, rs ]
-                out_array = np.append(out_array, val_array[i])  # appending 'v_ns' __n__
+            for i in range(len(val_array)):  # 7 is a number of main values: [ l, m, Yc, ts, rs, renv, menv]
+                out_array = np.append(out_array, val_array[i])  # appending 'v_ns' __n__ SONIC VALUES
 
             return out_array
 
+        def get_tp_up_r_xm__env(cls, guess=5.2):
+            '''
+            Looks for a loal extremum between t_lim1 and t_lim2, and, if the extremem != sonic point: returns
+            length and mass of whatever is left
+            :param cls:
+            :param t_lim1:
+            :param t_lim2:
+            :return: tp, up, rp, xmp (coordinates, where envelope begins)
+            '''
+
+            def get_envelope_r_or_m(v_n, cls, t_start):
+                t = cls.get_col('t')
+                ind = Math.find_nearest_index(t, t_start) - 5  # just before the limit, so we don't need to
+
+                # interpolate across the whole t range
+                t = t[ind:]
+                var = cls.get_col(v_n)
+                var = var[ind:]
+
+                value = interpolate.InterpolatedUnivariateSpline(t[::-1], var[::-1])(t_start)
+
+                # print('-_-: {}'.format(var[-1]-value))
+
+                return value
+
+            t = cls.get_col('t')  # x - axis
+            u = cls.get_col('u')  # y - axis
+
+            # s = len(t)-1
+            # while go_on:
+            #     if u[-2] < u[-1]
+            #
+            # for i in range(len(t)):
+            #     if u[s-1] < u[s]:
+            #         s = s-1
+            #     else:
+            #         t = t[:s]
+            #         u = u[:s]
+            #         break
+
+            # if t.min() > t_lim1 and t_lim2 > t.min():
+            # i1 = Math.find_nearest_index(t, t_lim2)
+            # i2 = Math.find_nearest_index(t, t_lim1)
+
+            # t_cropped= t[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t,
+            #                                                                          t_lim1)][::-1]   # t_lim2 > t_lim1 and t is Declining
+            # u_cropped = u[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t, t_lim1)][::-1]
+
+            # print('<<<<<<<<<<<SIZE: {} {} (i1:{}, i2:{}) >>>>>>>>>>>>>>>>'.format(len(t), len(u), i1, i2))
+
+            tp, up = Math.get_max_by_interpolating(t, u, True, guess) # WHERE the envelope starts (if any)
+                                                                      # TRUE for cutting out the rising part in the end
+            if Math.find_nearest_index(t, tp) < len(t) - 1:  # if the tp is not the last point of the t array
+
+                print('<<<<<<<<<<<Coord: {} {} >>>>>>>>>>>>>>>>'.format("%.2f" % tp, "%.2f" % up))
+
+                return tp, up, get_envelope_r_or_m('r', cls, tp), get_envelope_r_or_m('xm', cls, tp)
+            else:
+                return 0., 0., 0, 0
+            #     # print('L_env: {}'.format(get_envelope_r_or_m('r', smcl, tp)))
+            #     # print('M_env: {}'.format(get_envelope_r_or_m('xm', smcl, tp)))
+            #
+            #     # var = get_envelope_r_or_m('r', smcl, tp)
+            #     if m_or_r == 'xm': return tp, up, np.log10(get_envelope_r_or_m('xm', self, tp))
+            #     if m_or_r == 'r': return tp, up, get_envelope_r_or_m('r', self, tp)
+            #     raise NameError('m_or_r = {}'.format(m_or_r))
+            # else:
+            #     return 0.  # default value if there is no envelope
+
+            # else: return None, None
+
+        # ==============================================================================================================
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
         ax2 = ax1.twinx()
@@ -3101,7 +3183,7 @@ class Criticals3:
 
         '''---INTERPOLATING THE SONIC VALUES---'''
 
-        out_array = np.zeros(len(add_sonic_vals) + 6)  # where 6 are: [l, m, Yc, mdot, rs, ts] # always include
+        out_array = np.zeros(len(add_sonic_vals) + 8)  # where 8 are: [l, m, Yc, mdot, rs, ts, r_env, m_emv] # always include
         for cl in self.sp_smdl:
 
             r  = cl.get_col('r')
@@ -3181,8 +3263,12 @@ class Criticals3:
                 ax2.annotate(str('%.2f' % ts_p), xy=(rs_p, ts_p), textcoords='data')
                 # print('--Rs{} Ts{}'.format(rs_p, ts_p))
 
+                tp_env, up_env, rp_env, xmp_env = get_tp_up_r_xm__env(cl, 5.2) # 5.2 = initial guess
+                if rp_env != 0.:
+                    ax1.plot(rp_env, up_env, 'X', color='black') # location of the onset of an envelope
+                    ax2.plot(rp_env, tp_env, 'X', color='black')
 
-                row = all_values_array(cl, min_ind, rs_p, ts_p, add_sonic_vals)
+                row = all_values_array(cl, min_ind, rs_p, ts_p, rp_env, xmp_env, add_sonic_vals)
                 out_array = np.vstack((out_array, row))
 
 
@@ -3194,7 +3280,7 @@ class Criticals3:
         # tablehead = '{} {} {} {} {} {} {} {} {}' \
         #     .format('log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp')#-----------------------
 
-        tablehead = ['log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp']
+        tablehead = ['log(L)', 'M(Msun)', 'Yc', 'mdot', 'r-sp', 't-sp', 'r_env', 'm_env']
 
         # tmp = ''
         # for v_n in add_sonic_vals:
@@ -3344,10 +3430,7 @@ class Criticals3:
         return None
         # raise ValueError('arr[{}] == value[{}] | not found'.format(arr, value))
 
-    def combine_save(self, depth, add_sonic_vals, show_plot):
-
-        sp_head, sp_table = self.analyze_sp_sm_fls(depth, add_sonic_vals, show_plot)
-        wd_head, wd_arr = self.analyze_wind_fls(['t', 'r'], False, False) # do not append 0th and 1st values on the WIND
+    def combine_save(self, depth, add_sonic_vals, show_plot, use_wind_fls = True):
 
         def combine_two_tables_by_mdot(head1, table1, head2, table2):
 
@@ -3387,8 +3470,6 @@ class Criticals3:
             if len(head) != len(out_array[0, :]):
                 raise ValueError('Something is wrong here...')
             return head, out_array
-        head, table = combine_two_tables_by_mdot(sp_head, sp_table, wd_head, wd_arr)
-
         def create_file_name(first_part='SP3'):
             '''Creates name like:
             SP3_ga_z0008_10sm_y10
@@ -3402,9 +3483,22 @@ class Criticals3:
                         out_name = out_name + '_'
             out_name = out_name + '.data'
             return out_name
+
+        #==============================================================================
+
+        sp_head, sp_table = self.analyze_sp_sm_fls(depth, add_sonic_vals, show_plot)
+
         fname = create_file_name('SP3')
 
-        print('Results are saved in: {}'.format(self.out_dir + fname))
+        if use_wind_fls:
+            wd_head, wd_arr = self.analyze_wind_fls(['t', 'r'], False, False) # do not append 0th and 1st values on the WIND
+            head, table = combine_two_tables_by_mdot(sp_head, sp_table, wd_head, wd_arr)
+            print('\n FILE: {} | SAVED IN: {} | sm.data & .wind FILES USED \n'.format(fname, 'SP3'))
+        else:
+            head = sp_head
+            table = sp_table
+            print('\n FILE: {} | SAVED IN: {} | ONLY sm.data FILES USED'.format(fname, 'SP3'))
+
 
         tmp = ''
         for i in range(len(head)):

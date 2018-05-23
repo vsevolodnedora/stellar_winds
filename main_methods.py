@@ -431,7 +431,7 @@ class Combine:
 
 
             m_ind = Math.find_nearest_index(m_vals, m_in)
-            if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
+            #if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
 
             ys_row = ys_arr[m_ind, ::-1]
             yc_row = yc_vals[::-1]
@@ -461,7 +461,7 @@ class Combine:
             # # for i in range(len(m_vals)):
 
 
-        if len(self.plot_files) > 1:
+        if len(self.plot_files) > 0:
             m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.opal_used, '')
             plcls = []
             for i in range(len(self.plot_files)):
@@ -517,6 +517,114 @@ class Combine:
         plot_name = self.output_dir + 'hrd.pdf'
         plt.savefig(plot_name)
         plt.show()
+
+
+
+
+    def evol_mdot(self):
+
+        fig, ax = plt.subplots(1, 1)
+        ax.set_title('HRD')
+        ax.set_xlabel(Labels.lbls('yc'))
+        ax.set_ylabel(Labels.lbls('mdot'))
+
+        def get_yc_min_for_m_init(m_in, m_yc_ys_lims):
+            m_vals = m_yc_ys_lims[1:, 0]
+            yc_vals = m_yc_ys_lims[0, 1:]
+            ys_arr = m_yc_ys_lims[1:, 1:]
+
+            m_ind = Math.find_nearest_index(m_vals, m_in)
+            if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
+
+            ys_row = ys_arr[m_ind, ::-1]
+            yc_row = yc_vals[::-1]
+            ys_zams = ys_arr[m_ind, -1]
+
+            for i in range(len(ys_row)):
+                if ys_row[i] < ys_zams:
+                    print('----------------------- {} {} -------------------------'.format(m_in, yc_vals[i]))
+                    return yc_row[i - 1]
+            print('----------------------- {} -------------------------'.format(yc_row[-1]))
+            return yc_row[-1]
+
+            #
+            #
+            # if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
+            #
+            # ind = Math.find_nearest_index(m_vals, m_in)
+            # for i in range(len(yc_vals)):
+            #     if ys_arr[ind, i] < ys_arr[ind, -1]: # if the surface compostion has changed
+            #         print('----------------------- {} {} -------------------------'.format( m_in, yc_vals[i]))
+            #         return yc_vals[i-1] # return the yc for which ys has not yet changed
+            # print('----------------------- {} -------------------------'.format(yc_vals[0]))
+            # return yc_vals[0]
+            # # for i in range(len(m_vals)):
+
+        # yc_vals = [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, ]
+        yc_vals = [1.0, 0.9,  0.8,  0.7,  0.6,  0.5,  0.4,  0.3, 0.2 ]
+        v_n_conds = ['yc', 'mdot', 'lm']
+
+        if len(self.plot_files) > 0:
+            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.opal_used, '')
+            plcls = []
+            for i in range(len(self.plot_files)):
+                plcls.append(Read_Plot_file.from_file(self.plot_files[i]))
+
+                # size = '{'
+                # head = ''
+                # for i in range(len(v_n_conds)):
+                #     size = size + 'c'
+                #     head = head + '{}'.format(v_n_conds[i])
+                #     if i != len(v_n_conds) - 1: size = size + ' '
+                #     if i != len(v_n_conds) - 1: head = head + ' & '
+                #     # if i % 2 == 0: size = size + ' '
+                # head = head + ' \\\\'  # = \\
+                #
+                # size = size + '}'
+                #
+                # print('\\begin{table}[h!]')
+                # print('\\begin{center}')
+                # print('\\begin{tabular}' + '{}'.format(size))
+                # print('\\hline')
+                # print(head)
+                # print('\\hline\\hline')
+                #
+                # # for i in range(len(self.smfiles)):
+                # # 1 & 6 & 87837 & 787 \\
+                # row = ''
+                # for j in range(len(v_n_conds)):
+                #     val = "%{}f".format(0.2) % self.mdl[i].get_col(v_n_conds[j])
+                #     row = row + val
+                #     if j != len(v_n_conds) - 1: row = row + ' & '
+                # row = row + ' \\\\'  # = \\
+                # print(row)
+                #
+                # print('\\hline')
+                # print('\\end{tabular}')
+                # print('\\end{center}')
+                # print('\\caption{NAME_ME}')
+                # print('\\label{tbl:1}')
+                # print('\\end{table}')
+
+
+
+                yc_plot = plcls[i].y_c
+                mdot_plot = plcls[i].mdot_
+
+                mdot_res = []
+
+                for j in range(len(yc_vals)):
+                    ind = Math.find_nearest_index(yc_plot, yc_vals[j])
+                    mdot_res = np.append(mdot_res, plcls[i].mdot_[ind])
+                    print('{} & {} & {}'.format("%.2f"%plcls[i].y_c[ind],"%.2f"% plcls[i].mdot_[ind],"%.2f"% plcls[i].lm_[ind]))
+                    # print(plcls[i].y_c[ind], ' & ', plcls[i].mdot_[ind] )
+
+                    # for k in range(len(yc_plot)):
+                    #     ind = Math.find_nearest_index()
+                    #     if np.round(yc_plot[k], 2) == np.round(yc_vals[j], 2):
+                    #         mdot_res = np.append(mdot_res, plcls[i].mdot_[k])
+
+                print('a')
 
 
     def hrd(self, l_or_lm, clean=False):
@@ -1926,6 +2034,117 @@ class Combine:
     #     plt.savefig(plot_name)
     #     plt.show()
 
+class PlotTable:
+    def __init__(self, plotfiles, yc_arr):
+        self.plotfiles = plotfiles
+        self.yc_arr = yc_arr
+        self.plcls = []
+        for i in range(len(self.plotfiles)):
+            self.plcls.append(Read_Plot_file.from_file(self.plotfiles[i]))
+
+        if len(self.plcls)==0:
+            raise NameError('No .plot1 files has been passed to |PlotTable|')
+
+    def latex_table(self, v_ns, precis):
+        ''' print a latex compatible table'''
+
+        def get_str_of_elements(n, filling = 'l', borders='|'):
+            row =''
+            row = row + borders
+            for i in range(n):
+                row = row + filling + borders
+
+            return row
+
+        def print_multirow_nams(v_ns):
+            '''
+            \multicolumn{2}{c}{1.plot1} &
+            \multicolumn{2}{c}{2.plot1} &
+            \multicolumn{2}{c|}{3.plot1} \\
+            '''
+            # n = len(v_ns)
+            for i in range(len(self.plotfiles)-1):
+                # name = self.plotfiles[i].split('/')[-1]
+
+                print('\\multicolumn{'+str(len(v_ns))+'}{c}{ f:'+ self.plotfiles[i].split('/')[-2]+ ' } &')
+            print('\\multicolumn{' + str(len(v_ns)) + '}{c|}{ f:' + self.plotfiles[-1].split('/')[-2] + ' } \\\\')
+
+        def print_column_names(v_ns):
+            '''
+            & O.B.R & A.R & O.B.R & A.R & O.B.R & A.R \\
+            '''
+            row = '& '
+            for file in self.plotfiles:
+                for v_n in v_ns:
+                    row = row + v_n + ' & '
+            row = row[:-2]
+            row = row + ' \\\\'
+            print(row)
+
+        def get_str_col(plcl, v_ns, prec):
+
+            col = []
+            for i in range(len(self.yc_arr)):
+                piece = ' '
+                ind = Math.find_nearest_index(plcl.y_c, self.yc_arr[i])
+                for i in range(len(v_ns)):
+                    piece = piece + "%{}f".format(prec[i]) % plcl.get_col(v_ns[i])[ind]
+                    if i < len(v_ns)-1:  piece = piece + ' & '
+                col.append(piece)
+            return col
+
+        def print_table(v_ns, precs, row_separateor):
+            cols = []
+            for plcl in self.plcls:
+                cols.append(get_str_col(plcl, v_ns, precs))
+
+            # print(cols)
+            # print(len(cols))
+            rows = []
+            for j in range(len(self.yc_arr)):
+                row = "%.2f"%self.yc_arr[j] + ' &'
+                for i in range(len(self.plcls)):
+                    row = row + cols[i][j]
+                    if i < len(self.plcls)-1:
+                        row = row + ' &'
+
+                print(row + ' \\\\')
+                print(row_separateor)
+                # print(i+len(v_ns))
+                # row = cols[i+len(v_ns)]
+                # print(row)
+
+
+        # def print_row(v_ns):
+        #     '''
+        #     val1 & val1 & val1 & val1 & val1 & val1 & val1 \\
+        #     '''
+        #     row = '& '
+        #     for file in self.plotfiles:
+        #         for v_n in v_ns:
+        #             row = row + v_n + ' & '
+        #     row = row[:-1]
+        #     row = row + ' \\\\'
+        #     print(row)
+
+        # v_ns = v_ns[::-1]
+        # v_ns.append('yc') # addong yc as a first v_n
+        # v_ns = v_ns[::-1]
+
+        print('\n')
+        print('\\begin{table}')
+        print('\\begin{center}')
+        print('\\begin{tabular}{'+get_str_of_elements(len(v_ns)*len(self.plotfiles))+'}')
+        print('\\hline')
+        print('\\multirow{2}{*}{$He_{core}$} &')
+        print_multirow_nams(v_ns)
+        print_column_names(v_ns)
+        print('\\hline')
+        print_table(v_ns, precis, '\\hline')
+        print('\\end{tabular}')
+        print('\\end{center}')
+        print('\\caption{FILL_ME}')
+        print('\\end{table}')
 
 class Table:
 

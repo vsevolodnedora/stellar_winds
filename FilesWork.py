@@ -2685,6 +2685,10 @@ class Read_Plot_file:
             return self.teffluca
         if v_n == 'tauatR':
             return self.tauatR
+        if v_n == 'lm':
+            return self.lm_
+
+        raise NameError('Name: {} is not defined here. Sorrry:('.format(v_n))
 
     @classmethod
     def from_file(cls, plot_file_name, sonic_bec = False):
@@ -3842,7 +3846,7 @@ class Read_Wind_file:
         self.ten = suca_table[:,10]
         self.eleven=suca_table[:, 11]
         self.kappa_eff=suca_table[:,12]
-        self.thirteen=suca_table[:, 13]
+        self.thirteen=suca_table[:, 13] # eta
 
     def get_col(self, v_n):
         if v_n == 'u':

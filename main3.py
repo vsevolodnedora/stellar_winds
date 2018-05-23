@@ -89,7 +89,7 @@ gal_opal_file = '../data/opal/table8.data'
 tst_opal_file = ''
 
 
-smfiles = get_files(sse_locaton + 'ga_z0008/', ['t18mlchange/infl_comp/', 't18mlchange/comp_infl/'], [], 'sm.data')
+smfiles = get_files(sse_locaton + 'ga_z0008/', ['13sm/y10/sp/'], [], 'sm.data')
 # smfiles = get_files(sse_locaton, ['zams_004/hecore/t1/'], [], 'sm.data')
 
 # lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
@@ -202,8 +202,8 @@ set_sp_oopal_obs('lmc')
 #
 # ntbl.check_if_opals_same_range()
 # ntbl.get_new_opal(0.008)
-
-print('T_eff:', Physics.steph_boltz_law_t_eff(5.115, 0.910))
+from Phys_Math_Labels import Physics
+print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.141, 1.1))
 
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
 
@@ -272,7 +272,7 @@ def gray_analysis3(z, m_set, y_set, plot, wind):
 
 # gray_analysis3('0008', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], [10], True, False)
 # gray_analysis('002', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], [10,9,8,7,6,5,4,3,2,1], False)
-gray_analysis3('0008', [18], [9], True, False)
+# gray_analysis3('0008', [18], [9], True, False)
 # gray_analysis3('002', [25], [10], True)
 # 10,11,12,13,14,15,16,17,18,19,20,21,22,
 '''======================================================TAU========================================================='''
@@ -325,7 +325,7 @@ spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
 # spcls.save_t_llm_mdot_const_r('lm', 0.8, 'HeII', 1.0, 500, 'min', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
-'''====================================================MAIN=METHODS=================================================='''
+'''=======================================================TABLES====================================================='''
 
 from main_methods import Table
 tbl = Table(get_files(sse_locaton + 'ga_z002/', ['20sm/y10/sp/'], [], 'sm.data'))
@@ -333,17 +333,23 @@ tbl.latex_table(['mdot-', 'teff-', 't-', 'teff/ts4-', 'mfp-', 'mfp/c-', 'HP-', '
                 [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
 # sys.exit('FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK')
 
+from main_methods import PlotTable
+pltbl = PlotTable(get_files(sse_locaton + 'ga_z0008/', ['13sm/'], [], 'plot1'), [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1])
+pltbl.latex_table(['mdot', 't', 'lm'], [0.2, 0.2, 0.2])
+# sys.exit('FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK') # 'env_ev_pj/18sm/sp_evol/'
 
-comb = Combine()
+'''====================================================MAIN=METHODS=================================================='''
 
-comb.opal_used = opalfile
-comb.sp_files = select_sp_files(spfiles, [], [], [])
-comb.sm_files = get_files(sse_locaton + 'ga_z0008/', ['18sm/y10/sp/'], [], 'sm.data') # MANUAL SET FOR SM FILES
-comb.obs_files = obsfile
-comb.plot_files = plotfiles
-# comb.m_l_relation=0.993
+# comb = Combine()
+#
+# comb.opal_used = opalfile
+# comb.sp_files = select_sp_files(spfiles, [], [], [])
+# comb.sm_files = get_files(sse_locaton + 'ga_z0008/', ['env_ev_pj/13sm/sp_at_yc/'], [], 'sm.data') # MANUAL SET FOR SM FILES
+# comb.obs_files = obsfile
+# comb.plot_files = get_files(sse_locaton +'ga_z0008/', ['18sm/'], [], '.plot1')
+# comb.m_l_relation=0.993 '13sm/', 'env_ev_pj/13sm/sp_evol/'
 
-comb.set_files()
+# comb.set_files()
 
 
 
@@ -353,8 +359,9 @@ comb.set_files()
 # comb.dxdy_profile('r', 'kappa', 'mdot', 'lm', False, True)
 # comb.xyy_profile('t','Pg/P_total', 'L/Ledd','mdot', 'HP', 'mfp', True, True)
 # comb.xy_last_points('r','u','mdot',False)
-# comb.hrd2('l', True)
+# comb.hrd2('lm', True)
 # comb.mdot_check()
+# comb.evol_mdot()
 # comb.time_analysis(50)
 # comb.sp_get_r_lt_table2('rho', 'lm')
 # comb.save_yc_llm_mdot_cr('l')
@@ -591,14 +598,17 @@ pts.y_coord=['lm', 'lm']
         # print('cp run_wind.py ../{}sm/y{}/sp/'.format(i, j))
 
 m = 18
-mdot='5.50'
+mdot='3.50_0.99'
+folder = '10sm/y10/sp/'#'{}sm/y10/sp/{}'.format(m, mdot)
+
+
 from FilesWork import Read_Wind_file
-suca = Read_Wind_file.from_wind_dat_file(sse_locaton +'ga_z0008/' + '{}sm/y10/sp/{}.wind'.format(m, mdot))
+wind = Read_Wind_file.from_wind_dat_file(sse_locaton + 'ga_z0008/' + folder + '{}.wind'.format(mdot))
 
-smfl = Read_SM_data_file.from_sm_data_file(sse_locaton +'ga_z0008/' + '{}sm/y10/sp/{}sm.data'.format(m, mdot))
+smfl = Read_SM_data_file.from_sm_data_file(sse_locaton +'ga_z0008/' + folder + '{}sm.data'.format(mdot))
 
-plfl = Read_Plot_file.from_file(sse_locaton +'ga_z0008/' + '{}sm/y10/sp/{}.plot1'.format(m, mdot), True)
-print('PLOT: R_s: {}; Tau: {}'.format(plfl.r_n_rsun[-1], plfl.tauatR[-1]))
+#plfl = Read_Plot_file.from_file(sse_locaton +'ga_z002/' + folder + '{}.plot1'.format(mdot), True)
+#print('PLOT: R_s: {}; Tau: {}'.format(plfl.r_n_rsun[-1], plfl.tauatR[-1]))
 from Phys_Math_Labels import Labels
 from Phys_Math_Labels import Get_Z
 
@@ -653,7 +663,7 @@ def plot_tau(x_v_n, y_v_n, smcls, wndcls, pltcls, opal_used, log=True):
     ax.legend()
     plt.show()
 
-def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, pltcls, opal_used, log):
+def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
     x_core = smcls.get_col(x_v_n)
     y_core = smcls.get_col(y_v_n)
 
@@ -719,8 +729,8 @@ def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, pltcls, opal_used, log):
     ax.legend()
     plt.show()
 
-# plot_core_wind('t', 'kappa', smfl, suca, plfl, opalfile, False)
-# plot_tau('t', 'tau', smfl, suca, plfl, opalfile, True)
+plot_core_wind('r', 'tau', smfl, wind, opalfile, True)
+# plot_tau('t', 'tau', smfl, wind, plfl, opalfile, True)
 # tsm = smfl.get_col('t')
 #
 # r_wind = suca.r/Constants.solar_r

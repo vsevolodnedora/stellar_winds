@@ -520,7 +520,6 @@ class Combine:
 
 
 
-
     def evol_mdot(self):
 
         fig, ax = plt.subplots(1, 1)
@@ -627,16 +626,17 @@ class Combine:
                 print('a')
 
 
-    def hrd(self, l_or_lm, clean=False):
+    def hrd(self, v_n_x, l_or_lm, obs=True, clean=False):
 
         fig, ax = plt.subplots(1, 1)
 
 
+        if obs:
+            Plots.plot_obs_x_llm(ax, self.obs, l_or_lm, v_n_x, 1.0, True, False)
 
-
-        plt.title('HRD')
-        plt.xlabel(Labels.lbls('t_eff'))
-        plt.ylabel(Labels.lbls(l_or_lm))
+        ax.set_title('HRD')
+        ax.set_xlabel(Labels.lbls(v_n_x))
+        ax.set_ylabel(Labels.lbls(l_or_lm))
 
         # plt.xlim(t1, t2)
         ax.grid(which='major', alpha=0.2)

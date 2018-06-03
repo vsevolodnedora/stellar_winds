@@ -422,7 +422,7 @@ class Creation:
         t_llm_mdot = Math.combine(t_llm_vrho[0,1:], t_llm_vrho[1:,0], mdot)
         Save_Load_tables.save_table(t_llm_mdot, self.op_name, 't_'+l_or_lm+'_mdot','t', l_or_lm, 'mdot', self.out_dir)
 
-class SP_file_work():
+class SP_file_work:
 
     def __init__(self, sp_files, yc_precision, opal_used, out_dir, plot_dir):
         self.sp_files = sp_files
@@ -587,6 +587,11 @@ class SP_file_work():
 
         yc_llm_m_pol = Math.combine(yc, y_grid, z2d_pol.T)  # changing the x/y
         yc_llm_m_int = Math.combine(yc, y_grid, z2d_int.T)  # changing the x/y
+
+
+
+        # yc_llm_m_pol = Math.extrapolate(yc_llm_m_pol,0,0,0,35,1000,4) # Extrapolation
+
 
         table_name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
         if save == 'int':
@@ -2081,7 +2086,6 @@ class Read_Observables:
                 if '#' not in line.split() and line.strip(): # if line is not empty and does not contain '#'
                     self.table.append(line)
 
-
         self.names = self.table[0].split()
         self.num_stars = len(self.table)-1 # as first row is of var names
 
@@ -2105,10 +2109,75 @@ class Read_Observables:
         # print(self.get_table_num_par('l', 110))
         # print(self.get_star_class(110))
 
+        # --- --- GAIA LUMINOCITIES --- ---
+        if opal_used.split('/')[-1] == 'table8.data':
+            self.gaia_names, self.gaia_table = self.read_genergic_table(observ_name.split('.data')[0] + '_gaia_lum.data')
+
+
+        # if opal_used.split('/')[-1] == 'table8.data':  # if Galactic Mode is set:
+        #     gaia_lum_fname = observ_name.split('.data')[0] + '_gaia_lum.data'
+        #     self.table_lum = []
+        #
+        #
+        #
+        #
+        #
+        #     with open(gaia_lum_fname, 'r') as f:
+        #         for line in f:
+        #             if '#' not in line.split() and line.strip():  # if line is not empty and does not contain '#'
+        #                 # self.table_lum.append(line)
+        #                 self.table_lum = np.append(self.table_lum, np.array(line.split()))
+        #
+        #     raw_names = ['WR', 'type', 'l', 'll', 'ul']
+        #     self.num_stars2 = len(self.table_lum[:,0])
+        #     if self.num_stars!=self.num_stars2:
+        #         raise IOError('Number of stars in OBS file and luminocity from Gaia file not equal ({} != {})'
+        #                       .format(self.num_stars, self.num_stars2  ))
+
+            # gaia_star_n = np.array(self.table_lum[:,0])
+
+        # --- ---
+        # self.get_gaia_lum(110)
+
         if load_relations:
             self.yc_l_lm = Save_Load_tables.load_table('yc_l_lm', 'yc', 'l', 'lm', self.opal_used, '')
             self.yc_nan_lmlim = Save_Load_tables.load_table('yc_nan_lmlim', 'yc', 'nan', 'lmlim', self.opal_used, '')
+    # ------------------------------------------------
+    @staticmethod
+    def read_genergic_table(file_name):
+        '''
+        Reads the the file table, returning the list with names and the table
+        structure: First Row must be with '#' in the beginning and then, the var names.
+        other Rows - table with the same number of elements as the row of var names
+        :return:
+        '''
+        table = []
+        with open(file_name, 'r') as f:
+            for line in f:
+                # if '#' not in line.split() and line.strip():  # if line is not empty and does not contain '#'
+                table.append(line)
 
+        names = table[0].split()[1:]  # getting rid of '#' which is the first element in a row
+        num_colls = len(table) - 1  # as first row is of var names
+
+        if len(names) != len(table[1].split()):
+            print('\t___Error. Number of vars in list({}) != number of cols in observ.data file({}) '
+                  '|Read_Observables, __init__|'.format(len(names), len(table[1].split())))
+        print('\t__Note: Data include following paramters:\n\t | {} |'.format(names))
+
+        table.remove(table[0])  # removing the var_names line from the array. (only actual values left)
+
+        tmp = np.zeros(len(names))
+        for row in table:
+            tmp_ = np.array(row.split(), dtype=np.float)
+            if len(tmp_)!=len(names):
+                print('row:', row, '\n', 'tmp:',tmp_,len(tmp_))
+                raise NameError(len(tmp_),'\n',len(names))
+            tmp = np.vstack((tmp, tmp_))
+        table = np.delete(tmp, 0, 0)
+
+        return names, table
+    # ------------------------------------------------
 
     def set_num_str_tables(self):
 
@@ -2159,12 +2228,17 @@ class Read_Observables:
 
         return value
 
-    def get_num_par_from_table(self, v_n, star_n):
+    def get_num_par_from_table(self, v_n, star_n, use_gaia=False):
 
         if v_n not in self.num_v_n:
             raise NameError('v_n: {} is not in set of num. pars: {}'.format(v_n, self.num_v_n))
         if star_n not in self.numers[: , 0]:
             raise NameError('star_n: {} is not in the list of star numbers: {}'.format(star_n, self.numers[:,0]))
+
+        # -- GAIA MISSION for GALAXY (table8) ---
+        if v_n == 'l' and self.opal_used.split('/')[-1] == 'table8.data' and use_gaia:
+            l = self.get_gaia_lum(star_n)[0]
+            return l
 
         ind_star = np.where(self.numers[: , 0]==star_n)[0][0]
         ind_v_n  = self.num_v_n.index(v_n)
@@ -2175,6 +2249,13 @@ class Read_Observables:
 
         return value
 
+    # ---
+    def get_gaia_lum(self, star_n):
+        if star_n not in self.gaia_table[:,0]:
+            raise ValueError('Star: {} is not in the GAIA list: {}'.format(star_n, self.gaia_table[:,0]))
+        ind = Math.find_nearest_index(self.gaia_table[:,0], star_n)
+        # print(ind)
+        return np.array([self.gaia_table[ind,2], self.gaia_table[ind,3], self.gaia_table[ind,4]])
     #---------------------------------------------PUBLIC FUNCTIONS---------------------------------------
     def l_lm_for_errs(self, l, star_n, yc_val):
         '''
@@ -2206,17 +2287,78 @@ class Read_Observables:
         if yc_val == None or yc_val == 'hamman':
             m = self.get_num_par_from_table('m', star_n)
             return np.log10(10 ** l / m)
-    def get_star_lm_obs_err(self,star_n, yc_assumed):
-        l_err = None
+    def get_star_l_obs_err(self,star_n, yc_assumed, use_gaia=False):
+
+        l_err1 = l_err2 = None
+        l = self.get_num_par('l', star_n, yc_assumed, use_gaia)
+
         if self.opal_used.split('/')[-1] == 'table8.data':
-            l_err = 0.2
+
+            l_err1 = 0.2 # --- OLD correction from Hamman2006
+            l_err2 = 0.2
+            if use_gaia:
+                l_err1 = self.get_gaia_lum(star_n)[0]-self.get_gaia_lum(star_n)[1]
+                l_err2 = self.get_gaia_lum(star_n)[2]-self.get_gaia_lum(star_n)[0]
+
         if self.opal_used.split('/')[-1] == 'table_x.data':
-            l_err = 0.1
+
+            l_err1 = 0.1
+            l_err2 = 0.1
+
+        if l_err1 == None or l_err2 == None: raise ValueError('Error for l (star:{}) not found'.format(star_n))
+        return l-l_err1, l+l_err2
+
+    def get_star_lm_obs_err(self,star_n, yc_assumed, use_gaia=False):
+        # l_err1 = l_err2 = None
+        # l = None
+
+        l_err1, l_err2 = self.get_star_l_obs_err(star_n, yc_assumed, use_gaia)
+        lm1 = self.l_lm_for_errs(l_err1, star_n, yc_assumed)
+        lm2 = self.l_lm_for_errs(l_err2, star_n, yc_assumed)
+
+        return lm1, lm2
+
+        # if self.opal_used.split('/')[-1] == 'table8.data':
+        #
+        #     l_err1, l_err2 = self.get_star_l_obs_err(star_n, yc_assumed, use_gaia)
+        #
+        #     # l_err1 = 0.2 # --- OLD correction from Hamman2006
+        #     # l_err2 = 0.2
+        #     # l_err1 = self.get_gaia_lum(star_n)[0]-self.get_gaia_lum(star_n)[1]
+        #     # l_err2 = self.get_gaia_lum(star_n)[2]-self.get_gaia_lum(star_n)[0]
+        # if self.opal_used.split('/')[-1] == 'table_x.data':
+        #
+        #
+        #
+        #     l_err1 = 0.1
+        #     l_err2 = 0.1
+        #
+        #
+        # l = self.get_num_par('l', star_n, yc_assumed)
+        # lm1 = self.l_lm_for_errs(l - l_err1, star_n, yc_assumed)
+        # lm2 = self.l_lm_for_errs(l + l_err2, star_n, yc_assumed)
+        #
+        # return lm1, lm2
+
+
+    def get_star_lm_obs_err_old(self,star_n, yc_assumed, use_gaia=False):
+        l_err1 = l_err2 = None
+        l = None
+        if self.opal_used.split('/')[-1] == 'table8.data':
+
+            l_err1 = 0.2 # --- OLD correction from Hamman2006
+            l_err2 = 0.2
+            # l_err1 = self.get_gaia_lum(star_n)[0]-self.get_gaia_lum(star_n)[1]
+            # l_err2 = self.get_gaia_lum(star_n)[2]-self.get_gaia_lum(star_n)[0]
+        if self.opal_used.split('/')[-1] == 'table_x.data':
+
+            l_err1 = 0.1
+            l_err2 = 0.1
 
 
         l = self.get_num_par('l', star_n, yc_assumed)
-        lm1 = self.l_lm_for_errs(l - l_err, star_n, yc_assumed)
-        lm2 = self.l_lm_for_errs(l + l_err, star_n, yc_assumed)
+        lm1 = self.l_lm_for_errs(l - l_err1, star_n, yc_assumed)
+        lm2 = self.l_lm_for_errs(l + l_err2, star_n, yc_assumed)
 
         return lm1, lm2
 
@@ -2279,7 +2421,7 @@ class Read_Observables:
         return np.float(ts1_b), np.float(ts2_b), np.float(ts1_t), np.float(ts2_t)
     # --------------------------------------------
 
-    def get_num_par(self, v_n, star_n, yc_val = None):
+    def get_num_par(self, v_n, star_n, yc_val = None, use_gaia = False):
         '''
 
         :param v_n:
@@ -2288,12 +2430,13 @@ class Read_Observables:
         :return:
         '''
 
+
         if v_n == 'lm':
             # print('\__ Yc: {}'.format(yc_val))
-            l = self.get_num_par_from_table('l', star_n)
+            l = self.get_num_par_from_table('l', star_n, use_gaia)
             if yc_val >= 0 and yc_val <= 1.:
                 l, lm = Math.get_z_for_yc_and_y(yc_val, self.yc_l_lm, l, 0)
-                yc_ind = Math.find_nearest_index(self.yc_l_lm, yc_val)
+                yc_ind = Math.find_nearest_index(self.yc_nan_lmlim[0,1:], yc_val)
                 lm_lim = self.yc_nan_lmlim[1:, yc_ind]
                 if lm < lm_lim[0] or lm > lm_lim[1]:
                     raise ValueError('For Yc:{}, star:{} L/M limits are: {}, {}, given lm {}'
@@ -2312,7 +2455,7 @@ class Read_Observables:
             raise ValueError('Yc = {} is not recognised. '
                              'Use: 0-1 for loading tables | -1 or langer for langer |  None or hamman for hamman')
 
-        return self.get_num_par_from_table(v_n, star_n)
+        return self.get_num_par_from_table(v_n, star_n, use_gaia)
 
     def get_min_max(self, v_n, yc = None):
         arr = []
@@ -2466,7 +2609,7 @@ class Read_Observables:
             else:
                 return yc[i]
 
-    def get_star_lm_err(self, star_n, yc_assumed):
+    def get_star_lm_err(self, star_n, yc_assumed, use_gaia = False):
         '''
         Assuming the same l, but different L -> L/M relations for different Yc, retruns (lm-lm1), (lm-lm2)
         :param star_n:
@@ -2479,14 +2622,14 @@ class Read_Observables:
         yc2 = yc[-1]                # Max yc is always 1.0, - ZAMS (no surface change expected)
         yc1 = self.get_min_yc_for_lm(star_n)
 
-        lm1 = self.get_num_par('lm', star_n, yc1) # Getting lm at different Yc (assiming the same l, but
-        lm2 = self.get_num_par('lm', star_n, yc2)
-        lm  = self.get_num_par('lm', star_n, yc_assumed)
+        lm1 = self.get_num_par('lm', star_n, yc1, use_gaia) # Getting lm at different Yc (assiming the same l, but
+        lm2 = self.get_num_par('lm', star_n, yc2, use_gaia)
+        lm  = self.get_num_par('lm', star_n, yc_assumed, use_gaia)
 
         print('\t__STAR: {} | Evol. Err. L/M for Yc ({} - {}) L/M: ({}, {})'.format(star_n, yc1, yc2, lm1, lm2))
 
         if lm1 == lm2 :
-             raise  ValueError('lm1==lm2')
+             raise  ValueError('Star: {} lm1==lm2'.format(star_n))
 
         return lm1, lm2
 
@@ -3660,32 +3803,65 @@ class Read_SP_data_file:
         self.plot_dir = plot_dir
 
 
+
+
+        self.names, self.table = self.read_genergic_table(sp_data_file) # now it suppose to read the table
+
         # self.list_of_v_n = ['l', 'm', 't', 'mdot', 'tau', 'r', 'Yc', 'k']
 
-        self.table = []
-        with open(sp_data_file, 'r') as f:
+        # self.table = []
+        # with open(sp_data_file, 'r') as f:
+        #     for line in f:
+        #         # if '#' not in line.split() and line.strip():  # if line is not empty and does not contain '#'
+        #         self.table.append(line)
+        #
+        # self.names = self.table[0].split()[1:] # getting rid of '#' which is the first element in a row
+        # self.num_colls = len(self.table) - 1  # as first row is of var names
+        #
+        # if len(self.names) != len(self.table[1].split()):
+        #     print('\t___Error. Number of vars in list({}) != number of cols in observ.data file({}) '
+        #           '|Read_Observables, __init__|'.format(len(self.names), len(self.table[1].split())))
+        # print('\t__Note: Data include following paramters:\n\t | {} |'.format(self.names))
+        #
+        # self.table.remove(self.table[0])  # removing the var_names line from the array. (only actual values left)
+        #
+        # tmp = np.zeros(len(self.names))
+        # for row in self.table:
+        #     tmp = np.vstack((tmp, np.array(row.split(), dtype=np.float)))
+        # self.table = np.delete(tmp, 0, 0)
+        #
+        # print('File: {} has been loaded successfully.'.format(sp_data_file))
+
+    @staticmethod
+    def read_genergic_table(file_name):
+        '''
+        Reads the the file table, returning the list with names and the table
+        structure: First Row must be with '#' in the beginning and then, the var names.
+        other Rows - table with the same number of elements as the row of var names
+        :return:
+        '''
+        table = []
+        with open(file_name, 'r') as f:
             for line in f:
                 # if '#' not in line.split() and line.strip():  # if line is not empty and does not contain '#'
-                self.table.append(line)
+                table.append(line)
 
-        self.names = self.table[0].split()[1:] # getting rid of '#' which is the first element in a row
-        self.num_colls = len(self.table) - 1  # as first row is of var names
+        names = table[0].split()[1:]  # getting rid of '#' which is the first element in a row
+        num_colls = len(table) - 1  # as first row is of var names
 
-        if len(self.names) != len(self.table[1].split()):
+        if len(names) != len(table[1].split()):
             print('\t___Error. Number of vars in list({}) != number of cols in observ.data file({}) '
-                  '|Read_Observables, __init__|'.format(len(self.names), len(self.table[1].split())))
-        print('\t__Note: Data include following paramters:\n\t | {} |'.format(self.names))
+                  '|Read_Observables, __init__|'.format(len(names), len(table[1].split())))
+        print('\t__Note: Data include following paramters:\n\t | {} |'.format(names))
 
-        self.table.remove(self.table[0])  # removing the var_names line from the array. (only actual values left)
+        table.remove(table[0])  # removing the var_names line from the array. (only actual values left)
 
-        tmp = np.zeros(len(self.names))
-        for row in self.table:
+        tmp = np.zeros(len(names))
+        for row in table:
             tmp = np.vstack((tmp, np.array(row.split(), dtype=np.float)))
-        self.table = np.delete(tmp, 0, 0)
+        table = np.delete(tmp, 0, 0)
 
-        print('File: {} has been loaded successfully.'.format(sp_data_file))
-
-
+        return names, table
 
 
     def v_n_to_v_n(self, v_n):

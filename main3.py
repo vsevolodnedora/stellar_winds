@@ -53,8 +53,25 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
+for i in range(1,9):
+    # print('mkdir y{}; '.format(i))
+    print('cp ../../ga_z002/10sm/y{}/fy{}.bin1 y{}/; '.format(i, i, i))
+    print('cp ../ev_m.dat y{}/; '.format(i))
+    print('cp ../fred.sh y{}; '.format(i))
+    print('cp ../run_mass_loss.py y{}'.format(i))
 
 
+# for i in range(10,31):
+#     for j in range(1,11):
+
+        # print('rm -r {}sm/y{}/sp/*_WIND'.format(i, j))
+        # print('cp auto_ev_rd_bb.sh {}sm/y{}/sp/'.format(i, j))
+        # print('cp step_run_mdot.py {}sm/y{}/sp/'.format(i, j))
+        # print('cp run_mass_loss.py {}sm/y{}/sp/'.format(i, j))
+        # print('cp ref_m.dat {}sm/y{}/sp/'.format(i, j))
+        # print('cp auto_wind.sh {}sm/y{}/sp/'.format(i, j))
+        # print('cp ref_w_m.dat ../{}sm/y{}/sp/'.format(i, j))
+        # print('cp run_wind.py ../{}sm/y{}/sp/'.format(i, j))
 
 output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
@@ -193,7 +210,7 @@ def set_sp_oopal_obs(gal_or_lmc):
         obsfile = tst_obs_file
     # raise NameError('Wrong name: {}'.format(gal_or_lmc))
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-set_sp_oopal_obs('lmc')
+set_sp_oopal_obs('gal')
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''=================================================NEW=TABLE========================================================'''
 
@@ -203,13 +220,13 @@ set_sp_oopal_obs('lmc')
 # ntbl.check_if_opals_same_range()
 # ntbl.get_new_opal(0.008)
 from Phys_Math_Labels import Physics
-print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.141, 1.1))
+print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.139, 3.4))
 
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
 
 def gray_analysis(z, m_set, y_set, plot):
 
-    from Sonic_Criticals import Criticals
+    from Temp import Master_Gray
     for m in m_set:
         for y in y_set:
             root_name = 'ga_z' + z + '/'
@@ -220,9 +237,9 @@ def gray_analysis(z, m_set, y_set, plot):
             print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
             smfiles_ = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
 
-            cr = Criticals(smfiles_, '../data/sp_files/' + out_name, plot_dir,
+            cr = Master_Gray(smfiles_, '../data/sp_files/' + out_name, plot_dir,
                          ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'])  # [] is a listof folders not to be put in output name
-            cr.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], plot)
+            # cr.save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp'], plot)
 
             print('m:{}, y:{} DONE'.format(m,y))
 
@@ -271,9 +288,9 @@ def gray_analysis3(z, m_set, y_set, plot, wind):
             print('m:{}, y:{} DONE'.format(m,y))
 
 # gray_analysis3('0008', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], [10], True, False)
-# gray_analysis('002', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], [10,9,8,7,6,5,4,3,2,1], False)
+# gray_analysis('002', [26], [10, 9, 8, 7, 6, 5, 4, 3, 2], True)
 # gray_analysis3('0008', [18], [9], True, False)
-# gray_analysis3('002', [25], [10], True)
+gray_analysis('002', [25], [10], True)
 # 10,11,12,13,14,15,16,17,18,19,20,21,22,
 '''======================================================TAU========================================================='''
 
@@ -292,9 +309,9 @@ from Sonic_Criticals import Tau_Map
 '''====================================================CREATION======================================================'''
 
 from FilesWork import Creation
-# make = Creation(opalfile, 'HeII', 1000)
-# make.save_t_k_rho(3.8, None, 1000)
-# make.from_t_k_rho__to__t_lm_rho(0.8)
+# make = Creation(opalfile, 'Fe', 1000)
+# make.save_t_k_rho(3.5, None, 1000)
+# make.from_t_k_rho__to__t_lm_rho(1.0)
 # make.save_t_rho_k(None, None)
 
 from FilesWork import SP_file_work
@@ -340,26 +357,27 @@ pltbl.latex_table(['mdot', 't', 'lm'], [0.2, 0.2, 0.2])
 
 '''====================================================MAIN=METHODS=================================================='''
 
-# comb = Combine()
-#
-# comb.opal_used = opalfile
-# comb.sp_files = select_sp_files(spfiles, [], [], [])
-# comb.sm_files = get_files(sse_locaton + 'ga_z0008/', ['env_ev_pj/13sm/sp_at_yc/'], [], 'sm.data') # MANUAL SET FOR SM FILES
-# comb.obs_files = obsfile
-# comb.plot_files = get_files(sse_locaton +'ga_z0008/', ['18sm/'], [], '.plot1')
+comb = Combine()
+
+comb.opal_used = opalfile
+comb.sp_files = select_sp_files(spfiles, [], [], [])
+comb.sm_files = get_files(sse_locaton + 'ga_z002/', ['30sm/y10/'], [], 'sm.data') # MANUAL SET FOR SM FILES
+comb.obs_files = obsfile
+comb.plot_files = get_files(sse_locaton +'ga_z002/', [], [], '.plot1')
 # comb.m_l_relation=0.993 '13sm/', 'env_ev_pj/13sm/sp_evol/'
 
-# comb.set_files()
+comb.set_files()
 
 
 
 # comb.sp_xy_last_points('m','l','mdot', 4)
 
-# comb.xy_profile('t','u','mdot','lm', True, True) # Pg/P_total
+comb.xy_profile('r','u','mdot','lm', True, True) # Pg/P_total
 # comb.dxdy_profile('r', 'kappa', 'mdot', 'lm', False, True)
 # comb.xyy_profile('t','Pg/P_total', 'L/Ledd','mdot', 'HP', 'mfp', True, True)
 # comb.xy_last_points('r','u','mdot',False)
-# comb.hrd2('lm', True)
+# comb.hrd2('l', False)
+# comb.hrd('t', 'lm', True, False)
 # comb.mdot_check()
 # comb.evol_mdot()
 # comb.time_analysis(50)
@@ -394,9 +412,9 @@ shrd.sm_files = smfiles
 shrd.obs_files = obsfile
 shrd.plot_files = plotfiles
 
-# shrd.set_files('Fe', 1.0)
+shrd.set_files('Fe', 1.0)
 
-# shrd.plot_sonic_hrd(1.0, 'lm', 1.0, True)
+shrd.plot_sonic_hrd(1.0, 'lm', 1.0, False)
 # shrd.plot_sonic_hrd_set('lm', [1.0], 1.0, 0.1)
 # shrd.plot_sonic_hrd_const_r('lm', 1., [1.0])
 
@@ -586,26 +604,17 @@ pts.y_coord=['lm', 'lm']
 # for i in range(1,11):
 #     print('cp y{}/fy{}.bin1 y{}/sp/;'.format(i,i,i))
 
-# for i in range(10,31):
-#     for j in range(1,11):
-#         # print('rm -r {}sm/y{}/sp/*_WIND'.format(i, j))
-#         # print('cp auto_ev_rd_bb.sh {}sm/y{}/sp/'.format(i, j))
-#         print('cp step_run_mdot.py {}sm/y{}/sp/'.format(i, j))
-#         print('cp run_mass_loss.py {}sm/y{}/sp/'.format(i, j))
-        # print('cp ref_m.dat {}sm/y{}/sp/'.format(i, j))
-        # print('cp auto_wind.sh {}sm/y{}/sp/'.format(i, j))
-        # print('cp ref_w_m.dat ../{}sm/y{}/sp/'.format(i, j))
-        # print('cp run_wind.py ../{}sm/y{}/sp/'.format(i, j))
+
 
 m = 18
-mdot='3.50_0.99'
-folder = '10sm/y10/sp/'#'{}sm/y10/sp/{}'.format(m, mdot)
+mdot='4.00_0.98'
+folder = 't10sm/'#'{}sm/y10/sp/{}'.format(m, mdot)
 
 
 from FilesWork import Read_Wind_file
-wind = Read_Wind_file.from_wind_dat_file(sse_locaton + 'ga_z0008/' + folder + '{}.wind'.format(mdot))
+wind = Read_Wind_file.from_wind_dat_file(sse_locaton + 'ga_z002/' + folder + '{}.wind'.format(mdot))
 
-smfl = Read_SM_data_file.from_sm_data_file(sse_locaton +'ga_z0008/' + folder + '{}sm.data'.format(mdot))
+smfl = Read_SM_data_file.from_sm_data_file(sse_locaton +'ga_z002/' + folder + '{}sm.data'.format(mdot))
 
 #plfl = Read_Plot_file.from_file(sse_locaton +'ga_z002/' + folder + '{}.plot1'.format(mdot), True)
 #print('PLOT: R_s: {}; Tau: {}'.format(plfl.r_n_rsun[-1], plfl.tauatR[-1]))

@@ -1286,7 +1286,7 @@ class Physics:
         l = (10**logl)*Constants.solar_l # in cgs
         r = r*Constants.solar_r # in cgs
 
-        return 0.25*np.log10( l/(4*np.pi * Constants.steph_boltz* r**2))
+        return 0.25*np.log10( l/(4*np.pi * Constants.steph_boltz * r**2))
 
     @staticmethod
     def model_yz_to_xyz(x_1d_arr, y_1d_arr, z_2d_arr, star_y_coord, star_z_coord, num_of_model, lim_x1 = None, lim_x2 = None):
@@ -2427,7 +2427,7 @@ class Criticals3:
     out_dir = '../data/output/'
     plot_dir = '../data/plots/'
 
-    def __init__(self, sp_smfiles, wind_files, dirs_not_to_be_included, out_dir):
+    def __init__(self, root, sp_smfiles, wind_files, dirs_not_to_be_included, out_dir):
 
         self.input_dirs = sp_smfiles[0].split('/')[:-1]
         # print(self.input_dirs)
@@ -2441,7 +2441,7 @@ class Criticals3:
         self.wmdfils = wind_files
         self.sp_smfls = sp_smfiles
         self.sp_mdl = []
-        self.sp_smdl =[]
+        # self.sp_smdl =[]
         self.wndcls = []
 
         # for file in ga_smfiles:
@@ -2450,23 +2450,29 @@ class Criticals3:
         if len(self.sp_mdl) != len(self.wndcls): raise IOError('len(self.sp_mdl)[{}] != len(self.wndcls)[{}] '.format(len(self.sp_mdl), len(self.wndcls)))
         smfnames = []
         wnfnames = []
+        fnames = []
+
         for i in range(len(sp_smfiles)):
             smfnames.append(sp_smfiles[i].split('/')[-1].split('sm.data')[0])
             wnfnames.append(wind_files[i].split('/')[-1].split('.wind')[0])
+
 
         for smfname in smfnames:
             if smfname not in wnfnames:
                 raise NameError('There is a missing sm.data file: {}'.format(smfname))
 
+        for fname in smfnames:
+            self.sp_mdl.append(Read_SM_data_file.from_sm_data_file(root+fname+'sm.data'))
+            self.wndcls.append(Read_Wind_file.from_wind_dat_file(root+fname+'.wind'))
 
-        for file in sp_smfiles:
-            self.sp_mdl.append(Read_SM_data_file.from_sm_data_file(file))
-
-        for file in wind_files:
-            self.wndcls.append(Read_Wind_file.from_wind_dat_file(file))
+        # for file in sp_smfiles:
+        #     self.sp_mdl.append(Read_SM_data_file.from_sm_data_file(file))
+        #
+        # for file in wind_files:
+        #     self.wndcls.append(Read_Wind_file.from_wind_dat_file(file))
 
         # self.sort_ga_smfiles('mdot', -1)
-        self.sort_sp_smfiles('mdot', -1)
+        # self.sort_sp_smfiles('mdot', -1)
 
     def get_boundary(self, u_min):
         '''
@@ -2735,7 +2741,7 @@ class Criticals3:
                              'Value: tau[1] = {}\n'
                              'File: {}'.format(tau_outer[1], self.sp_smfls[i_file]))
 
-        tau_offset = tau_outer[0]
+        tau_offset = tau_outer[1]
         tau_inner2 = tau_inner + tau_offset
 
         tau_full = []
@@ -2746,8 +2752,8 @@ class Criticals3:
         x_full = np.append(x_full, smcl.get_col(v_n1)[start:])
         x_full = np.append(x_full, wndcl.get_col(v_n1)[1:end]) # use 1:end as t
 
-        ax.plot(smcl.get_col(v_n1)[start:], tau_inner2, '.', color='blue')
-        ax.plot(wndcl.get_col(v_n1)[1:end], tau_outer, '.', color='red')
+        # ax.plot(smcl.get_col(v_n1)[start:], tau_inner2+tau_offset, '.', color='blue')
+        # ax.plot(wndcl.get_col(v_n1)[1:end], tau_outer, '.', color='red')
 
         ax.plot(x_full, tau_full, '-', color='gray')
         ax.annotate('{}'.format(int(i_file)), xy=(x_full[-1], tau_full[-1]), textcoords='data')
@@ -2792,6 +2798,46 @@ class Criticals3:
             y2 = cl.get_col('kappa_eff')[:ind]
             ax.plot(x, y2, '.', color='green', label='kappa_eff')
             ax.plot(x, y2, '-', color='green')
+
+    def plot_tph_teff(self):
+        teff = []
+        tph  = []
+        mdot = []
+        ts   = []
+        ts_eff=[]
+        arr = []
+
+        for i in range(len(self.sp_mdl)):
+            mdot = np.append(mdot, self.sp_mdl[i].get_col('mdot')[-1])
+            ts = np.append(ts, self.sp_mdl[i].get_col('t')[-1])
+            ts_eff=np.append(ts_eff, Physics.steph_boltz_law_t_eff(self.sp_mdl[i].get_col('l')[-1], self.sp_mdl[i].get_col('r')[-1]))
+            tph = np.append(tph, self.wndcls[i].get_value('t'))
+            teff = np.append( teff, Physics.steph_boltz_law_t_eff(self.sp_mdl[i].get_col('l')[-1], self.wndcls[i].get_value('r')) )
+
+            arr = np.append(arr, [mdot[i], ts[i], ts_eff[i], tph[i], teff[i]])
+
+        arr_sort = np.sort(arr.view('f8, f8, f8, f8, f8'), order=['f1'], axis=0).view(np.float)
+        arr_shaped = np.reshape(arr_sort, (len(self.sp_mdl), 5))
+
+        teff =  arr_shaped[:,4]
+        tph =   arr_shaped[:,3]
+        mdot =  arr_shaped[:,0]
+        ts =    arr_shaped[:,1]
+        ts_eff =arr_shaped[:,2]
+
+
+        plt.plot(mdot, tph, '.', color='red',label='tph (tau=2/3)')
+        plt.plot(mdot, tph, '-', color='red')
+        plt.plot(mdot, teff, '.', color='blue', label='teff (BoltzLaw, tau2/3)')
+        plt.plot(mdot, teff, '-', color='blue')
+        plt.plot(mdot, ts, '.', color='black', label='tsonic')
+        plt.plot(mdot, ts, '-', color='black')
+        plt.plot(mdot, ts_eff, '.', color='green', label='teff (BoltzLaw, Sonic)')
+        plt.plot(mdot, ts_eff, '-', color='green')
+        plt.xlabel(Labels.lbls('mdot'))
+        plt.ylabel(Labels.lbls('t'))
+        plt.legend()
+        plt.show()
 
     def analyze_sp_sm_fls(self, ax, depth, add_sonic_vals, show_plot, v_n_arr):
         '''
@@ -2839,8 +2885,8 @@ class Criticals3:
             bourders = []
 
             for i in range(len(self.sp_smfls)):
-                u = self.sp_smdl[i].get_col('u')
-                r = self.sp_smdl[i].get_col('r')
+                u = self.sp_mdl[i].get_col('u')
+                r = self.sp_mdl[i].get_col('r')
                 for i in range(len(r)):
                     if u[i] > u_min:
                         # ax1.axvline(x=r[i], color='red')
@@ -3144,16 +3190,16 @@ class Criticals3:
         if len(v_n_arr[4]) > 2: ax5 = ax[5].twinx()
 
         lbl = ''
-        for i in range(len(self.sp_smdl)):
-            lbl = lbl + str(i) + ' : ' + "%.2f"%self.sp_smdl[i].get_col('He4')[0] + \
-                            ' ' + "%.2f"%(-1*self.sp_smdl[i].get_col('mdot')[-1]) + '\n'
+        for i in range(len(self.sp_mdl)):
+            lbl = lbl + str(i) + ' : ' + "%.2f"%self.sp_mdl[i].get_col('He4')[0] + \
+                            ' ' + "%.2f"%(-1*self.sp_mdl[i].get_col('mdot')[-1]) + '\n'
 
 
         ax[0].text(0.7, 0.7, lbl, style='italic',
                 bbox={'facecolor': 'cyan', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                 verticalalignment='center', transform=ax[0].transAxes)
 
-        for cl in self.sp_smdl:
+        for cl in self.sp_mdl:
             r = cl.get_col('r')
             u = cl.get_col('u')
             min_ind = Math.find_nearest_index(r, r_min)
@@ -3164,7 +3210,7 @@ class Criticals3:
 
         i_sm = 0
         out_array = np.zeros(len(add_sonic_vals) + 8)  # where 8 are: [l, m, Yc, mdot, rs, ts, r_env, m_emv] # always include
-        for cl in self.sp_smdl:
+        for cl in self.sp_mdl:
 
             r  = cl.get_col('r')
             u  = cl.get_col('u')
@@ -3277,25 +3323,25 @@ class Criticals3:
 
 
                 if len(v_n_arr[0]) == 2:
-                    self.plot_xy(ax[1], cl, min_ind, v_n_arr[0][0], v_n_arr[0][1], rs_p, rp_env, i_sm)
+                    self.plot_xy(ax[1], self.sp_mdl[i_sm], min_ind, v_n_arr[0][0], v_n_arr[0][1], rs_p, rp_env, i_sm)
                 else:
-                    self.plot_xyy(ax[1], ax1, cl, min_ind, v_n_arr[0][0], v_n_arr[0][1], v_n_arr[0][2], rs_p, rp_env, i_sm)
+                    self.plot_xyy(ax[1], ax1, self.sp_mdl[i_sm], min_ind, v_n_arr[0][0], v_n_arr[0][1], v_n_arr[0][2], rs_p, rp_env, i_sm)
 
 
                 if len(v_n_arr[1]) == 2:
-                    self.plot_xy(ax[2], cl, min_ind, v_n_arr[1][0], v_n_arr[1][1], rs_p, rp_env, i_sm)
+                    self.plot_xy(ax[2], self.sp_mdl[i_sm], min_ind, v_n_arr[1][0], v_n_arr[1][1], rs_p, rp_env, i_sm)
                 else:
-                    self.plot_xyy(ax[2], ax2, cl, min_ind, v_n_arr[1][0], v_n_arr[1][1], v_n_arr[1][2], rs_p, rp_env, i_sm)
+                    self.plot_xyy(ax[2], ax2, self.sp_mdl[i_sm], min_ind, v_n_arr[1][0], v_n_arr[1][1], v_n_arr[1][2], rs_p, rp_env, i_sm)
 
 
 
-                self.plot_xy(ax[3], cl, min_ind, v_n_arr[2][0], v_n_arr[2][1], ts_p, tp_env, i_sm)
+                self.plot_xy(ax[3], self.sp_mdl[i_sm], min_ind, v_n_arr[2][0], v_n_arr[2][1], ts_p, tp_env, i_sm)
                 self.plot_wind(ax[3], self.wndcls[i_sm], v_n_arr[2][0], v_n_arr[2][1])
 
-                self.plot_xy(ax[4], cl, min_ind, v_n_arr[3][0], v_n_arr[3][1], ts_p, tp_env, i_sm)
+                self.plot_xy(ax[4], self.sp_mdl[i_sm], min_ind, v_n_arr[3][0], v_n_arr[3][1], ts_p, tp_env, i_sm)
                 self.plot_wind(ax[4], self.wndcls[i_sm], v_n_arr[3][0], v_n_arr[3][1])
 
-                self.plot_tau(ax[5], v_n_arr[4][0], self.wndcls[i_sm], cl, ts_p, tp_env, True, i_sm)
+                self.plot_tau(ax[5], v_n_arr[4][0], self.wndcls[i_sm], self.sp_mdl[i_sm], ts_p, tp_env, True, i_sm)
 
 
 
@@ -3569,7 +3615,6 @@ class Criticals3:
             out_name = out_name + '.profs'
             return out_name
 
-
         #==============================================================================
 
 
@@ -3628,7 +3673,7 @@ class Criticals3:
 
         np.savetxt(self.out_dir + fname, table, '%.5f', '  ', '\n', head__, '')
 
-
+        self.plot_tph_teff()
         print('a')
 
 
@@ -3894,17 +3939,23 @@ def get_files(compath, req_dirs, requir_files, extension):
     return comb
 
 # ----------------------------------------------------------------------------------------------------------------------
-location = '/media/vnedora/HDD/sse/' + '10sm/y10/sp/'
-local = '' + './'
+
+dir = '/media/vnedora/HDD/sse/ga_z002/10sm/y10/sp/'
 
 
-tst_spfiles = get_files('/media/vnedora/HDD/sse/', ['ga_z0008/10sm/y10/sp/'], [], 'sm.data')
-tst_windfls = get_files('/media/vnedora/HDD/sse/', ['ga_z0008/10sm/y10/sp/'], [], 'wind')
+# location = '/media/vnedora/HDD/sse/' + 'tga_z002/t10sm/'
+# local = '' + './'
+
+
+
+
+tst_spfiles = get_files(dir, [''], [], 'sm.data')
+tst_windfls = get_files(dir, [''], [], 'wind')
 
 if len(tst_spfiles) != len(tst_windfls):
     raise IOError('Number of sm.data({}) and .wind({}) files are not the same!'.format(len(tst_spfiles), len(tst_windfls)))
 
-cl = Criticals3(tst_spfiles, tst_windfls, './', './')
+cl = Criticals3(dir, tst_spfiles, tst_windfls, './', './')
 cl.combine_save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], True, True) # PLOT, WIND fils
 
 

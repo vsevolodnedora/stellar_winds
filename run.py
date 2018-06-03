@@ -914,15 +914,15 @@ def change_value(rows, v_n, value):
             v_n = ' '+v_n
 
 
-        print('beginning:', beginning)
+        # print('beginning:', beginning)
         # 'important' always contain the value to be cahnged as ' = oldval   'NEXT_V_N = ...'
 
         set = important.split()
-        print('important:', important)
-        print('set:', set)
+        # print('important:', important)
+        # print('set:', set)
         if set[0]!='=': raise NameError('There should be < = > at the beginning, instead of : {}'.format(set[0]))
 
-        print(set)
+        # print(set)
         old_value = set[1]
 
         if len(set) == 2:
@@ -939,19 +939,19 @@ def change_value(rows, v_n, value):
             print(end_with_next_v_n)
 
             stuff = important.split(old_value)[0]
-            print('stuff:', stuff)
+            # print('stuff:', stuff)
 
             construct = beginning+v_n + stuff + value + end_with_next_v_n
 
             old_len = len(row)
             new_len = len(construct)
-            print('construct:', construct)
+            # print('construct:', construct)
 
             if new_len > old_len: raise ValueError('You got too big row Old:{} New:{}'.format(old_len, new_len))
             blanks = ' '*(old_len - new_len)
 
             construct2 = beginning + v_n + stuff + value + blanks + end_with_next_v_n
-            print('construct2:', construct2)
+            # print('construct2:', construct2)
 
             new_len2 = len(construct2)
 
@@ -993,9 +993,36 @@ def modify_mdat_file(ref_mdat, v_n_string_array):
     g = open(new_file_name, 'w').writelines(new_lines)  # writing down the new file from modified rows
 
 '''======================================================__MAIN__===================================================='''
+# --- AVAILABLE MODES --- Chose when Initialize the Program ---
+use_manual       = False    # Get Mdot from losts below
+use_prescription = False    # gen Mdot from prescription (N&L)
+do_steps         = False    # iterate, using previouse model
+# -------------------------------------------------------------
+
+# manual_files=['3.00', '3.10', '3.20', '3.30', '3.40', '3.50', '3.60', '3.70', '3.80', '3.90',
+#               '4.00', '4.10', '4.20', '4.30', '4.40', '4.50', '4.60', '4.70', '4.80', '4.90',
+#               '5.00', '5.10', '5.20', '5.30', '5.40', '5.50', '5.60', '5.70', '5.80', '5.90', '6.00']
+
+manual_files=['3.00', '3.05', '3.10', '3.15', '3.20', '3.25', '3.30', '3.35', '3.40', '3.45', '3.50', '3.55', '3.60', '3.65', '3.70', '3.75', '3.80', '3.85', '3.90', '3.95',
+              '4.00', '4.05', '4.10', '4.15', '4.20', '4.25', '4.30', '4.35', '4.40', '4.45', '4.50', '4.55', '4.60', '4.65', '4.70', '4.75', '4.80', '4.85', '4.90', '4.95',
+              '5.00', '5.05', '5.10', '5.15', '5.20', '5.25', '5.30', '5.35', '5.40', '5.45', '5.50', '5.55', '5.60', '5.65', '5.70', '5.75', '5.80', '5.85', '5.90', '5.95',
+              '6.00', '6.05', '6.10', '6.15', '6.20', '6.25', '6.30', '6.35', '6.40', '6.45', '6.50', '6.55', '6.60', '6.65', '6.70', '6.75', '6.80', '6.85', '6.90', '6.95'
+              ]
+
+# manual_mdots =[3.00, 3.10, 3.20, 3.30, 3.40, 3.50, 3.60, 3.70, 3.80, 3.90,
+#                4.00, 4.10, 4.20, 4.30, 4.40, 4.50, 4.60, 4.70, 4.80, 4.90,
+#                5.00, 5.10, 5.20, 5.30, 5.40, 5.50, 5.60, 5.70, 5.80, 5.90, 6.00]
+
+manual_mdots =[3.00, 3.05, 3.10, 3.15, 3.20, 3.25, 3.30, 3.35, 3.40, 3.45, 3.50, 3.55, 3.60, 3.65, 3.70, 3.75, 3.80, 3.85, 3.90, 3.95,
+               4.00, 4.05, 4.10, 4.15, 4.20, 4.25, 4.30, 4.35, 4.40, 4.45, 4.50, 4.55, 4.60, 4.65, 4.70, 4.75, 4.80, 4.85, 4.90, 4.95,
+               5.00, 5.05, 5.10, 5.15, 5.20, 5.25, 5.30, 5.35, 5.40, 5.45, 5.50, 5.55, 5.60, 5.65, 5.70, 5.75, 5.80, 5.85, 5.90, 5.95,
+               6.00, 6.05, 6.10, 6.15, 6.20, 6.25, 6.30, 6.35, 6.40, 6.45, 6.50, 6.55, 6.60, 6.65, 6.70, 6.75, 6.80, 6.85, 6.90, 6.95
+                ]
+
 
 tmp_sign = '_'
 
+mode =   input("Mode: ")
 in_file= input(".bin1: ") # INPUT name of the file to be prcesses
 mdot1  = input("mdot1: ")
 mdot2  = input("mdot2: ")
@@ -1005,11 +1032,20 @@ maxzal_= input("maxzal: ")
 ref_mdat = 'ref_m.dat'
 var_name1 = 'FNAME'
 
-use_prescription = False
-mdot_array = []
 
-if mdot1 == '' and mdot2== '' and step == '':
+
+
+if mode == 'ALL':
+    use_manual=True
+
+if mode == 'prescr':
     use_prescription = True
+
+if mode == 'step':
+    do_steps = True
+
+# ------------------------------------------------
+mdot_array = []
 
 if mdot1 != '' and mdot2== '' and step == '':
     mdot_array = np.array([float(mdot1)])
@@ -1029,16 +1065,44 @@ else:
 
 def get_new_name_from_smfile(smfile):
     if len(smfile) > 1:  raise IOError('Extract_name_from_sm: More than 1 sm.data file found <{}>'.format(smfile))
-    if len(smfile) == 0: raise IOError('No sm.data file found <{}>'.format(smfile))
+    if len(smfile) == 0: return '_no_sm_data' #raise IOError('No sm.data file found <{}>'.format(smfile))
     smcls = Read_SM_data_file.from_sm_data_file(smfile[0])
 
     mdot = smcls.mdot_[-1]
     yc = smcls.He4_[0]
 
-    new_name = '{}_{}'.format("%.2f" % (-1*mdot), "%.2f" % yc)
+    # new_name = '{}_{}'.format("%.2f" % (-1*mdot), "%.2f" % yc)
+    new_name = '{}'.format("%.2f" % (-1 * mdot))
     return new_name
 
+if use_manual:
+    if len(manual_files)!=len(manual_mdots):raise NameError('Manual files {} while mdot values {}. Not equal'.format(manual_files, manual_mdots))
+    mdot_array = manual_mdots
+
+    for i in range(len(manual_mdots)):
+        mdot_str = "%.2f"%mdot_array[i]
+
+        ev_name = 'FNAME=_{}'.format(mdot_str)                                 # sae name as in passing to auto_ev2
+        maxzal_mdat = 'MAXZAL={}'.format(maxzal)
+        mdot_mdat = 'DMDT=' + '-' + str( "%.3e" % (10**( (-1.) * mdot_array[i])) ).replace('e','d')
+
+        modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat])
+
+        subprocess.call(['./auto_ev2.sh', manual_files[i], '_{}'.format(mdot_str), str(maxzal)])
+
+        smfile = get_files('', ['./'], ['_' + '_{}'.format(mdot_str)], 'sm.data')
+        new_name = get_new_name_from_smfile(smfile)
+
+        subprocess.call(['./auto_rename.sh', '_' + '_{}'.format(mdot_str), new_name])
+
+        # import check
+        print('<================== COMPUTED: File:{} Mdot:{} ============================>'.format(in_file, mdot_str))
+
+    exit('DONE')
+
 if use_prescription:
+
+    raise NameError('I AM NOT READY!')
 
     fname = 'FNAME=re_{}'.format(in_file)
     maxzal_mdat = 'MAXZAL={}'.format(maxzal)
@@ -1061,7 +1125,10 @@ if use_prescription:
     print('<================== COMPUTED: Mdot:{} Yc:{} ============================>'.format(mdot, yc))
     print('DONE!')
 
-else:
+if do_steps:
+
+    last_computed = in_file
+
     for i in range(len(mdot_array)):
         mdot_str = "%.2f"%mdot_array[i]
 
@@ -1070,7 +1137,35 @@ else:
         maxzal_mdat = 'MAXZAL={}'.format(maxzal)
         mdot_mdat = 'DMDT=' + '-' + str( "%.3e" % (10**( (-1.) * mdot_array[i])) ).replace('e','d')
 
-        modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat, 'DTIN=3.201d03'])
+        modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat])
+
+        subprocess.call(['./auto_ev2.sh', last_computed, '_{}'.format(mdot_str), str(maxzal)])
+
+        smfile = get_files('', ['./'], ['_' + '_{}'.format(mdot_str)], 'sm.data')
+        new_name = get_new_name_from_smfile(smfile)
+
+        subprocess.call(['./auto_rename.sh', '_' + '_{}'.format(mdot_str), new_name])
+
+        last_computed = new_name
+
+        # import check
+        print('<================== COMPUTED: File:{} Mdot:{} ============================>'.format(last_computed, mdot_str))
+    print('DONE!')
+
+
+
+
+if not do_steps and not use_manual and not use_prescription: # Standart mode
+
+    for i in range(len(mdot_array)):
+        mdot_str = "%.2f"%mdot_array[i]
+
+
+        ev_name = 'FNAME=_{}'.format(mdot_str)                                 # sae name as in passing to auto_ev2
+        maxzal_mdat = 'MAXZAL={}'.format(maxzal)
+        mdot_mdat = 'DMDT=' + '-' + str( "%.3e" % (10**( (-1.) * mdot_array[i])) ).replace('e','d')
+
+        modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat])
 
         subprocess.call(['./auto_ev2.sh', in_file, '_{}'.format(mdot_str), str(maxzal)])
 

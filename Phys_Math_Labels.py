@@ -807,6 +807,84 @@ class Math:
         return res
 
     @staticmethod
+    def extrapolate_value(x, y, x_val, method, ax_plot=None):
+        '''
+        Select a method to extrapolate a value x_val for given x (raw) and y (raw)
+        available methods: 'IntUni', 'Uni', 'poly4', 'poly3', 'poly2' , 'poly1', and 'test' to plot all of them.
+        ax_plot - is a class 'plot' in plotting is needed.
+        :param ax_plot:
+        :param x:
+        :param y:
+        :param x_val:
+        :param method:
+        :return:
+        '''
+
+        x, y = Math.x_y_z_sort(x, y, np.empty(0, ), 0)
+        y_val = None
+
+        # x_grid = np.mgrid[np.append(x, x_val).min():np.append(x, x_val).max():100j]
+
+        if ax_plot != None:
+            ax_plot.plot(x, y, '.', color='black')
+
+        if method == 'IntUni' or method == 'test':
+            y_val = interpolate.InterpolatedUnivariateSpline(x, y)(x_val)
+            if ax_plot != None:
+                ax_plot.plot(x_val, y_val, 'x', color='magenta',
+                             label='IntUni x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
+                # ax_plot.plot(np.append(x, x_val), np.append(y, y_val1), '-', color='magenta')
+
+        # y_grid = interpolate.InterpolatedUnivariateSpline(x_grid, np.append(y, y_val))(ga_table[0, 3])
+
+        if method == 'Uni' or method == 'test':
+            y_val = interpolate.UnivariateSpline(x, y)(x_val)
+            if ax_plot != None:
+                ax_plot.plot(x_val, y_val, 'x', color='red',
+                             label='Uni x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
+                # ax_plot.plot(np.append(x, x_val), np.append(y, y_val2), '-', color='red')
+            # tau_cr2 = interpolate.UnivariateSpline(md_tau_sh[:, 0], md_tau_sh[:, 1])(ga_table[0, 3])
+
+        if method == 'poly4' or method == 'test':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            tmp, y_val = Math.fit_plynomial(x, y, 4, 0, np.array([x_val]))
+            if ax_plot != None:
+                ax_plot.plot(x_val, y_val, 'x', color='blue',
+                             label='poly4 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
+                # ax_plot.plot(np.append(x, x_val), np.append(y, y_val3), '-', color='blue')
+
+        if method == 'poly3' or method == 'test':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            tmp, y_val = Math.fit_plynomial(x, y, 3, 0, np.array([x_val]))
+            if ax_plot != None:
+                ax_plot.plot(x_val, y_val, 'x', color='orange',
+                             label='poly3 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
+                # ax_plot.plot(np.append(x, x_val), np.append(y, y_val4), '-', color='orange')
+
+        if method == 'poly2' or method == 'test':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            tmp, y_val = Math.fit_plynomial(x, y, 2, 0, np.array([x_val]))
+            if ax_plot != None:
+                ax_plot.plot(x_val, y_val, 'x', color='cyan',
+                             label='poly2 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
+                # ax_plot.plot(np.append(x, x_val), np.append(y, y_val5), '-', color='cyan')
+
+        if method == 'poly1' or method == 'test':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            tmp, y_val = Math.fit_plynomial(x, y, 1, 0, np.array([x_val]))
+            if ax_plot != None:
+                ax_plot.plot(x_val, y_val, 'x', color='green',
+                             label='poly1 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
+                # ax_plot.plot(np.append(x, x_val), np.append(y, y_val6), '-', color='green')
+
+        if not method in ['poly1', 'ploy2', 'poly3', 'poly4', 'Uni', 'IntUni', 'test']:
+            raise NameError('method is not recognised {} \n Available: {}'.format(method,
+                                                                                  ['poly1', 'ploy2', 'poly3', 'poly4',
+                                                                                   'Uni', 'IntUni', 'test']))
+        if y_val == None : raise ValueError('Extrapolation Failed')
+        return y_val
+
+    @staticmethod
     def get_z_for_yc_and_y(yc_value, yc_y_z, y_inp, dimension=0):
         '''
         LOADS the table with given v_ns and extract the row with given Yc and interpolateds the y_value, for x_val given
@@ -1553,6 +1631,9 @@ class Physics:
     # --- --- --- --- --- --- --- --- --- -- --- --- ----
 
 class Plots:
+
+    use_gaia = False
+
     def __init__(self):
         pass
 
@@ -1637,6 +1718,166 @@ class Plots:
         # plt.savefig(name)
         # plt.show()
         return ax
+
+    @staticmethod
+    def plot_obs_x_llm(ax, obs_cls, l_or_lm, v_n_x, yc_val, use_gaia = False, clean=False):
+
+        def plot_obs_err(ax, obs_cls, star_n, l_or_lm, v_n_x, yc_val, use_gaia = False):
+
+            x_coord =  obs_cls.get_num_par(v_n_x, star_n)
+
+            if l_or_lm == 'lm':
+
+                lm_err1, lm_err2 = obs_cls.get_star_lm_obs_err(star_n, yc_val, use_gaia)          # ERRORS Mdot
+
+                if v_n_x == 'mdot':
+                    mdot1, mdot2 = obs_cls.get_star_mdot_obs_err(star_n, yc_val)
+                    mdot_coord = [mdot1, mdot2, mdot2, mdot1]
+                    lm_coord = [lm_err1, lm_err1, lm_err2, lm_err2]
+                    ax.add_patch(patches.Polygon(xy=list(zip(mdot_coord, lm_coord)), fill=True, alpha=.4,
+                                                 color=obs_cls.get_class_color(star_n)))
+                else:
+                    ax.plot([x_coord, x_coord], [lm_err1, lm_err2], '-', color=obs_cls.get_class_color(star_n))
+
+            if l_or_lm == 'l':
+
+                l_err1, l_err2 = obs_cls.get_star_l_obs_err(star_n, yc_val, use_gaia)
+
+                if v_n_x == 'mdot':
+                    mdot1, mdot2 = obs_cls.get_star_mdot_obs_err(star_n, yc_val)
+                    mdot_coord = [mdot1, mdot2, mdot2, mdot1]
+                    l_coord = [l_err1, l_err1, l_err2, l_err2]
+                    ax.add_patch(patches.Polygon(xy=list(zip(mdot_coord, l_coord)), fill=True, alpha=.4,
+                                                 color=obs_cls.get_class_color(star_n)))
+                else:
+                    ax.plot([x_coord, x_coord], [l_err1, l_err2], '-', color=obs_cls.get_class_color(star_n))
+
+        def plot_stars(ax, obs_cls, star_n, l_or_lm, v_n_x, yc_val, use_gaia = False, clean=False):
+
+            x_coord = obs_cls.get_num_par(v_n_x, star_n)
+            llm_obs = obs_cls.get_num_par(l_or_lm, star_n, yc_val, use_gaia)
+
+            ax.plot(x_coord, llm_obs, marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                    color=obs_cls.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
+
+            if not clean:
+                ax.annotate('{}'.format(int(star_n)), xy=(x_coord, llm_obs),
+                            textcoords='data')  # plot numbers of stars
+
+        def plot_evol_err(ax, obs_cls, star_n, l_or_lm, v_n_x, yc_val):
+            if l_or_lm == 'lm':
+                llm1, llm2 = obs_cls.get_star_lm_err(star_n, yc_val)
+                # obs_cls.get_star_llm_evol_err(star_n, l_or_lm, yc_val, 1.0, 0.1)                  # ERRORS L/LM
+                # mdot1, mdot2 = obs_cls.get_star_mdot_err(star_n, l_or_lm, yc_val, 1.0, 0.1, 'nugis')           # ERRORS Mdot
+
+                x_coord = obs_cls.get_num_par(v_n_x, star_n)
+
+                ax.plot([x_coord, x_coord], [llm1, llm2], '-', color='gray')
+                ax.plot([x_coord, x_coord], [llm1, llm2], '.', color='gray')
+
+
+
+        classes = []
+        classes.append('dum')
+        x_coord = []
+        llm_obs = []
+
+        # from Phys_Math_Labels import Opt_Depth_Analythis
+        # use_gaia = False
+        for star_n in obs_cls.stars_n:
+            i = -1
+            x_coord = np.append(x_coord, obs_cls.get_num_par(v_n_x, star_n))
+            llm_obs = np.append(llm_obs, obs_cls.get_num_par(l_or_lm, star_n, yc_val, use_gaia))
+
+            plot_obs_err(ax, obs_cls, star_n, l_or_lm, v_n_x, yc_val, use_gaia)
+            plot_stars(ax, obs_cls, star_n, l_or_lm, v_n_x, yc_val, use_gaia, clean)
+            plot_evol_err(ax,obs_cls, star_n, l_or_lm, v_n_x, yc_val)
+
+            if obs_cls.get_star_class(star_n) not in classes:
+                plt.plot(x_coord[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+                         color=obs_cls.get_class_color(star_n), ls='', mec='black',
+                         label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
+                classes.append(obs_cls.get_star_class(star_n))
+
+            # # --- PLOT OBSERVABLE ERROR ---
+            # if l_or_lm == 'lm':
+            #     llm1, llm2 = obs_cls.get_star_lm_err(star_n, yc_val, use_gaia)          # ERRORS Mdot
+            #     lm = obs_cls.get_num_par(v_n_x, star_n)
+            #
+            #     if v_n_x == 'mdot':
+            #         mdot1, mdot2 = obs_cls.get_star_mdot_obs_err(star_n, yc_val)
+            #         mdot_coord = [mdot1, mdot2, mdot2, mdot1]
+            #         lm_coord = [lm_err1, lm_err1, lm_err2, lm_err2]
+            #         ax.add_patch(patches.Polygon(xy=list(zip(mdot_coord, lm_coord)), fill=True, alpha=.4,
+            #                                      color=obs_cls.get_class_color(star_n)))
+            #     else:
+            #         ax.plot([x_coord_, x_coord_], [llm1, llm2], '-', color='gray')
+            #
+            # else:
+            #     l1, l2 = obs_cls.get_star_l_err(star_n, yc_val, use_gaia)
+            #     x_coord_ = obs_cls.get_num_par(v_n_x, star_n)
+            #     ax.plot([x_coord_, x_coord_], [l1, l2], '-', color='gray')
+            #
+            # if v_n_x == 'mdot':
+            #     mdot1, mdot2 = obs_cls.get_star_mdot_obs_err(star_n, yc_val)
+            #     ax.plot([x_coord_, x_coord_], [l1, l2], '-', color='gray')
+
+                # ax.errorbar(mdot_obs[i], llm_obs[i], yerr=[[llm1],  [llm2]], fmt='--.', color=obs_cls.get_class_color(star_n))
+
+            # ax.plot(x_coord[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+            #         color=obs_cls.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
+            # if not clean:
+            #     ax.annotate('{}'.format(int(star_n)), xy=(x_coord[i], llm_obs[i]),
+            #                 textcoords='data')  # plot numbers of stars
+
+            # t = obs_cls.get_num_par('t', star_n)
+            # ax.annotate('{}'.format("%.2f" % t), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plot numbers of stars
+
+            # v_inf = obs_cls.get_num_par('v_inf', star_n)
+            # tau_cl = Opt_Depth_Analythis(30, v_inf, 1., 1., mdot_obs[i], 0.20)
+            # tau = tau_cl.anal_eq_b1(1.)
+            # # # # ax.annotate(str(int(tau)), xy=(mdot_obs[i], llm_obs[i]), textcoords='data')  # plo
+            # ax.annotate('{} {}'.format(str(int(tau)), eta), xy=(mdot_obs[i], llm_obs[i]),
+            #             textcoords='data')  # plot numbers of stars
+
+            # if obs_cls.get_star_class(star_n) not in classes:
+            #     plt.plot(x_coord[i], llm_obs[i], marker=obs_cls.get_clss_marker(star_n), markersize='9',
+            #              color=obs_cls.get_class_color(star_n), ls='', mec='black',
+            #              label='{}'.format(obs_cls.get_star_class(star_n)))  # plot color dots)))
+            #     classes.append(obs_cls.get_star_class(star_n))
+
+
+        print('\t__PLOT: total stars: {}'.format(len(obs_cls.stars_n)))
+        print(len(x_coord), len(llm_obs))
+
+        # fit = np.polyfit(mdot_obs, llm_obs, 1)  # fit = set of coeddicients (highest first)
+        # f = np.poly1d(fit)
+        # fit_x_coord = np.mgrid[(mdot_obs.min() - 1):(mdot_obs.max() + 1):1000j]
+
+        mdot_grid = np.mgrid[(x_coord.min() - 1):(x_coord.max() + 1):100j]
+        x_coord__, y_coord__ = Math.fit_plynomial(x_coord, llm_obs, 1, 100, mdot_grid)
+        ax.plot(x_coord__, y_coord__, '-.', color='blue')
+
+        min_mdot, max_mdot = obs_cls.get_min_max('mdot')
+        min_llm, max_llm = obs_cls.get_min_max(l_or_lm, yc_val)
+
+        # ax.set_xlim(min_mdot - 0.2, max_mdot + 0.2)
+        # ax.set_ylim(min_llm - 0.05, max_llm + 0.05)
+
+        ax.set_ylabel(Labels.lbls(l_or_lm))
+        ax.set_xlabel(Labels.lbls('mdot'))
+        ax.grid(which='major', alpha=0.2)
+        ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+
+        print('Yc:{}'.format(yc_val))
+
+        if not clean:
+            ax.text(0.9, 0.9, 'Yc:{}'.format(yc_val), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
+
+        return ax
+
 
     @staticmethod
     def plot_obs_mdot_llm(ax, obs_cls, l_or_lm, yc_val, clean = False):
@@ -1951,7 +2192,7 @@ class Levels:
         if opal_used.split('/')[-1] == 'table8.data':
 
             if v_n == 'r':
-                return [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
+                return [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0,4.0]
             if v_n == 'm':
                 levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
             if v_n == 'mdot':

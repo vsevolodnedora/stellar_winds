@@ -2580,7 +2580,6 @@ class Criticals3:
         if v_n2 == 'Pg/P_total':
             ax.plot(ax.get_xlim(), [0.15, 0.15], '-.', color='gray')
 
-
     @staticmethod
     def plot_xyy(ax, ax_, cl, start_ind, v_n1, v_n2, v_n3, x_sp=None, x_env=None, i_file=0):
 
@@ -3551,7 +3550,6 @@ class Criticals3:
         #         return i
         # return None
         # # raise ValueError('arr[{}] == value[{}] | not found'.format(arr, value))
-
 
     def combine_save(self, depth, add_sonic_vals, show_plot, use_wind_fls = True):
 

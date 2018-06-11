@@ -3414,6 +3414,7 @@ class Criticals3:
         #     # ax.set_yscale("log", nonposy='clip')
         #     ax.legend()
         #     plt.show()
+
     @staticmethod
     def where(arr, value):
         for i in range(len(arr)):

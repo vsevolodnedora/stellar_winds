@@ -135,6 +135,44 @@ class Combine:
 
             # else: return None, None
 
+        def inflection_point(cl):
+            kappa = 10**cl.get_col('kappa')
+            t = 10**cl.get_col('t')
+            gamma = cl.get_col('L/Ledd')
+
+            u = cl.get_col('u')
+
+            dkappa = []
+            dt = []
+            t_=[]
+            kappa_ = []
+            gamma_ = []
+
+            left = []
+            right = []
+
+            u_ = []
+
+            for i in range(1, len(kappa)):
+                dkappa = np.append(dkappa, kappa[i]-kappa[i-1])
+                dt = np.append(dt, t[i] - t[i-1])
+                t_ = np.append(t_, t[i-1] + (t[i]-t[i-1])/2)
+                kappa_ = np.append(kappa_, kappa[i-1] + (kappa[i]-kappa[i-1])/2)
+                gamma_ = np.append(gamma_, gamma[i-1] + (gamma[i]-gamma[i-1])/2)
+                u_ = np.append(u_, u[i-1] + (u[i]-u[i-1])/2)
+            for i in range(len(kappa_)):
+                right = np.append(right, (t_[i]/kappa_[i])*(dkappa[i]/dt[i]))
+                left = np.append(left, (1-1/gamma_[i]))
+
+
+
+            u_norm = u_/u_.max()
+
+            plt.plot(np.log10(t_), u_norm, '-.', color='gray')
+            plt.plot(np.log10(t_), left, '-', color='black')
+            plt.plot(np.log10(t_), right, '-', color='red')
+            plt.show()
+
 
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
@@ -143,6 +181,8 @@ class Combine:
         # plt.title(tlt)
 
         for i in range(len(self.sm_files)):
+
+            inflection_point(self.mdl[i])
 
             x =      self.mdl[i].get_col(v_n1)
             y      = self.mdl[i].get_col(v_n2)          # simpler syntaxis
@@ -183,8 +223,9 @@ class Combine:
 
             tp, up = get_m_r_envelope(self.mdl[i])
             if tp != None:
-
                 ax1.plot(tp, up, 'X', color='black')
+
+
 
         ax1.set_xlabel(Labels.lbls(v_n1))
         ax1.set_ylabel(Labels.lbls(v_n2))

@@ -55,21 +55,28 @@ def get_files(compath, req_dirs, requir_files, extension):
 
 for i in range(1,9):
     # print('mkdir y{}; '.format(i))
+
     print('cp ../../ga_z002/10sm/y{}/fy{}.bin1 y{}/; '.format(i, i, i))
     print('cp ../ev_m.dat y{}/; '.format(i))
     print('cp ../fred.sh y{}; '.format(i))
     print('cp ../run_mass_loss.py y{}'.format(i))
 
 
-# for i in range(10,31):
-#     for j in range(1,11):
-
+for i in range(10,31):
+    # print('mkdir ga_z0008_2/{}sm/'.format(i))
+    for j in range(1,11):
+        # print('rm -r ga_z0008_2/{}sm/y{}/sp'.format(i, j))
+        # print('rm ga_z002_2/{}sm/y{}/fy{}.bin1'.format(i, j, j))
+        # print('cp ga_z002_2/{}sm/y{}/fy{}.bin1 ga_z0008_2/{}sm/y{}/'.format(i, j, j, i, j))
+        print('mv {}sm/y{}/sp_files {}sm/y{}/sp'.format(i, j, i, j))
+        # print('cp auto_* ref_m.dat re_m.dat check.py {}sm/y{}/; '.format(i, j)) # EVE
+        # print('cp re_m.dat {}sm/y{}/'.format(i, j))
         # print('rm -r {}sm/y{}/sp/*_WIND'.format(i, j))
-        # print('cp auto_ev_rd_bb.sh {}sm/y{}/sp/'.format(i, j))
-        # print('cp step_run_mdot.py {}sm/y{}/sp/'.format(i, j))
-        # print('cp run_mass_loss.py {}sm/y{}/sp/'.format(i, j))
-        # print('cp ref_m.dat {}sm/y{}/sp/'.format(i, j))
-        # print('cp auto_wind.sh {}sm/y{}/sp/'.format(i, j))
+        # print('cp ev_m.dat {}sm/y{}/'.format(i, j))
+        # print('cp auto_rename.sh {}sm/y{}/'.format(i, j))
+        # print('cp auto_ev2.sh {}sm/y{}/'.format(i, j))
+        # print('cp ref_m.dat {}sm/y{}/'.format(i, j))
+        # print('cp re_m.dat {}sm/y{}/'.format(i, j))
         # print('cp ref_w_m.dat ../{}sm/y{}/sp/'.format(i, j))
         # print('cp run_wind.py ../{}sm/y{}/sp/'.format(i, j))
 
@@ -226,7 +233,7 @@ print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.139, 3.4))
 
 def gray_analysis(z, m_set, y_set, plot):
 
-    from Temp import Master_Gray
+    from Temp import master_gray
     for m in m_set:
         for y in y_set:
             root_name = 'ga_z' + z + '/'
@@ -237,7 +244,7 @@ def gray_analysis(z, m_set, y_set, plot):
             print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
             smfiles_ = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
 
-            cr = Master_Gray(smfiles_, '../data/sp_files/' + out_name, plot_dir,
+            cr = master_gray(smfiles_, '../data/sp_files/' + out_name, plot_dir,
                          ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'])  # [] is a listof folders not to be put in output name
             # cr.save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp'], plot)
 
@@ -265,9 +272,10 @@ def gray_analysis2(z, m_set, y_set, plot):
 
             print('m:{}, y:{} DONE'.format(m,y))
 
-def gray_analysis3(z, m_set, y_set, plot, wind):
+def gray_analysis3(z, m_set, y_set, plot):
 
     from Sonic_Criticals import Criticals3 # CRITICALS2 also computes sonic-BEC sm and plot files to get tau.
+    from Temp import master_sonic
     for m in m_set:
         for y in y_set:
             root_name = 'ga_z' + z + '/'
@@ -280,17 +288,17 @@ def gray_analysis3(z, m_set, y_set, plot, wind):
             smfiles_sp = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'sm.data')
             sucafls    = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'wind')
 
-            cr = Criticals3(smfiles_sp, sucafls,
-                            ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'], '../data/sp3_files/' + out_name)
+            cr = master_sonic(smfiles_sp, sucafls, '../data/sp3_files/' + out_name, plot_dir,
+                            ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'])
 
-            cr.combine_save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], plot, wind)
+            # cr.combine_save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], plot, wind)
 
             print('m:{}, y:{} DONE'.format(m,y))
 
 # gray_analysis3('0008', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], [10], True, False)
 # gray_analysis('002', [26], [10, 9, 8, 7, 6, 5, 4, 3, 2], True)
 # gray_analysis3('0008', [18], [9], True, False)
-gray_analysis('002', [25], [10], True)
+gray_analysis3('002', [10], [10], True)
 # 10,11,12,13,14,15,16,17,18,19,20,21,22,
 '''======================================================TAU========================================================='''
 
@@ -361,7 +369,7 @@ comb = Combine()
 
 comb.opal_used = opalfile
 comb.sp_files = select_sp_files(spfiles, [], [], [])
-comb.sm_files = get_files(sse_locaton + 'ga_z002/', ['30sm/y10/'], [], 'sm.data') # MANUAL SET FOR SM FILES
+comb.sm_files = get_files(sse_locaton + 'ga_z002/', ['15sm/y10/sp/'], ['5.40'], 'sm.data') # MANUAL SET FOR SM FILES
 comb.obs_files = obsfile
 comb.plot_files = get_files(sse_locaton +'ga_z002/', [], [], '.plot1')
 # comb.m_l_relation=0.993 '13sm/', 'env_ev_pj/13sm/sp_evol/'

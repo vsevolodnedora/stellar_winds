@@ -947,6 +947,32 @@ class Math:
 
             return x_arr_f, y_arr_f
 
+    @staticmethod
+    def interpolate_arr(x, y, new_x, interp_method):
+        '''
+
+        :param x:
+        :param y:
+        :param new_x:
+        :param interp_method: 'IntUni' 'Uni' '1dCubic' '1dLinear'
+        :return:
+        '''
+
+        if interp_method == 'IntUni':
+            new_y = interpolate.InterpolatedUnivariateSpline(x, y)(new_x)
+        if interp_method == 'Uni':
+            new_y = interpolate.UnivariateSpline(x, y)(new_x)
+        if interp_method == '1dCubic':
+            new_y= interpolate.interp1d(x, y, kind='cubic')(new_x)
+        if interp_method == '1dLinear':
+            new_y = interpolate.interp1d(x, y, kind='linear')(new_x)
+
+
+        if len(new_y) == 0:
+            raise NameError('IntMethod is not recognised (or interpolation is failed)')
+
+        return new_y
+
 class Physics:
     def __init__(self):
         pass
@@ -2341,6 +2367,13 @@ class Labels:
 
         if v_n == 'L/Ledd':
             return r'$L/L_{Edd}$'
+
+        if v_n == 'delta_t':
+            return r'$t_i - ts_i$'
+
+        if v_n == 'delta_u':
+            return r'$u_i - us_i$'
+
 
 class Get_Z:
     def __init__(self):

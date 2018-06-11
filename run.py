@@ -29,8 +29,7 @@ import os
 
 '''===================================================m.dat=change==================================================='''
 #
-#   This script launches 'auto_wind.sh' that takes the .bin file (already relaxed), computes one more model,
-#   and saves only this model, [.data, .plot1, .wind] files again, removing the old ones.
+#
 #
 '''======================================================METHODS====================================================='''
 class Constants:
@@ -992,35 +991,56 @@ def modify_mdat_file(ref_mdat, v_n_string_array):
     new_file_name = 'm.dat'
     g = open(new_file_name, 'w').writelines(new_lines)  # writing down the new file from modified rows
 
-'''======================================================__MAIN__===================================================='''
+'''====================================================__SETTINGS__=================================================='''
 # --- AVAILABLE MODES --- Chose when Initialize the Program ---
-use_manual       = False    # Get Mdot from losts below
-use_prescription = False    # gen Mdot from prescription (N&L)
-do_steps         = False    # iterate, using previouse model
+allowed_modes=['list', 'listlist', 'prescr', 'steps', 'allsteps', 'all']
+print('Choose a Mode out of: {}'.format(allowed_modes))
+
+    # Get Mdot from losts below
+    # gen Mdot from prescription (N&L)
+    # iterate, using previouse model
+    # iterate over folders and do 'do_manual' in all of them
 # -------------------------------------------------------------
 
-# manual_files=['3.00', '3.10', '3.20', '3.30', '3.40', '3.50', '3.60', '3.70', '3.80', '3.90',
-#               '4.00', '4.10', '4.20', '4.30', '4.40', '4.50', '4.60', '4.70', '4.80', '4.90',
-#               '5.00', '5.10', '5.20', '5.30', '5.40', '5.50', '5.60', '5.70', '5.80', '5.90', '6.00']
+all_mdot_files=['3.00', '3.10', '3.20', '3.30', '3.40', '3.50', '3.60', '3.70', '3.80', '3.90',
+                '4.00', '4.10', '4.20', '4.30', '4.40', '4.50', '4.60', '4.70', '4.80', '4.90',
+                '5.00', '5.10', '5.20', '5.30', '5.40', '5.50', '5.60', '5.70', '5.80', '5.90', '6.00']
 
-manual_files=['3.00', '3.05', '3.10', '3.15', '3.20', '3.25', '3.30', '3.35', '3.40', '3.45', '3.50', '3.55', '3.60', '3.65', '3.70', '3.75', '3.80', '3.85', '3.90', '3.95',
-              '4.00', '4.05', '4.10', '4.15', '4.20', '4.25', '4.30', '4.35', '4.40', '4.45', '4.50', '4.55', '4.60', '4.65', '4.70', '4.75', '4.80', '4.85', '4.90', '4.95',
-              '5.00', '5.05', '5.10', '5.15', '5.20', '5.25', '5.30', '5.35', '5.40', '5.45', '5.50', '5.55', '5.60', '5.65', '5.70', '5.75', '5.80', '5.85', '5.90', '5.95',
-              '6.00', '6.05', '6.10', '6.15', '6.20', '6.25', '6.30', '6.35', '6.40', '6.45', '6.50', '6.55', '6.60', '6.65', '6.70', '6.75', '6.80', '6.85', '6.90', '6.95'
-              ]
+#all_mdot_files=['3.00']
+                # '3.05', '3.10', '3.15', '3.20', '3.25', '3.30', '3.35', '3.40', '3.45', '3.50', '3.55', '3.60', '3.65', '3.70', '3.75', '3.80', '3.85', '3.90', '3.95',
+                # '4.00', '4.05', '4.10', '4.15', '4.20', '4.25', '4.30', '4.35', '4.40', '4.45', '4.50', '4.55', '4.60', '4.65', '4.70', '4.75', '4.80', '4.85', '4.90', '4.95',
+                # '5.00', '5.05', '5.10', '5.15', '5.20', '5.25', '5.30', '5.35', '5.40', '5.45', '5.50', '5.55', '5.60', '5.65', '5.70', '5.75', '5.80', '5.85', '5.90', '5.95',
+                # '6.00', '6.05', '6.10', '6.15', '6.20', '6.25', '6.30', '6.35', '6.40', '6.45', '6.50', '6.55', '6.60', '6.65', '6.70', '6.75', '6.80', '6.85', '6.90', '6.95'
+                # ]
 
-# manual_mdots =[3.00, 3.10, 3.20, 3.30, 3.40, 3.50, 3.60, 3.70, 3.80, 3.90,
-#                4.00, 4.10, 4.20, 4.30, 4.40, 4.50, 4.60, 4.70, 4.80, 4.90,
-#                5.00, 5.10, 5.20, 5.30, 5.40, 5.50, 5.60, 5.70, 5.80, 5.90, 6.00]
+all_mdot_values =[3.00, 3.10, 3.20, 3.30, 3.40, 3.50, 3.60, 3.70, 3.80, 3.90,
+               4.00, 4.10, 4.20, 4.30, 4.40, 4.50, 4.60, 4.70, 4.80, 4.90,
+               5.00, 5.10, 5.20, 5.30, 5.40, 5.50, 5.60, 5.70, 5.80, 5.90, 6.00]
+all_mdot_files = ['../'+mdot_file for mdot_file in all_mdot_files]
+# all_mdot_values =[3.00]
+                  # 3.05, 3.10, 3.15, 3.20, 3.25, 3.30, 3.35, 3.40, 3.45, 3.50, 3.55, 3.60, 3.65, 3.70, 3.75, 3.80, 3.85, 3.90, 3.95,
+                  # 4.00, 4.05, 4.10, 4.15, 4.20, 4.25, 4.30, 4.35, 4.40, 4.45, 4.50, 4.55, 4.60, 4.65, 4.70, 4.75, 4.80, 4.85, 4.90, 4.95,
+                  # 5.00, 5.05, 5.10, 5.15, 5.20, 5.25, 5.30, 5.35, 5.40, 5.45, 5.50, 5.55, 5.60, 5.65, 5.70, 5.75, 5.80, 5.85, 5.90, 5.95,
+                  # 6.00, 6.05, 6.10, 6.15, 6.20, 6.25, 6.30, 6.35, 6.40, 6.45, 6.50, 6.55, 6.60, 6.65, 6.70, 6.75, 6.80, 6.85, 6.90, 6.95
+                  # ]
 
-manual_mdots =[3.00, 3.05, 3.10, 3.15, 3.20, 3.25, 3.30, 3.35, 3.40, 3.45, 3.50, 3.55, 3.60, 3.65, 3.70, 3.75, 3.80, 3.85, 3.90, 3.95,
-               4.00, 4.05, 4.10, 4.15, 4.20, 4.25, 4.30, 4.35, 4.40, 4.45, 4.50, 4.55, 4.60, 4.65, 4.70, 4.75, 4.80, 4.85, 4.90, 4.95,
-               5.00, 5.05, 5.10, 5.15, 5.20, 5.25, 5.30, 5.35, 5.40, 5.45, 5.50, 5.55, 5.60, 5.65, 5.70, 5.75, 5.80, 5.85, 5.90, 5.95,
-               6.00, 6.05, 6.10, 6.15, 6.20, 6.25, 6.30, 6.35, 6.40, 6.45, 6.50, 6.55, 6.60, 6.65, 6.70, 6.75, 6.80, 6.85, 6.90, 6.95
-                ]
+            #  ['10sm/', '11sm/']
+sm_dirs = ['12sm/', '13sm/', '14sm/', '15sm/', '16sm/', '17sm/', '18sm/',
+           '19sm/', '20sm/', '21sm/', '22sm/', '23sm/', '24sm/', '25sm/', '26sm/', '27sm/'] #, '28sm/', '29sm/', '30sm/']
 
+y_dirs = ['y10/sp/']
+          # 'y9/', 'y8/', 'y7/', 'y6/', 'y5/', 'y4/', 'y3/', 'y2/', 'y1/']
+
+
+
+main_dir = '/media/vnedora/HDD/sse/ga_z0008_2/'#dir before the '10sm/y10/'
 
 tmp_sign = '_'
+
+
+
+
+'''======================================================__INPUT__==================================================='''
 
 mode =   input("Mode: ")
 in_file= input(".bin1: ") # INPUT name of the file to be prcesses
@@ -1031,18 +1051,6 @@ maxzal_= input("maxzal: ")
 
 ref_mdat = 'ref_m.dat'
 var_name1 = 'FNAME'
-
-
-
-
-if mode == 'ALL':
-    use_manual=True
-
-if mode == 'prescr':
-    use_prescription = True
-
-if mode == 'step':
-    do_steps = True
 
 # ------------------------------------------------
 mdot_array = []
@@ -1063,6 +1071,28 @@ else:
 
 # maxzal = 50
 
+'''======================================================__MAIN__===================================================='''
+
+def compute_one(mdot_val, file, ref_mdat, maxzal):
+
+    mdot_str = "%.2f" % mdot_val
+
+    ev_name = 'FNAME=_{}'.format(mdot_str)  # sae name as in passing to auto_ev2
+    maxzal_mdat = 'MAXZAL={}'.format(maxzal)
+    mdot_mdat = 'DMDT=' + '-' + str("%.3e" % (10 ** ((-1.) * mdot_val))).replace('e', 'd')
+
+    modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat])
+
+    subprocess.call(['./auto_ev2.sh', file, '_{}'.format(mdot_str), str(maxzal)])
+
+    smfile = get_files('', ['./'], ['_' + '_{}'.format(mdot_str)], 'sm.data')
+    new_name = get_new_name_from_smfile(smfile)
+
+    subprocess.call(['./auto_rename.sh', '_' + '_{}'.format(mdot_str), new_name])
+
+    # import check
+    print('<================== COMPUTED: File:{} Mdot:{} ============================>'.format(file, mdot_val))
+
 def get_new_name_from_smfile(smfile):
     if len(smfile) > 1:  raise IOError('Extract_name_from_sm: More than 1 sm.data file found <{}>'.format(smfile))
     if len(smfile) == 0: return '_no_sm_data' #raise IOError('No sm.data file found <{}>'.format(smfile))
@@ -1075,32 +1105,103 @@ def get_new_name_from_smfile(smfile):
     new_name = '{}'.format("%.2f" % (-1 * mdot))
     return new_name
 
-if use_manual:
-    if len(manual_files)!=len(manual_mdots):raise NameError('Manual files {} while mdot values {}. Not equal'.format(manual_files, manual_mdots))
-    mdot_array = manual_mdots
+def compute_for_list(list_mdots, in_files, ref_mdat, maxzal):
+    '''
+    Takes set of Mdots (to be used) ne per computed model, an initial file, to be used in EVERY
+    computation as starting model and a reference m.dat file that will be modified in every iteration with new
+    Mdot and new number of models
 
-    for i in range(len(manual_mdots)):
-        mdot_str = "%.2f"%mdot_array[i]
+    :param list_files:
+    :param list_mdots:
+    :param in_file:
+    :param ref_mdat:
+    :return:
+    '''
+    if len(list_mdots) < 1: raise NameError(
+        'Less then one value is passed {}.'.format(list_mdots))
 
-        ev_name = 'FNAME=_{}'.format(mdot_str)                                 # sae name as in passing to auto_ev2
+    if len(in_files) == 1:
+        in_file = in_files[0]
+    else:
+        if len(in_files)<len(list_mdots):raise ValueError('Size of list_mdots and in_files should be equial.')
+
+
+
+    for i in range(len(list_mdots)):
+
+        compute_one(mdot, file, ref_mdat, maxzal)
+
+def compute_for_dirs_lists(sm_dirs, y_dirs, main_dir, all_mdot_values, ref_mdat, maxzal):
+    '''
+    Interates between sm_dirs and in every sm_dir, iterates between y_dirs. In every sm_dir/y_dir ir serts the
+    os.chdir(this_dir) and computes the aut0(), which is automatically computes set of models for every Mdot value
+    in, saving as 'all_m
+    For the model name it usus the y_dir, which is 'y10 ro y1' and turns it into 'fy10.bin1 ...'
+
+    :param sm_dirs:
+    :param y_dirs:
+    :param main_dir:
+    :param manual_files:
+    :param manual_mdats:
+    :param ref_mdat:
+    :return:
+    '''
+
+    for sm_folder in sm_dirs:
+        for y_folder in y_dirs:
+
+            print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DOING {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                  .format(sm_folder, y_folder))
+
+            os.chdir(main_dir+sm_folder+y_folder)
+
+            in_file = 'f' + y_folder.split('/')[0]  # fy10.bin1
+
+            compute_for_list(all_mdot_values, in_file, ref_mdat, maxzal)
+
+            print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DONE  {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                  .format(sm_folder, y_folder))
+
+def compute_for_steps(in_file, mdot_array, ref_mdat, maxzal):
+    last_computed = in_file
+
+    for i in range(len(mdot_array)):
+        mdot_str = "%.2f" % mdot_array[i]
+
+        ev_name = 'FNAME=_{}'.format(mdot_str)  # sae name as in passing to auto_ev2
         maxzal_mdat = 'MAXZAL={}'.format(maxzal)
-        mdot_mdat = 'DMDT=' + '-' + str( "%.3e" % (10**( (-1.) * mdot_array[i])) ).replace('e','d')
+        mdot_mdat = 'DMDT=' + '-' + str("%.3e" % (10 ** ((-1.) * mdot_array[i]))).replace('e', 'd')
 
         modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat])
 
-        subprocess.call(['./auto_ev2.sh', manual_files[i], '_{}'.format(mdot_str), str(maxzal)])
+        subprocess.call(['./auto_ev2.sh', last_computed, '_{}'.format(mdot_str), str(maxzal)])
 
         smfile = get_files('', ['./'], ['_' + '_{}'.format(mdot_str)], 'sm.data')
         new_name = get_new_name_from_smfile(smfile)
 
         subprocess.call(['./auto_rename.sh', '_' + '_{}'.format(mdot_str), new_name])
 
+        last_computed = new_name
+
         # import check
-        print('<================== COMPUTED: File:{} Mdot:{} ============================>'.format(in_file, mdot_str))
+        print('<================== COMPUTED: File:{} Mdot:{} ============================>'
+              .format(last_computed, mdot_str))
+
+if mode=='listlist':
+
+    if len(all_mdot_values) != len(all_mdot_files):
+        raise NameError('len(all_mdot_values){} != len(all_mdot_files){}'.format(len(all_mdot_values), len(all_mdot_files)))
+
+    for i in range(len(all_mdot_files)):
+        file = all_mdot_files[i]
+        mdot = all_mdot_values[i]
+
+        compute_one(mdot, file, ref_mdat, maxzal)
+
 
     exit('DONE')
 
-if use_prescription:
+if mode=='prescr':
 
     raise NameError('I AM NOT READY!')
 
@@ -1125,58 +1226,49 @@ if use_prescription:
     print('<================== COMPUTED: Mdot:{} Yc:{} ============================>'.format(mdot, yc))
     print('DONE!')
 
-if do_steps:
+if mode=='steps':
 
-    last_computed = in_file
-
-    for i in range(len(mdot_array)):
-        mdot_str = "%.2f"%mdot_array[i]
-
-
-        ev_name = 'FNAME=_{}'.format(mdot_str)                                 # sae name as in passing to auto_ev2
-        maxzal_mdat = 'MAXZAL={}'.format(maxzal)
-        mdot_mdat = 'DMDT=' + '-' + str( "%.3e" % (10**( (-1.) * mdot_array[i])) ).replace('e','d')
-
-        modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat])
-
-        subprocess.call(['./auto_ev2.sh', last_computed, '_{}'.format(mdot_str), str(maxzal)])
-
-        smfile = get_files('', ['./'], ['_' + '_{}'.format(mdot_str)], 'sm.data')
-        new_name = get_new_name_from_smfile(smfile)
-
-        subprocess.call(['./auto_rename.sh', '_' + '_{}'.format(mdot_str), new_name])
-
-        last_computed = new_name
-
-        # import check
-        print('<================== COMPUTED: File:{} Mdot:{} ============================>'.format(last_computed, mdot_str))
+    compute_for_steps(in_file, mdot_array, ref_mdat, maxzal)
     print('DONE!')
 
+if mode=='allsteps':
+
+    for sm_folder in sm_dirs:
+        for y_folder in y_dirs:
+
+            print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DOING {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                  .format(sm_folder, y_folder))
+
+            os.chdir(main_dir+sm_folder+y_folder)
+
+            # in_file = 'f' + y_folder.split('/')[0]  # fy10.bin1
+
+            compute_for_steps(in_file, mdot_array, ref_mdat, maxzal)
+
+            print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DONE  {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                  .format(sm_folder, y_folder))
+
+if mode=='all':
+
+    compute_for_dirs_lists(sm_dirs, y_dirs, main_dir, all_mdot_values, ref_mdat, maxzal)
+
+if mode=='':
 
 
 
-if not do_steps and not use_manual and not use_prescription: # Standart mode
+    if  len(mdot_array) < 1:
+        raise NameError('len(mdot_array){} < 1'.format(len(mdot_array)))
+
+    file = in_file
 
     for i in range(len(mdot_array)):
-        mdot_str = "%.2f"%mdot_array[i]
+        mdot = mdot_array[i]
+
+        compute_one(mdot, file, ref_mdat, maxzal)
 
 
-        ev_name = 'FNAME=_{}'.format(mdot_str)                                 # sae name as in passing to auto_ev2
-        maxzal_mdat = 'MAXZAL={}'.format(maxzal)
-        mdot_mdat = 'DMDT=' + '-' + str( "%.3e" % (10**( (-1.) * mdot_array[i])) ).replace('e','d')
-
-        modify_mdat_file(ref_mdat, [ev_name, mdot_mdat, 'MTU=00', maxzal_mdat])
-
-        subprocess.call(['./auto_ev2.sh', in_file, '_{}'.format(mdot_str), str(maxzal)])
-
-        smfile = get_files('', ['./'], ['_' + '_{}'.format(mdot_str)], 'sm.data')
-        new_name = get_new_name_from_smfile(smfile)
-
-        subprocess.call(['./auto_rename.sh', '_' + '_{}'.format(mdot_str), new_name])
-
-        # import check
-        print('<================== COMPUTED: File:{} Mdot:{} ============================>'.format(in_file, mdot_str))
-    print('DONE!')
+print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MODE {} DONE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+          .format(mode))
 
 
 

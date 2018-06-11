@@ -3134,7 +3134,6 @@ class Read_SM_data_file:
         # attached an empty raw to match the index of array
         return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T)
 
-
     def get_xyz_from_yz(self, model_i, condition, y_name, z_name, x_1d_arr, y_1d_arr, z_2d_arr, lx1 = None, lx2 = None):
         i_req = self.ind_from_condition(condition)
 
@@ -4023,6 +4022,8 @@ class Read_Wind_file:
         self.eleven=suca_table[:, 11]
         self.kappa_eff=suca_table[:,12]
         self.thirteen=suca_table[:, 13] # eta
+
+        self.var_names=['u', 'r', 'rho', 't', 'kappa', 'tau', 'gp', 'mdot', '9', '10', '11', 'kappa_eff', '13']
 
     def get_col(self, v_n):
         if v_n == 'u':

@@ -1241,7 +1241,7 @@ if mode=='allsteps':
 
             os.chdir(main_dir+sm_folder+y_folder)
 
-            # in_file = 'f' + y_folder.split('/')[0]  # fy10.bin1
+            in_file = 'f' + y_folder.split('/')[0]  # fy10.bin1
 
             compute_for_steps(in_file, mdot_array, ref_mdat, maxzal)
 

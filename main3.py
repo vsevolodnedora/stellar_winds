@@ -53,22 +53,24 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
-for i in range(1,9):
-    # print('mkdir y{}; '.format(i))
+# for i in range(1,9):
+#     # print('mkdir y{}; '.format(i))
+#
+#     print('cp ../../ga_z002/10sm/y{}/fy{}.bin1 y{}/; '.format(i, i, i))
+#     print('cp ../ev_m.dat y{}/; '.format(i))
+#     print('cp ../fred.sh y{}; '.format(i))
+#     print('cp ../run_mass_loss.py y{}'.format(i))
 
-    print('cp ../../ga_z002/10sm/y{}/fy{}.bin1 y{}/; '.format(i, i, i))
-    print('cp ../ev_m.dat y{}/; '.format(i))
-    print('cp ../fred.sh y{}; '.format(i))
-    print('cp ../run_mass_loss.py y{}'.format(i))
 
-
-for i in range(10,31):
-    # print('mkdir ga_z0008_2/{}sm/'.format(i))
-    for j in range(1,11):
-        # print('rm -r ga_z0008_2/{}sm/y{}/sp'.format(i, j))
-        # print('rm ga_z002_2/{}sm/y{}/fy{}.bin1'.format(i, j, j))
-        # print('cp ga_z002_2/{}sm/y{}/fy{}.bin1 ga_z0008_2/{}sm/y{}/'.format(i, j, j, i, j))
-        print('mv {}sm/y{}/sp_files {}sm/y{}/sp'.format(i, j, i, j))
+# for i in range(10,31):
+#     # print('mkdir ga_z0008_2/{}sm/'.format(i))
+#     for j in range(1,11):
+#         # print('rm -r ga_z0008_2/{}sm/y{}/sp'.format(i, j))
+#         # print('rm ga_z002_2/{}sm/y{}/fy{}.bin1'.format(i, j, j))
+#         # print('cp ga_z002_2/{}sm/y{}/fy{}.bin1 ga_z0008_2/{}sm/y{}/'.format(i, j, j, i, j))
+#         print('cp ga_z002_2tmp/{}sm/y{}/*.bin1 ga_z002_2tmp/{}sm/y{}/*.plot1 ga_z002_2tmp/{}sm/y{}/*sm.data ga_z002_2/{}sm/y{}/'
+#               .format(i,j, i,j, i,j, i,j))
+        # print('mv {}sm/y{}/sp_files {}sm/y{}/sp'.format(i, j, i, j))
         # print('cp auto_* ref_m.dat re_m.dat check.py {}sm/y{}/; '.format(i, j)) # EVE
         # print('cp re_m.dat {}sm/y{}/'.format(i, j))
         # print('rm -r {}sm/y{}/sp/*_WIND'.format(i, j))
@@ -93,7 +95,7 @@ lmc_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '11sm/', '12sm/', '1
                                                    ], [], '.plot1')
 tst_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '15sm/', '20sm/', '25sm/', '30sm/'], [], '.plot1')
 
-gal_spfiles = get_files('../data/sp_files/', ['10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
+gal_spfiles = get_files('../data/sp_files (copy)/', ['10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
                                               '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
                                               '22z002/', '23z002/', '24z002/', '25z002/'], [], '.data')
 lmc_spfiles = get_files('../data/sp3_files/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
@@ -112,6 +114,8 @@ lmc_opal_file = '../data/opal/table_x.data'
 gal_opal_file = '../data/opal/table8.data'
 tst_opal_file = ''
 
+gal_atm_file = '../data/atm/gal_atm_models.data'
+lmc_atm_file = '../data/atm/lmc_atm_models.data'
 
 smfiles = get_files(sse_locaton + 'ga_z0008/', ['13sm/y10/sp/'], [], 'sm.data')
 # smfiles = get_files(sse_locaton, ['zams_004/hecore/t1/'], [], 'sm.data')
@@ -195,6 +199,7 @@ spfiles = []
 opalfile =[]
 obsfile = []
 plotfiles=[]
+atmfile=[]
 def set_sp_oopal_obs(gal_or_lmc):
     global spfiles
     global opalfile
@@ -205,11 +210,13 @@ def set_sp_oopal_obs(gal_or_lmc):
         opalfile = lmc_opal_file
         plotfiles = lmc_plotfls
         obsfile = lmc_obs_file
+        atmfile = lmc_atm_file
     if gal_or_lmc == 'gal':
         spfiles = gal_spfiles
         opalfile = gal_opal_file
         plotfiles = gal_plotfls
         obsfile = gal_obs_file
+        atmfile = gal_atm_file
     if gal_or_lmc == 'tst':
         spfiles = tst_spfiles
         opalfile = tst_opal_file
@@ -230,75 +237,78 @@ from Phys_Math_Labels import Physics
 print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.139, 3.4))
 
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
+# from FilesWork import Read_Atmosphere_File
+# atm=Read_Atmosphere_File(opalfile)
+# atm.plot_tstar_rt('t', 'r', 't_eff')
 
-def gray_analysis(z, m_set, y_set, plot):
-
-    from Temp import master_gray
-    for m in m_set:
-        for y in y_set:
-            root_name = 'ga_z' + z + '/'
-            folder_name = str(m)+'sm/y'+str(y)+'/'
-            out_name = str(m) + 'z' + z + '/'
-
-
-            print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
-            smfiles_ = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
-
-            cr = master_gray(smfiles_, '../data/sp_files/' + out_name, plot_dir,
-                         ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'])  # [] is a listof folders not to be put in output name
-            # cr.save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp'], plot)
-
-            print('m:{}, y:{} DONE'.format(m,y))
-
-def gray_analysis2(z, m_set, y_set, plot):
-
-    from Sonic_Criticals import Criticals2 # CRITICALS2 also computes sonic-BEC sm and plot files to get tau.
-    for m in m_set:
-        for y in y_set:
-            root_name = 'ga_z' + z + '/'
-            folder_name = str(m)+'sm/y'+str(y)+'/'
-            out_name = str(m) + 'z' + z + '/'
-
-            print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
-
-            smfiles_ga = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
-            smfiles_sp = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'sm.data')
-            plotfls_sp = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], '.plot1')
-
-            cr = Criticals2(smfiles_ga, smfiles_sp, plotfls_sp,
-                            ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'], '../data/sp2_files/' + out_name)
-
-            cr.combine_ga_sp(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], plot, 'IntUni')
-
-            print('m:{}, y:{} DONE'.format(m,y))
-
-def gray_analysis3(z, m_set, y_set, plot):
-
-    from Sonic_Criticals import Criticals3 # CRITICALS2 also computes sonic-BEC sm and plot files to get tau.
-    from Temp import master_sonic
-    for m in m_set:
-        for y in y_set:
-            root_name = 'ga_z' + z + '/'
-            folder_name = str(m)+'sm/y'+str(y)+'/'
-            out_name = str(m) + 'z' + z + '/'
-
-            print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
-
-            # smfiles_ga = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
-            smfiles_sp = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'sm.data')
-            sucafls    = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'wind')
-
-            cr = master_sonic(smfiles_sp, sucafls, '../data/sp3_files/' + out_name, plot_dir,
-                            ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'])
-
-            # cr.combine_save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], plot, wind)
-
-            print('m:{}, y:{} DONE'.format(m,y))
+# def gray_analysis(z, m_set, y_set, plot):
+#
+#     from Temp import master_gray
+#     for m in m_set:
+#         for y in y_set:
+#             root_name = 'ga_z' + z + '/'
+#             folder_name = str(m)+'sm/y'+str(y)+'/'
+#             out_name = str(m) + 'z' + z + '/'
+#
+#
+#             print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
+#             smfiles_ = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
+#
+#             cr = master_gray(smfiles_, '../data/sp_files/' + out_name, plot_dir,
+#                          ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'])  # [] is a listof folders not to be put in output name
+#             # cr.save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp'], plot)
+#
+#             print('m:{}, y:{} DONE'.format(m,y))
+#
+# def gray_analysis2(z, m_set, y_set, plot):
+#
+#     from Sonic_Criticals import Criticals2 # CRITICALS2 also computes sonic-BEC sm and plot files to get tau.
+#     for m in m_set:
+#         for y in y_set:
+#             root_name = 'ga_z' + z + '/'
+#             folder_name = str(m)+'sm/y'+str(y)+'/'
+#             out_name = str(m) + 'z' + z + '/'
+#
+#             print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
+#
+#             smfiles_ga = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
+#             smfiles_sp = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'sm.data')
+#             plotfls_sp = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], '.plot1')
+#
+#             cr = Criticals2(smfiles_ga, smfiles_sp, plotfls_sp,
+#                             ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'], '../data/sp2_files/' + out_name)
+#
+#             cr.combine_ga_sp(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], plot, 'IntUni')
+#
+#             print('m:{}, y:{} DONE'.format(m,y))
+#
+# def gray_analysis3(z, m_set, y_set, plot):
+#
+#     from Sonic_Criticals import Criticals3 # CRITICALS2 also computes sonic-BEC sm and plot files to get tau.
+#     from Temp import master_sonic
+#     for m in m_set:
+#         for y in y_set:
+#             root_name = 'ga_z' + z + '/'
+#             folder_name = str(m)+'sm/y'+str(y)+'/'
+#             out_name = str(m) + 'z' + z + '/'
+#
+#             print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
+#
+#             # smfiles_ga = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
+#             smfiles_sp = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'sm.data')
+#             sucafls    = get_files(sse_locaton + root_name, [folder_name+'sp/'], [], 'wind')
+#
+#             cr = master_sonic(smfiles_sp, sucafls, '../data/sp3_files/' + out_name, plot_dir,
+#                             ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'vnedora', 'HDD'])
+#
+#             # cr.combine_save(1000, ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tpar-'], plot, wind)
+#
+#             print('m:{}, y:{} DONE'.format(m,y))
 
 # gray_analysis3('0008', [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], [10], True, False)
 # gray_analysis('002', [26], [10, 9, 8, 7, 6, 5, 4, 3, 2], True)
 # gray_analysis3('0008', [18], [9], True, False)
-gray_analysis3('002', [10], [10], True)
+# gray_analysis3('002', [10], [10], True)
 # 10,11,12,13,14,15,16,17,18,19,20,21,22,
 '''======================================================TAU========================================================='''
 
@@ -315,6 +325,29 @@ from Sonic_Criticals import Tau_Map
 # tau = Tau_Map(-3.,-6.,-0.1, plotfls_sp, smfiles_sp, output_dir, plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])
 # tau.interpolation_tau()
 '''====================================================CREATION======================================================'''
+from FilesWork import Read_Observables
+from FilesWork import Read_Atmosphere_File
+
+# def save_atm_table(z_v_n, obs_file, atm_file, opal_used, bump):
+#     obs = Read_Observables(obs_file, opal_used, False)
+#     obs.set_use_atm_file = False
+#     obs.set_use_gaia = False
+#     obs.set_atm_file = atm_file
+#
+#     atm = Read_Atmosphere_File(atm_file, opal_used)
+#     table = atm.get_table('t_*', 'rt', z_v_n)
+#
+#     out_table = np.zeros((2))
+#     for star_n in obs.stars_n:
+#         tstar = obs.get_num_par('t', star_n)
+#         rt = obs.get_num_par('lRt', star_n)
+#         t_eff = Math.interpolate_value_table(table, [tstar, rt])
+#         out_table = np.vstack((out_table, [star_n, t_eff]))
+#
+#     from FilesWork import Save_Load_tables
+#     Save_Load_tables.save_table(out_table, opal_used, bump, 'none_model_t_eff', 'none', 'model', 't_eff')
+
+# save_atm_table('t_eff', obsfile, atmfile, opalfile, 'Fe')
 
 from FilesWork import Creation
 # make = Creation(opalfile, 'Fe', 1000)
@@ -367,12 +400,12 @@ pltbl.latex_table(['mdot', 't', 'lm'], [0.2, 0.2, 0.2])
 
 comb = Combine()
 
-comb.opal_used = opalfile
-comb.sp_files = select_sp_files(spfiles, [], [], [])
-comb.sm_files = get_files(sse_locaton + 'ga_z002/', ['15sm/y10/sp/'], ['5.40'], 'sm.data') # MANUAL SET FOR SM FILES
-comb.obs_files = obsfile
-comb.plot_files = get_files(sse_locaton +'ga_z002/', [], [], '.plot1')
-# comb.m_l_relation=0.993 '13sm/', 'env_ev_pj/13sm/sp_evol/'
+comb.set_opal_used = opalfile
+comb.set_sp_files = select_sp_files(spfiles, [], [], [])
+comb.set_sm_files = get_files(sse_locaton + 'ga_z002_2/', ['20sm/y10/sp55/'], ['4.50'], 'sm.data') # MANUAL SET FOR SM FILES
+comb.set_obs_file = obsfile
+comb.set_plot_files = get_files(sse_locaton + 'ga_z002/', [], [], '.plot1')
+
 
 comb.set_files()
 
@@ -380,12 +413,12 @@ comb.set_files()
 
 # comb.sp_xy_last_points('m','l','mdot', 4)
 
-comb.xy_profile('r','u','mdot','lm', True, True) # Pg/P_total
+# comb.xy_profile('r','u','mdot','lm', True, True) # Pg/P_total
 # comb.dxdy_profile('r', 'kappa', 'mdot', 'lm', False, True)
 # comb.xyy_profile('t','Pg/P_total', 'L/Ledd','mdot', 'HP', 'mfp', True, True)
 # comb.xy_last_points('r','u','mdot',False)
 # comb.hrd2('l', False)
-# comb.hrd('t', 'lm', True, False)
+comb.hrd('t_eff', 'l', True, False)
 # comb.mdot_check()
 # comb.evol_mdot()
 # comb.time_analysis(50)
@@ -397,11 +430,11 @@ comb.xy_profile('r','u','mdot','lm', True, True) # Pg/P_total
 # comb.plot_t_l_mdot('lm', 0, True, False, 5.22, None)
 # comb.min_mdot_sp('lm', 1.)
 
-from main_methods import Crit_Mdot
-mdot = Crit_Mdot()
-mdot.sp_files = spfiles
-mdot.opal_used = opalfile
-mdot.obs_files = obsfile
+# from main_methods import Crit_Mdot
+# mdot = Crit_Mdot()
+# mdot.sp_files = spfiles
+# mdot.opal_used = opalfile
+# mdot.obs_files = obsfile
 
 # mdot.set_files('Fe', 1.0)
 
@@ -412,41 +445,41 @@ mdot.obs_files = obsfile
 
 # --- --- ---
 
-from main_methods import Sonic_HRD
-shrd = Sonic_HRD()
-shrd.opal_used = opalfile
-shrd.sp_files = select_sp_files(spfiles, [], [], [])
-shrd.sm_files = smfiles
-shrd.obs_files = obsfile
-shrd.plot_files = plotfiles
-
-shrd.set_files('Fe', 1.0)
-
-shrd.plot_sonic_hrd(1.0, 'lm', 1.0, False)
+# from main_methods import Sonic_HRD
+# shrd = Sonic_HRD()
+# shrd.opal_used = opalfile
+# shrd.sp_files = select_sp_files(spfiles, [], [], [])
+# shrd.sm_files = smfiles
+# shrd.obs_files = obsfile
+# shrd.plot_files = plotfiles
+#
+# shrd.set_files('Fe', 1.0)
+#
+# shrd.plot_sonic_hrd(1.0, 'lm', 1.0, False)
 # shrd.plot_sonic_hrd_set('lm', [1.0], 1.0, 0.1)
 # shrd.plot_sonic_hrd_const_r('lm', 1., [1.0])
 
 '''=================================================MULTIPLE=BUMP=METHODS============================================'''
 
-from main_methods import Plot_Multiple_Crit_Mdots
-pmm = Plot_Multiple_Crit_Mdots([obsfile], [opalfile])
-pmm.coeff = [1.0, 0.8]
-pmm.r_cr =  [None, 1.0]
-pmm.bump =  ['Fe', 'HeII']
-pmm.yc   =  [1.0, 1.0]
-pmm.opal =  [opalfile, opalfile]
-pmm.y_coord=['lm', 'lm']
+# from main_methods import Plot_Multiple_Crit_Mdots
+# pmm = Plot_Multiple_Crit_Mdots([obsfile], [opalfile])
+# pmm.coeff = [1.0, 0.8]
+# pmm.r_cr =  [None, 1.0]
+# pmm.bump =  ['Fe', 'HeII']
+# pmm.yc   =  [1.0, 1.0]
+# pmm.opal =  [opalfile, opalfile]
+# pmm.y_coord=['lm', 'lm']
 
 # pmm.plot_crit_mdots(False, 'r_env', plotfiles)
 
-from main_methods import Plot_Tow_Sonic_HRDs
-pts = Plot_Tow_Sonic_HRDs([obsfile], [opalfile])
-pts.coeff = [1.0, 0.8]
-pts.rs =  [None, 1.0]
-pts.bump =  ['Fe', 'HeII']
-pts.yc   =  [1.0, 1.0]
-pts.opal =  [opalfile, opalfile]
-pts.y_coord=['lm', 'lm']
+# from main_methods import Plot_Tow_Sonic_HRDs
+# pts = Plot_Tow_Sonic_HRDs([obsfile], [opalfile])
+# pts.coeff = [1.0, 0.8]
+# pts.rs =  [None, 1.0]
+# pts.bump =  ['Fe', 'HeII']
+# pts.yc   =  [1.0, 1.0]
+# pts.opal =  [opalfile, opalfile]
+# pts.y_coord=['lm', 'lm']
 
 # pts.plot_srhd(True)
 
@@ -614,15 +647,14 @@ pts.y_coord=['lm', 'lm']
 
 
 
-m = 18
-mdot='4.00_0.98'
-folder = 't10sm/'#'{}sm/y10/sp/{}'.format(m, mdot)
 
+folder = '/media/vnedora/HDD/sse/ga_z002_2/20sm/y10/test/'
+mdot='4.80'
 
 from FilesWork import Read_Wind_file
-wind = Read_Wind_file.from_wind_dat_file(sse_locaton + 'ga_z002/' + folder + '{}.wind'.format(mdot))
+wind = Read_Wind_file.from_wind_dat_file(folder + '{}.wind'.format(mdot))
 
-smfl = Read_SM_data_file.from_sm_data_file(sse_locaton +'ga_z002/' + folder + '{}sm.data'.format(mdot))
+smfl = Read_SM_data_file.from_sm_data_file(folder + '{}sm.data'.format(mdot))
 
 #plfl = Read_Plot_file.from_file(sse_locaton +'ga_z002/' + folder + '{}.plot1'.format(mdot), True)
 #print('PLOT: R_s: {}; Tau: {}'.format(plfl.r_n_rsun[-1], plfl.tauatR[-1]))
@@ -641,7 +673,7 @@ def esc_vel(m, r):
 
 # def eff_kappa(r, kappa_s, r_s, )
 
-def plot_tau(x_v_n, y_v_n, smcls, wndcls, pltcls, opal_used, log=True):
+def plot_tau(x_v_n, y_v_n, smcls, wndcls, opal_used, log=True):
     x_wind = wndcls.get_col(x_v_n)
 
     ax = plt.subplot(111)
@@ -649,8 +681,8 @@ def plot_tau(x_v_n, y_v_n, smcls, wndcls, pltcls, opal_used, log=True):
     # x_wind_sp = pltcls.get_col(x_v_n)[-1]
     tau = wndcls.get_col(y_v_n)
 
-    t_eff_luca = pltcls.teffluca[-1]
-    ax.axvline(x=t_eff_luca, label='T_eff(Luca)', color='green')
+    # t_eff_luca = pltcls.teffluca[-1]
+    # ax.axvline(x=t_eff_luca, label='T_eff(Luca)', color='green')
 
     if log:
         # tau_sp =  tau_sp
@@ -660,18 +692,18 @@ def plot_tau(x_v_n, y_v_n, smcls, wndcls, pltcls, opal_used, log=True):
     # ax.plot(x_wind_sp, tau_sp, 'x', color='black', label='Tau(.plot1)')
     ax.plot(x_wind, tau, '.', color='blue', label='log({})(w)'.format(y_v_n))
 
-    if opal_used!=None:
-        lm = Physics.loglm(smcls.get_col('l')[-1], smcls.get_col('xm')[-1])
-        tlt = 'z{}_lm{}_log(mdot){}'.format(Get_Z.z(opal_used), '%.1f' % lm, '%.2f' % smcls.get_col('mdot')[-1])
-        plt.title(tlt)
+    # if opal_used!=None:
+    #     lm = Physics.loglm(smcls.get_col('l')[-1], smcls.get_col('xm')[-1])
+    #     tlt = 'z{}_lm{}_log(mdot){}'.format(Get_Z.z(opal_used), '%.1f' % lm, '%.2f' % smcls.get_col('mdot')[-1])
+    #     plt.title(tlt)
 
     atm_p = wndcls.get_col('gp')
     x_wind_atm = wndcls.get_col(x_v_n)[np.int(atm_p)]
     ax.axvline(x=x_wind_atm, label='Atmosphere')
 
-    x_sp = smcls.get_col(x_v_n)[-1]
-    y_sp = smcls.get_col(y_v_n)[-1]
-    ax.plot(x_sp, y_sp, 'X', color='red', label='SP (sm.file)')
+    # x_sp = smcls.get_col(x_v_n)[-1]
+    # y_sp = smcls.get_col(y_v_n)[-1]
+    # ax.plot(x_sp, y_sp, 'X', color='red', label='SP (sm.file)')
 
     ax.grid()
     ax.set_xlabel(Labels.lbls(x_v_n))
@@ -683,9 +715,17 @@ def plot_tau(x_v_n, y_v_n, smcls, wndcls, pltcls, opal_used, log=True):
 def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
     x_core = smcls.get_col(x_v_n)
     y_core = smcls.get_col(y_v_n)
+    #
+    # if y_v_n=='13':
+    #     x_core = smcls.get_col(x_v_n)
+    #     y_core = smcls.get_col('t')
+    # else:
+    #     x_core = smcls.get_col(x_v_n)
+    #     y_core = smcls.get_col(y_v_n)
 
     x_wind = wndcls.get_col(x_v_n)
     y_wind = wndcls.get_col(y_v_n)
+
     if y_v_n == 'kappa':
         y_core = 10**smcls.get_col(y_v_n)
         y_wind2 = wndcls.get_col('kappa_eff')
@@ -699,7 +739,7 @@ def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
     ax = plt.subplot(111)
     atm_p = wndcls.get_col('gp')
     x_wind_atm = wndcls.get_col(x_v_n)[np.int(atm_p)]
-    ax.axvline(x=x_wind_atm, label='Atmosphere')
+    # ax.axvline(x=x_wind_atm, label='Atmosphere')
 
 
     # def plot_tau(log=True):
@@ -727,8 +767,14 @@ def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
     # if y_v_n == 'tau':
     #     plot_tau(False)
     # ax.set_xlim(3.0, 5.5)
+
+    # if y_v_n == '13':
+    #     x_sp = smcls.get_col(x_v_n)[-1]
+    #     y_sp = smcls.get_col('t')[-1]
+    # else:
     x_sp = smcls.get_col(x_v_n)[-1]
     y_sp = smcls.get_col(y_v_n)[-1]
+
     if y_v_n == 'kappa':
         y_sp = 10**y_sp
     ax.plot(x_sp, y_sp, 'X', color='red', label='SP (sm.file)')
@@ -746,8 +792,8 @@ def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
     ax.legend()
     plt.show()
 
-plot_core_wind('r', 'tau', smfl, wind, opalfile, True)
-# plot_tau('t', 'tau', smfl, wind, plfl, opalfile, True)
+plot_core_wind('r', 't', smfl, wind, opalfile, False)
+# plot_tau('r', '13', smfl, wind, opalfile, True)
 # tsm = smfl.get_col('t')
 #
 # r_wind = suca.r/Constants.solar_r

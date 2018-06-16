@@ -261,6 +261,58 @@ class Save_Load_tables:
         #
         # f.clear()
 
+    @staticmethod
+    def read_genergic_table(file_name, str_col=None):
+        '''
+        Reads the the file table, returning the list with names and the table
+        structure: First Row must be with '#' in the beginning and then, the var names.
+        other Rows - table with the same number of elements as the row of var names
+        :return:
+        :str_col: Name of the volumn with string values
+        '''
+        table = []
+        with open(file_name, 'r') as f:
+            for line in f:
+                # if '#' not in line.split() and line.strip():  # if line is not empty and does not contain '#'
+                table.append(line)
+
+        names = table[0].split()[1:]  # getting rid of '#' which is the first element in a row
+        num_colls = len(table) - 1  # as first row is of var names
+
+        if len(names) != len(table[1].split()):
+            print('\t___Error. Number of vars in list({}) != number of cols in observ.data file({}) '
+                  '|Read_Observables, __init__|'.format(len(names), len(table[1].split())))
+        print('\t__Note: Data include following paramters:\n\t | {} |'.format(names))
+
+        table.remove(table[0])  # removing the var_names line from the array. (only actual values left)
+
+        if str_col==None:
+            tmp = np.zeros(len(names))
+            for row in table:
+                tmp = np.vstack((tmp, np.array(row.split(), dtype=np.float)))
+            table = np.delete(tmp, 0, 0)
+
+            return names, table
+
+        else:
+            # In case there is a column with strings in a table.
+            # Remove it from the table. Vstack the rest of the table. Remove it name from the 'names'
+            # Return all of it
+            tmp = np.zeros(len(names) - 1)
+            str_col_val = []
+            for row in table:
+                raw_row = row.split()
+                str_col_val.append(raw_row[names.index(str_col)])
+                raw_row.remove(raw_row[names.index(str_col)])
+                tmp = np.vstack((tmp, np.array(raw_row, dtype=np.float)))
+
+            table = np.delete(tmp, 0, 0)
+            names.remove(str_col)
+
+            return names, table, str_col_val
+
+
+
 class Opacity_Bump:
 
 
@@ -2073,12 +2125,20 @@ class Read_Observables:
         :param clump_used:
         :param clump_req:
         '''
+
+        self.set_use_gaia = True
+        self.set_use_atm_file = True
+        self.set_atm_file = None
+
+        # --------------------------------------------------------------------------------------------------------------
         self.file_name = observ_name
 
         self.clump = clump_used
         self.new_clump = clump_req
 
         self.opal_used = opal_used
+
+
 
         self.table = []
         with open(observ_name, 'r') as f:
@@ -2099,7 +2159,7 @@ class Read_Observables:
 
 
         # -----------------DISTRIBUTING READ COLUMNS-------------
-        self.num_v_n = ['N', 't', 'm', 'l', 'mdot', 'v_inf', 'eta']  # list of used v_n's; can be extended upon need ! 'N' should be first
+        self.num_v_n = ['N', 't', 'lRt', 'm', 'l', 'mdot', 'v_inf', 'eta']  # list of used v_n's; can be extended upon need ! 'N' should be first
         self.cls = 'class'                           # special variable
 
         self.str_v_n = []
@@ -2110,9 +2170,13 @@ class Read_Observables:
         # print(self.get_star_class(110))
 
         # --- --- GAIA LUMINOCITIES --- ---
-        if opal_used.split('/')[-1] == 'table8.data':
+        if self.set_use_gaia and opal_used.split('/')[-1] == 'table8.data':
             self.gaia_names, self.gaia_table = self.read_genergic_table(observ_name.split('.data')[0] + '_gaia_lum.data')
 
+        # --- --- Potsdam Atmospheres --- ---
+        if self.set_use_atm_file:
+            self.atm = Read_Atmosphere_File(self.set_atm_file, self.opal_used)
+            self.atm_table = self.atm.get_table('t_*', 'rt', 't_eff')
 
         # if opal_used.split('/')[-1] == 'table8.data':  # if Galactic Mode is set:
         #     gaia_lum_fname = observ_name.split('.data')[0] + '_gaia_lum.data'
@@ -2430,6 +2494,8 @@ class Read_Observables:
         :return:
         '''
 
+        if v_n == 't_eff':
+            return self.get_t_eff_from_atmosphere(star_n)
 
         if v_n == 'lm':
             # print('\__ Yc: {}'.format(yc_val))
@@ -2756,6 +2822,14 @@ class Read_Observables:
     #     #
     #     # mdot1 = Physics.l_mdot_prescriptions(llm1, 10 * get_z(self.opal_used), l_mdot_rescription)
     #     # mdot2 = Physics.l_mdot_prescriptions(llm2, 10 * get_z(self.opal_used), l_mdot_rescription)
+
+    def get_t_eff_from_atmosphere(self, star_n):
+
+        tstar = self.get_num_par('t', star_n)
+        rt = self.get_num_par('lRt', star_n)
+
+
+        return Math.interpolate_value_table(self.atm_table, [tstar, rt])
 
 class Read_Plot_file:
 
@@ -3801,9 +3875,6 @@ class Read_SP_data_file:
         self.out_dir = out_dir
         self.plot_dir = plot_dir
 
-
-
-
         self.names, self.table = self.read_genergic_table(sp_data_file) # now it suppose to read the table
 
         # self.list_of_v_n = ['l', 'm', 't', 'mdot', 'tau', 'r', 'Yc', 'k']
@@ -3937,6 +4008,7 @@ class Read_SP_data_file:
         # self.rho = np.array(self.table[1:, 8])
 
 
+
     #
     #
     # def get_crit_value(self, v_n):
@@ -4019,11 +4091,12 @@ class Read_Wind_file:
         self.mdot=suca_table[:, 8]
         self.nine=suca_table[:, 9]
         self.ten = suca_table[:,10]
-        self.eleven=suca_table[:, 11]
+        self.eleven=suca_table[:, 11] # wind luminocity
         self.kappa_eff=suca_table[:,12]
-        self.thirteen=suca_table[:, 13] # eta
+        self.thirteen=np.log10(suca_table[:, 13]) # eta
+        self.last = suca_table[:, -1]
 
-        self.var_names=['u', 'r', 'rho', 't', 'kappa', 'tau', 'gp', 'mdot', '9', '10', '11', 'kappa_eff', '13']
+        self.var_names=['u', 'r', 'rho', 't', 'kappa', 'tau', 'gp', 'mdot', '9', '10', '11', 'kappa_eff', '13', 'last']
 
     def get_col(self, v_n):
         if v_n == 'u':
@@ -4043,7 +4116,7 @@ class Read_Wind_file:
         if v_n == 'mdot':
             return np.log10(self.mdot/Constants.smperyear)
         if v_n == '9':
-            return self.nine
+            return self.nine # diffusive approximation temperature
         if v_n == '10':
             return self.ten
         if v_n == '11':
@@ -4052,6 +4125,8 @@ class Read_Wind_file:
             return self.kappa_eff
         if v_n == '13':
             return self.thirteen
+        if v_n == 'last':
+            return self.last
 
     def get_value(self, v_n, condition='ph'):
         '''
@@ -4096,4 +4171,179 @@ class Read_Wind_file:
         # attached an empty raw to match the index of array
         return cls((np.vstack((np.zeros(len(table[:, 0])), table.T))).T)
 
+class Read_Atmosphere_File:
+
+    list_of_names = ['model', 't_*', 'rt',  'l', 'mdot', 'v_inf', 'r_*',  't_eff', 'r_eff', 'm','g','q','d_inf','eta']
+
+    def __init__(self, atm_file, opal_used, out_dir = '../data/output/', plot_dir = '../data/plots/'):
+
+        gal_atm_file = '../data/atm/gal_atm_models.data'
+        lmc_atm_file = '../data/atm/lmc_atm_models.data'
+
+
+        if opal_used.split('/')[-1] == 'table8.data':
+            self.atm_file = gal_atm_file
+        if opal_used.split('/')[-1] == 'table_x.data':
+            self.atm_file = lmc_atm_file
+
+
+        self.out_dir = out_dir
+        self.plot_dir= plot_dir
+
+        self.names, self.table, self.models = Save_Load_tables.read_genergic_table(self.atm_file, 'model') # now it suppose to read the table
+
+    def v_n_to_v_n(self, v_n):
+
+        if not v_n in self.names:
+            raise NameError('Translation is not provided for {} \n (not found in {})'.format(v_n, self.names))
+
+        else: return v_n
+
+    def get_col(self, v_n):
+        col = self.table[:, self.names.index(self.v_n_to_v_n(v_n))]
+
+        if v_n == 't_*' or v_n == 't_eff':
+            return np.log10(col*1000)
+        else:
+            return col
+
+    def get_value(self, v_n, str_model):
+        value = self.table[self.models.index(str_model), self.names.index(self.v_n_to_v_n(v_n))]
+
+        if v_n == 't_*' or v_n == 't_eff':
+            return np.log10(value*1000)
+        else:
+            return value
+
+    #
+    #
+    #
+    #
+    # def get_crit_value(self, v_n):
+    #
+    #
+    #     if v_n == 'lm':
+    #         l = self.table[0, self.names.index(self.v_n_to_v_n('l'))]
+    #         m = self.table[0, self.names.index(self.v_n_to_v_n('m'))]
+    #         return Physics.loglm(l, m)
+    #
+    #
+    #     v_n_tr = self.v_n_to_v_n(v_n)
+    #     if not v_n_tr in self.names:
+    #         raise NameError('v_n_traslated({}) not in the list of names from file ({})'.format(v_n_tr, self.names))
+    #     return self.table[0, self.names.index(self.v_n_to_v_n(v_n))]
+    #
+    # def get_sonic_cols(self, v_n):
+    #
+    #     if v_n == 'lm':
+    #         l = self.table[1:, self.names.index(self.v_n_to_v_n('l'))]
+    #         m = self.table[1:, self.names.index(self.v_n_to_v_n('m'))]
+    #         return Physics.loglm(l, m, True)
+    #     else:
+    #         return self.table[1:, self.names.index(self.v_n_to_v_n(v_n))]
+    #
+    #     # --- Critical values ---
+    #
+    #     # self.l_cr = np.float(self.table[0, 0])  # mass array is 0 in the sp file
+    #     # self.m_cr = np.float(self.table[0, 1])  # mass array is 1 in the sp file
+    #     # self.yc_cr = np.float(self.table[0, 2])  # mass array is 2 in the sp file
+    #     # self.ys_cr = np.float(self.table[0, 3])  # mass array is 2 in the sp file
+    #     # self.lmdot_cr = np.float(self.table[0, 4])  # mass array is 3 in the sp file
+    #     # self.r_cr = np.float(self.table[0, 5])  # mass array is 4 in the sp file
+    #     # self.t_cr = np.float(self.table[0, 6])  # mass array is 4 in the sp file
+    #     # self.tau_cr = np.float(self.table[0, 7])
+    #     #
+    #     # # --- Sonic Point Values ---
+    #     #
+    #     # self.l = np.array(self.table[1:, 0])
+    #     # self.m = np.array(self.table[1:, 1])
+    #     # self.yc = np.array(self.table[1:, 2])
+    #     # self.ys = np.array(self.table[1:, 3])
+    #     # self.lmdot = np.array(self.table[1:, 4])
+    #     # self.rs = np.array(self.table[1:, 5])
+    #     # self.ts = np.array(self.table[1:, 6])
+    #     # self.tau = np.array(self.table[1:, 7])
+    #     # self.k = np.array(self.table[1:, 8])
+    #     # self.rho = np.array(self.table[1:, 9])
+    #
+    #     # self.k = np.array(self.table[1:, 6])
+    #     # self.rho = np.array(self.table[1:, 8])
+
+    def get_2d_arr(self, v_n, filling=-1, replace_to=-1):
+
+        arr = np.zeros((100, 100))
+        arr.fill(filling)
+
+        models = np.zeros(2)
+        for m in self.models:
+            row = np.array([m.split('-')[0], m.split('-')[-1]], dtype=np.int)
+            models = np.vstack((models, row))
+
+        models = np.delete(models, 0, 0)
+
+        for x in models[:, 0]:
+            for y in models[:, 1]:
+                str_model = "%0.2d" % x + '-' + "%0.2d" % y
+                if str_model in self.models:
+                    # print('Model {} found'.format(str_model))
+                    arr[np.int(y), np.int(x)] = self.get_value(v_n, str_model)
+                # else:
+                # print('Model {} not found'.format(str_model))
+
+        arr = arr[~np.all(arr == filling, axis=1)]
+        arr = arr.T[~np.all(arr.T == filling, axis=1)].T
+
+        arr[arr == filling] = replace_to
+
+        # print(arr)
+
+        return arr
+
+    def get_table(self, x_v_n, y_v_n, z_v_n, filling=None):
+
+        x_data = np.unique(self.get_2d_arr(x_v_n, -1))
+        x_data = np.delete(x_data, 0, 0)
+        y_data = np.unique(self.get_2d_arr(y_v_n, -1))
+        y_data = np.delete(y_data, 0, 0)
+
+        z_data = self.get_2d_arr(z_v_n, -1, filling)
+
+        if len(x_data) != len(z_data[0, :]): raise ValueError('Wrong x_len: len(x_data){}!=len(z_data[0,:]){}'
+                                                              .format(len(x_data), len(z_data[0, :])))
+        if len(y_data) != len(z_data[:, 0]): raise ValueError('Wrong x_len: len(x_data){}!=len(z_data[0,:]){}'
+                                                              .format(len(y_data), len(z_data[:, 0])))
+
+        table = Math.combine(x_data, y_data, z_data[::-1, :])
+
+        return table
+
+
+
+    def plot_tstar_rt(self, x_v_n, y_v_n, z_v_n):
+
+        models = np.zeros(2)
+        for m in self.models:
+            row = np.array([m.split('-')[0], m.split('-')[-1]], dtype=np.int)
+            models = np.vstack((models, row))
+
+        models=np.delete(models, 0, 0)
+
+        table = self.get_table('t_*', 'rt', 't_eff', None)
+
+        from Phys_Math_Labels import Plots
+        plots=Plots()
+        plots.plot_color_table(table, x_v_n, y_v_n, z_v_n, '../data/opal/table8.data')
+
+
+        # z_cood = Math.interpolate_value_table(table, [4.85, 0.9], '1dCubic')
+        # plots.plot_color_table(table, 't', 'r', 't_eff', '../data/opal/table8.data', 'x:{} y{} z:{}'
+        #                        .format("%.2f"%4.85, "%.2f"%0.9, "%.2f"%z_cood))
+
+
+
+
+
+        return 0
+
+        from Phys_Math_Labels import Plots
 

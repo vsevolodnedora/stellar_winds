@@ -593,7 +593,6 @@ class PlotProfiles(PlotProfile):
                         self.ax[i].plot(r_tu_mdot_max[:, 1], r_tu_mdot_max[:, 0], 'x', color='blue')
                         self.ax[i].plot(r_tu_mdot_max[:, 1], r_tu_mdot_max[:, 0], '-', color='gray')
 
-
     def plot_vertial(self, v_n_x_, v_n_y_, x_value, ls ='dashed', color='black'):
 
         for i in range(self.n_plots):
@@ -1743,8 +1742,9 @@ class CommonMethods:
         for i in range(len(sm_cls)):
             var = sm_cls[i].get_col(v_n)[where]
             v_n_cls.append([var, sm_cls[i]])
+            print('SORTING: {}'.format(v_n_cls[i][0]))
 
-        v_n_cls.sort()
+        v_n_cls.sort(key=lambda x: x[0])
 
         smdl = []
         for i in range(len(sm_cls)):
@@ -1921,6 +1921,8 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y):
     for file in wndfiles:
         wnd.append(Read_Wind_file.from_wind_dat_file(file))
     swnd = CommonMethods.sort_smfiles(wnd, 'mdot', -1)
+
+    PlotProfile.self_plot_tph_teff(smdl,swnd)
 
     # --------------------------------------------------| SETTINGS for sm.data |----------------------------------------
     sp = SonicPointAlgorithm(smdl)
@@ -2113,7 +2115,7 @@ def load_files(z, m_set, y_set, sp=False):
 
 load_files('002', [10], [10], False)
 
-def manual(full_path, sp=False):
+def manual(full_path, sp=True):
     sm_files = get_files('',[full_path],[],'sm.data')
 
     out_name='test.data'
@@ -2123,4 +2125,4 @@ def manual(full_path, sp=False):
     else:
         ga = ga_crit_main(sm_files, sm_files[0].split('/')[:-1], out_name)
 
-# manual('/media/vnedora/HDD/sse/ga_z002_2/temp/')
+# manual('/media/vnedora/HDD/sse/ga_z002_2/20sm/y10/test/')

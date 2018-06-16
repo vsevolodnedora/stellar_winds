@@ -55,28 +55,29 @@ class Combine:
     output_dir = '../data/output/'
     plot_dir = '../data/plots/'
 
-    opal_used = ''
-    sm_files = []
-    sp_files = []
+    set_opal_used = ''
+    set_sm_files = []
+    set_sp_files = []
 
-    obs_files =  ''
-    plot_files = []
+    set_obs_file = ''
+    set_plot_files = []
     m_l_relation = None
+
 
     def __init__(self):
         pass
 
     def set_files(self):
         self.mdl = []
-        for file in self.sm_files:
+        for file in self.set_sm_files:
             self.mdl.append( Read_SM_data_file.from_sm_data_file(file) )
 
         self.spmdl=[]
-        for file in self.sp_files:
+        for file in self.set_sp_files:
             self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
 
         # self.nums = Num_Models(smfls, plotfls)
-        self.obs = Read_Observables(self.obs_files, self.opal_used)
+        self.obs = Read_Observables(self.set_obs_file, self.set_opal_used)
 
     # --- METHODS THAT DO NOT REQUIRE OPAL TABLES ---
     def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = True, clean = False):
@@ -140,7 +141,7 @@ class Combine:
             t = 10**cl.get_col('t')
             gamma = cl.get_col('L/Ledd')
 
-            u = cl.get_col('u')
+            u = cl.get_col('Pg')
 
             dkappa = []
             dt = []
@@ -180,7 +181,7 @@ class Combine:
         tlt = v_n2 + '(' + v_n1 + ') profile'
         # plt.title(tlt)
 
-        for i in range(len(self.sm_files)):
+        for i in range(len(self.set_sm_files)):
 
             inflection_point(self.mdl[i])
 
@@ -193,7 +194,7 @@ class Combine:
                 y = 10**y
 
             print('\t __Core H: {} , core He: {} File: {}'.
-                  format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.sm_files[i]))
+                  format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.set_sm_files[i]))
 
             lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
 
@@ -268,7 +269,7 @@ class Combine:
             return res
 
 
-        for i in range(len(self.sm_files)):
+        for i in range(len(self.set_sm_files)):
 
 
             x = self.mdl[i].get_col(dv_n1)
@@ -291,7 +292,7 @@ class Combine:
                 dydx = 10 ** dydx
 
             print('\t __Core H: {} , core He: {} File: {}'.
-                  format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.sm_files[i]))
+                  format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.set_sm_files[i]))
 
             lbl = '{}:{} , {}:{}'.format(var_for_label1, '%.2f' % label1, var_for_label2, '%.2f' % label2)
 
@@ -357,7 +358,7 @@ class Combine:
         ax1.grid()
         ax2 = ax1.twinx()
 
-        for i in range(len(self.sm_files)):
+        for i in range(len(self.set_sm_files)):
 
             xyy2  = self.mdl[i].get_set_of_cols([v_n1, v_n2, v_n3])
             lbl1 =  self.mdl[i].get_col(var_for_label1)[-1]
@@ -432,8 +433,8 @@ class Combine:
 
     def mdot_check(self):
         array = []
-        for j in range(len(self.plot_files)):
-            plfl = Read_Plot_file.from_file(self.plot_files[j])
+        for j in range(len(self.set_plot_files)):
+            plfl = Read_Plot_file.from_file(self.set_plot_files[j])
 
             imx = Math.find_nearest_index(plfl.y_c, plfl.y_c.max())
 
@@ -445,11 +446,11 @@ class Combine:
 
                 mdot_prescr = Physics.l_mdot_prescriptions(l, 10**0.02, 'yoon')
 
-                in_mass = self.plot_files[j].split('/')[-1].split('ev')[0]
+                in_mass = self.set_plot_files[j].split('/')[-1].split('ev')[0]
 
                 array = np.append(array, [in_mass, yc, l, mdot, mdot_prescr, np.abs(mdot-mdot_prescr)])
                 print('\t__Mdots: Model: {} Mdot {}, presc: {}, diff: {}'
-                      .format(self.plot_files[j].split('/')[-1], mdot, mdot_prescr, np.abs(mdot-mdot_prescr)))
+                      .format(self.set_plot_files[j].split('/')[-1], mdot, mdot_prescr, np.abs(mdot - mdot_prescr)))
 
                 print('a')
 
@@ -502,11 +503,11 @@ class Combine:
             # # for i in range(len(m_vals)):
 
 
-        if len(self.plot_files) > 0:
-            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.opal_used, '')
+        if len(self.set_plot_files) > 0:
+            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.set_opal_used, '')
             plcls = []
-            for i in range(len(self.plot_files)):
-                plcls.append(Read_Plot_file.from_file(self.plot_files[i]))
+            for i in range(len(self.set_plot_files)):
+                plcls.append(Read_Plot_file.from_file(self.set_plot_files[i]))
 
 
                 if l_or_lm == 'l':
@@ -604,11 +605,11 @@ class Combine:
         yc_vals = [1.0, 0.9,  0.8,  0.7,  0.6,  0.5,  0.4,  0.3, 0.2 ]
         v_n_conds = ['yc', 'mdot', 'lm']
 
-        if len(self.plot_files) > 0:
-            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.opal_used, '')
+        if len(self.set_plot_files) > 0:
+            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.set_opal_used, '')
             plcls = []
-            for i in range(len(self.plot_files)):
-                plcls.append(Read_Plot_file.from_file(self.plot_files[i]))
+            for i in range(len(self.set_plot_files)):
+                plcls.append(Read_Plot_file.from_file(self.set_plot_files[i]))
 
                 # size = '{'
                 # head = ''
@@ -697,10 +698,10 @@ class Combine:
 
         ind_arr = []
 
-        for j in range(len(self.plot_files)):
+        for j in range(len(self.set_plot_files)):
             ind_arr.append(j)
             col_num = Math.get_0_to_max(ind_arr, 9)
-            plfl = Read_Plot_file.from_file(self.plot_files[j])
+            plfl = Read_Plot_file.from_file(self.set_plot_files[j])
 
             mod_x = plfl.t_eff
             if l_or_lm == 'l':
@@ -712,7 +713,7 @@ class Combine:
 
             color = 'C' + str(col_num[j])
 
-            fname = self.plot_files[j].split('/')[-2] + self.plot_files[j].split('/')[-1]# get the last folder in which the .plot1 is
+            fname = self.set_plot_files[j].split('/')[-2] + self.set_plot_files[j].split('/')[-1]# get the last folder in which the .plot1 is
 
             time = plfl.time - plfl.time[0]
             time_max = time.max()
@@ -764,9 +765,9 @@ class Combine:
     def time_analysis(self, percent_of_lifetime, yc_steps = 10):
 
 
-        for j in range(len(self.plot_files)):
+        for j in range(len(self.set_plot_files)):
 
-            plfl = Read_Plot_file.from_file(self.plot_files[j])
+            plfl = Read_Plot_file.from_file(self.set_plot_files[j])
 
 
             imx = Math.find_nearest_index(plfl.y_c, plfl.y_c.max())
@@ -801,7 +802,7 @@ class Combine:
         # res = nums.get_x_y_of_all_numericals('sp', 'r', 'l', 'mdot', 'color')
         x = []
         y = []
-        for i in range(len(self.sm_files)):
+        for i in range(len(self.set_sm_files)):
             x = np.append(x, self.mdl[i].get_cond_value(v_n1, 'sp') )
             y = np.append(y, self.mdl[i].get_cond_value(v_n2, 'sp') )
 
@@ -903,7 +904,7 @@ class Combine:
         y = []
         yc =[]
         xm = []
-        for i in range(len(self.sp_files)):
+        for i in range(len(self.set_sp_files)):
 
             x = np.append(x, self.spmdl[i].get_crit_value(v_n1) )
             y = np.append(y, self.spmdl[i].get_crit_value(v_n2) )
@@ -992,8 +993,8 @@ class Combine:
         :return:
         '''
         if not ref_t_llm_vrho.any():
-            print('\t__ No *ref_t_llm_vrho* is provided. Loading {} interp. opacity table.'.format(self.opal_used))
-            t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
+            print('\t__ No *ref_t_llm_vrho* is provided. Loading {} interp. opacity table.'.format(self.set_opal_used))
+            t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.set_opal_used, self.output_dir)
             table = Physics.t_kap_rho_to_t_llm_rho(t_k_rho, l_or_lm)
         else:
             table = ref_t_llm_vrho
@@ -1008,7 +1009,7 @@ class Combine:
         t_mins = []
         t_maxs = []
 
-        for i in range(len(self.sp_files)): # as every sp.file has different number of t - do it one by one
+        for i in range(len(self.set_sp_files)): # as every sp.file has different number of t - do it one by one
 
             t = self.spmdl[i].get_sonic_cols('t')                     # Sonic
             t = np.append(t, self.spmdl[i].get_crit_value('t'))       # critical
@@ -1033,7 +1034,7 @@ class Combine:
 
         llm_r_rows = np.empty(1 + len(t_ref[it1:it2]))
 
-        for i in range(len(self.sp_files)):
+        for i in range(len(self.set_sp_files)):
 
             if l_or_lm == 'l':
                 llm = self.spmdl[i].get_crit_value('l')
@@ -1130,11 +1131,11 @@ class Combine:
         '''
         '''===========================INTERPOLATING=EVERY=ROW=TO=HAVE=EQUAL=N=OF=ENTRIES============================='''
 
-        r = np.empty((len(self.sp_files), 100))
-        t = np.empty((len(self.sp_files), 100))
-        l_lm = np.empty(len(self.sp_files))
+        r = np.empty((len(self.set_sp_files), 100))
+        t = np.empty((len(self.set_sp_files), 100))
+        l_lm = np.empty(len(self.set_sp_files))
 
-        for i in range(len(self.sp_files)):
+        for i in range(len(self.set_sp_files)):
             r_i =  self.spmdl[i].get_sonic_cols('r')
             r_i = np.append(r_i, self.spmdl[i].get_crit_value('r'))
 
@@ -1328,7 +1329,7 @@ class Combine:
 
         # t_k_rho = self.opal.interp_opal_table(t1, t2, rho1, rho2)
 
-        t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k',self.opal_used, bump, self.output_dir)
+        t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k', self.set_opal_used, bump, self.output_dir)
 
         # t_rho_k = Math.extrapolate(t_rho_k,None,None,10,None,500,2)
 
@@ -1339,9 +1340,9 @@ class Combine:
 
         fig = plt.figure(figsize=plt.figaspect(0.8))
         ax = fig.add_subplot(111)  # , projection='3d'
-        z = Get_Z.z(self.opal_used.split('/')[-1])
-        Plots.plot_color_background(ax, t_rho_k, 't', 'rho', 'k', self.opal_used, '{}'.format(z))
-        Plots.plot_edd_kappa(ax, t, self.mdl, self.opal_used, 1000)
+        z = Get_Z.z(self.set_opal_used.split('/')[-1])
+        Plots.plot_color_background(ax, t_rho_k, 't', 'rho', 'k', self.set_opal_used, '{}'.format(z))
+        Plots.plot_edd_kappa(ax, t, self.mdl, self.set_opal_used, 1000)
 
         # plt.figure()
         # levels = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
@@ -1359,9 +1360,9 @@ class Combine:
         Table_Analyze.plot_k_vs_t = False  # there is no need to plot just one kappa in the range of availability
 
         if plot_edd:  # n_model_for_edd_k.any():
-            clas_table_anal = Table_Analyze(self.opal_used, 1000, False, self.output_dir, self.plot_dir)
+            clas_table_anal = Table_Analyze(self.set_opal_used, 1000, False, self.output_dir, self.plot_dir)
 
-            for i in range(len(self.sm_files)):  # self.nmdls
+            for i in range(len(self.set_sm_files)):  # self.nmdls
                 mdl_m = self.mdl[i].get_cond_value('xm', 'sp')
                 mdl_l = self.mdl[i].get_cond_value('l',  'sp')
 
@@ -1378,7 +1379,7 @@ class Combine:
         Table_Analyze.plot_k_vs_t = True
         # ----------------------DENSITY----------------------------------------
 
-        for i in range(len(self.sm_files)):
+        for i in range(len(self.set_sm_files)):
             res  = self.mdl[i].get_set_of_cols(['t', 'rho', var_for_label1, var_for_label2])
             xm   = self.mdl[i].get_cond_value('xm', 'sp')
             mdot = self.mdl[i].get_cond_value('mdot', 'sp')
@@ -1400,7 +1401,7 @@ class Combine:
 
     def plot_t_mdot_lm(self, v_lbl, r_s = 1., lim_t1_mdl = 5.2, lim_t2_mdl = None):
 
-        t_rho_k = Save_Load_tables.load_table('t_rho_k', 't', 'rho', 'k', self.opal_used,self.output_dir)
+        t_rho_k = Save_Load_tables.load_table('t_rho_k', 't', 'rho', 'k', self.set_opal_used, self.output_dir)
 
         t_s= t_rho_k[0, 1:]  # x
         rho= t_rho_k[1:, 0]  # y
@@ -1426,7 +1427,7 @@ class Combine:
         plt.xlabel('Log(t_s)')
         plt.ylabel('log(M_dot)')
 
-        for i in range(len(self.sm_files)):
+        for i in range(len(self.set_sm_files)):
             ts_llm_mdot = self.mdl[i].get_xyz_from_yz(i, 'sp', 'mdot', 'lm', t_s,mdot, lm_arr, lim_t1_mdl, lim_t2_mdl)
             lbl1 = self.mdl[i].get_cond_val(v_lbl, 'sp')
 

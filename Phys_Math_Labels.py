@@ -735,6 +735,72 @@ class Math:
         return arr1_cropped, arr2_cropped
 
     @staticmethod
+    def interpolate_value_table(table, xy_val):
+
+        x = table[0, 1:]
+        y = table[1:, 0]
+        z = table[1:,1:]
+
+        x_val = xy_val[0]
+        y_val = xy_val[1]
+
+
+        # x_i = Math.find_nearest_index(x, x_val)
+        # y_i = Math.find_nearest_index(y, y_val)
+        #
+        # x = x.ravel()
+        # x = (x[x != np.isnan])
+        # y = y.ravel()
+        # y = (y[y != np.isnan])
+        # z = z.ravel()
+        # z = (z[z != np.isnan])
+        #
+        # f = interpolate.SmoothBivariateSpline(x, y, z, kx=1, ky=1)
+        #
+        # res = f(x_val, y_val)
+
+        def cropp_nan_in_y(x, y):
+            if len(x)!=len(y): raise ValueError('Not equal sizes len(x) {} != {} len(y)'.format(len(x), len(y)))
+            new_x = []
+            new_y = []
+            for i in range(len(y)):
+                if np.isnan(y[i]):
+                    pass
+                    # print('Nan? y[{}]={}'.format(i, y[i]))
+                else:
+                    new_x = np.append(new_x, x[i])
+                    new_y = np.append(new_y, y[i])
+            return new_x, new_y
+
+        # x_grid = np.mgrid[x.min():x.max():depth * 1j]
+        z_y = np.zeros(1)
+        y_c = []
+        for i in range(len(y)):
+            x_crop, z_crop = cropp_nan_in_y(x, z[i, :])
+            if x_val >= x_crop.min() and x_val <= x_crop.max():
+                z_y = np.vstack((z_y, interpolate.InterpolatedUnivariateSpline(x_crop, z_crop)(x_val)))
+                y_c = np.append(y_c, y[i])
+
+        z_y = np.delete(z_y, 0, 0)
+
+        res = interpolate.InterpolatedUnivariateSpline(y_c,z_y)(y_val)
+
+        return res
+        #
+        # # y_grid = np.mgrid[y.min():y.max():depth * 1j]
+        # z_x = np.zeros(1)
+        # for i in range(len(x_grid)):
+        #     z_x = np.vstack((z_x, Math.interpolate_arr(y, z_y[:, i], y_val, method)))
+        #
+        # z_x = np.delete(z_x, 0, 0).T
+        #
+        # res = Math.combine(x_grid, y_grid, z_x)
+        # res[0, 0] = table[0, 0]
+        #
+        # return res
+
+
+    @staticmethod
     def extrapolate(table, x_left, x_right, y_down, y_up, depth, pol_order):
         '''
         Performs row by row and column by column interpolation, using polynomial of order 'pol_order'
@@ -963,9 +1029,9 @@ class Math:
         if interp_method == 'Uni':
             new_y = interpolate.UnivariateSpline(x, y)(new_x)
         if interp_method == '1dCubic':
-            new_y= interpolate.interp1d(x, y, kind='cubic')(new_x)
+            new_y= interpolate.interp1d(x, y, kind='cubic', bounds_error=False)(new_x)
         if interp_method == '1dLinear':
-            new_y = interpolate.interp1d(x, y, kind='linear')(new_x)
+            new_y = interpolate.interp1d(x, y, kind='linear', bounds_error=False)(new_x)
 
 
         if len(new_y) == 0:
@@ -2271,9 +2337,12 @@ class Levels:
 
             if v_n == 't_eff':
                 return [4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1]
+
             if v_n == 'tau':
                 return [0, 1 ,2, 4, 8, 16, 32]
                 # return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
+
+
 
 
         if v_n == 'vrho': return [-4.4, -4.0, -3.6, -3.2, -2.8, -2.4, -2.0, -1.6, -1.2, -0.8, -0.4, 0.4]
@@ -2286,6 +2355,12 @@ class Levels:
             return [-10.0,-9.9,-9.8,-9.7,-9.6,-9.5,-9.4,-9.3,-9.2,-9.1,-9.0]
         if v_n == 'r_env':
             return [0.0025,0.0050,0.0075,0.01,0.0125,0.0150,0.0175]
+
+        if v_n == 't_eff':
+            return [4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1, 5.2, 5.3, 5.4]
+
+        if v_n == 'r_eff':
+            return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ,11 ,12, 13, 14 , 16, 18, 20]
 
         raise NameError('Levels are not found for <{}> Opal:{}'.format(v_n, opal_used))
 

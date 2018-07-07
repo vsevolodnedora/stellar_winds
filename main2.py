@@ -8,22 +8,22 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import os
-from Plots_Obs_treat import Errors
-from Plots_Obs_treat import Read_Table
-from Plots_Obs_treat import Row_Analyze
-from Plots_Obs_treat import Table_Analyze
-from Plots_Obs_treat import Math
-from Plots_Obs_treat import Physics
-from Plots_Obs_treat import PhysPlots
-from Plots_Obs_treat import OPAL_Interpol
-from Plots_Obs_treat import Constants
-from Plots_Obs_treat import Read_SM_data_File
-from Plots_Obs_treat import ClassPlots
-from Plots_Obs_treat import Read_Observables
-from Plots_Obs_treat import New_Table
-from Plots_Obs_treat import Read_Plot_file
-from Plots_Obs_treat import Treat_Observables
-from main_methods import Combine
+from PlottingClasses import Errors
+from PlottingClasses import Read_Table
+from PlottingClasses import Row_Analyze
+from PlottingClasses import Table_Analyze
+from PlottingClasses import Math
+from PlottingClasses import Physics
+from PlottingClasses import PhysPlots
+from PlottingClasses import OPAL_Interpol
+from PlottingClasses import Constants
+from PlottingClasses import Read_SM_data_File
+from PlottingClasses import ClassPlots
+from PlottingClasses import Read_Observables
+from PlottingClasses import New_Table
+from PlottingClasses import Read_Plot_file
+from PlottingClasses import Treat_Observables
+from MainClasses import Combine
 #--------------------------------------------
 #
 # Here, the actual work proceeds,
@@ -83,7 +83,7 @@ plotfls = get_files('../../sse/sp_z002new/', ['20_full/'], [], '.plot1')
 # Read_SM_data_File.compart = ''
 
 '''-------------------------------------------------------------'''
-from main_methods import Creation
+from MainClasses import Creation
 
 # make = Creation(opal_fl, 4.9, 5.5, 1000)
 # # make.save_t_rho_k()

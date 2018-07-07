@@ -12,24 +12,25 @@ from os import listdir
 import matplotlib.patches as patches
 
 import os
-from Plots_Obs_treat import Errors
-from Plots_Obs_treat import Read_Table
-from Plots_Obs_treat import Row_Analyze
-from Plots_Obs_treat import Table_Analyze
-from Plots_Obs_treat import Math
-from Plots_Obs_treat import Physics
-from Plots_Obs_treat import PhysPlots
-from Plots_Obs_treat import OPAL_Interpol
-from Plots_Obs_treat import Constants
-from Plots_Obs_treat import Read_SM_data_file
-from Plots_Obs_treat import ClassPlots
-from Plots_Obs_treat import Read_Observables
-from Plots_Obs_treat import New_Table
-from Plots_Obs_treat import Read_Plot_file
-from Plots_Obs_treat import Treat_Observables
-from main_methods import Combine
-from Phys_Math_Labels import Opt_Depth_Analythis
-from FilesWork import SP_file_work
+# from PlottingClasses import Read_Table
+# from PlottingClasses import Row_Analyze
+# from PlottingClasses import Table_Analyze
+# from PlottingClasses import Math
+# from PlottingClasses import Physics
+# from PlottingClasses import PhysPlots
+# from PlottingClasses import OPAL_Interpol
+# from PlottingClasses import Constants
+# from PlottingClasses import Read_SM_data_file
+# from PlottingClasses import ClassPlots
+# from PlottingClasses import Read_Observables
+# from PlottingClasses import New_Table
+# from PlottingClasses import Read_Plot_file
+# from PlottingClasses import Treat_Observables
+from MainClasses import Combine
+from FilesWork import Files
+# from PhysMath import Opt_Depth_Analythis
+# from FilesWork import SP_file_work
+
 
 def get_files(compath, req_dirs, requir_files, extension):
     comb = []
@@ -62,13 +63,16 @@ def get_files(compath, req_dirs, requir_files, extension):
 #     print('cp ../run_mass_loss.py y{}'.format(i))
 
 
-# for i in range(10,31):
-#     # print('mkdir ga_z0008_2/{}sm/'.format(i))
+# for i in range(10,30):
+#     print('cp ga_z0008_old/{}sm/{}ev.plot1 ga_z0008/{}sm/'.format(i, i, i))
 #     for j in range(1,11):
-#         # print('rm -r ga_z0008_2/{}sm/y{}/sp'.format(i, j))
-#         # print('rm ga_z002_2/{}sm/y{}/fy{}.bin1'.format(i, j, j))
-#         # print('cp ga_z002_2/{}sm/y{}/fy{}.bin1 ga_z0008_2/{}sm/y{}/'.format(i, j, j, i, j))
-#         print('cp ga_z002_2tmp/{}sm/y{}/*.bin1 ga_z002_2tmp/{}sm/y{}/*.plot1 ga_z002_2tmp/{}sm/y{}/*sm.data ga_z002_2/{}sm/y{}/'
+#         print('cp *.sh *.dat {}sm/y{}/'.format(i, j))
+# #         # print('rm ga_z002_2/{}sm/y{}/fy{}.bin1'.format(i, j, j))
+# #         print('cp ga_z002_2tmp/{}sm/y{}/fy{}.bin1 ga_z0008_2/{}sm/y{}/'.format(i, j, j, i, j))
+#         print('cp ga_z0008_2tmp/{}sm/y{}/*.bin1 '
+#               'ga_z0008_2tmp/{}sm/y{}/*.plot1 '
+#               'ga_z0008_2tmp/{}sm/y{}/*sm.data '
+#               'ga_z0008_2/{}sm/y{}/'
 #               .format(i,j, i,j, i,j, i,j))
         # print('mv {}sm/y{}/sp_files {}sm/y{}/sp'.format(i, j, i, j))
         # print('cp auto_* ref_m.dat re_m.dat check.py {}sm/y{}/; '.format(i, j)) # EVE
@@ -81,6 +85,9 @@ def get_files(compath, req_dirs, requir_files, extension):
         # print('cp re_m.dat {}sm/y{}/'.format(i, j))
         # print('cp ref_w_m.dat ../{}sm/y{}/sp/'.format(i, j))
         # print('cp run_wind.py ../{}sm/y{}/sp/'.format(i, j))
+
+
+
 
 output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
@@ -95,9 +102,11 @@ lmc_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '11sm/', '12sm/', '1
                                                    ], [], '.plot1')
 tst_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '15sm/', '20sm/', '25sm/', '30sm/'], [], '.plot1')
 
-gal_spfiles = get_files('../data/sp_files (copy)/', ['10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
-                                              '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
-                                              '22z002/', '23z002/', '24z002/', '25z002/'], [], '.data')
+gal_spfiles = get_files('../data/sp_cr_files/', ['7z002/','8z002/','9z002/', '10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
+                                                 '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
+                                                 '22z002/', '23z002/', '24z002/', '25z002/', '26z002/', '27z002/',
+                                                 '28z002/', '29z002/', '30z002/'
+                                                 ], [], '.data')
 lmc_spfiles = get_files('../data/sp3_files/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
                                               '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
                                               # '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
@@ -195,36 +204,36 @@ def select_sp_files(spfiles, req_z, req_m, req_yc):
 
 
 '''===============================================SETTING=FILES======================================================'''
-spfiles = []
-opalfile =[]
-obsfile = []
-plotfiles=[]
-atmfile=[]
-def set_sp_oopal_obs(gal_or_lmc):
-    global spfiles
-    global opalfile
-    global plotfiles
-    global obsfile
-    if gal_or_lmc == 'lmc':
-        spfiles = lmc_spfiles
-        opalfile = lmc_opal_file
-        plotfiles = lmc_plotfls
-        obsfile = lmc_obs_file
-        atmfile = lmc_atm_file
-    if gal_or_lmc == 'gal':
-        spfiles = gal_spfiles
-        opalfile = gal_opal_file
-        plotfiles = gal_plotfls
-        obsfile = gal_obs_file
-        atmfile = gal_atm_file
-    if gal_or_lmc == 'tst':
-        spfiles = tst_spfiles
-        opalfile = tst_opal_file
-        plotfiles = tst_plotfls
-        obsfile = tst_obs_file
-    # raise NameError('Wrong name: {}'.format(gal_or_lmc))
+# spfiles = []
+# opalfile =[]
+# obsfile = []
+# plotfiles=[]
+# atmfile=[]
+# def set_sp_oopal_obs(gal_or_lmc):
+#     global spfiles
+#     global opalfile
+#     global plotfiles
+#     global obsfile
+#     if gal_or_lmc == 'lmc':
+#         spfiles = lmc_spfiles
+#         opalfile = lmc_opal_file
+#         plotfiles = lmc_plotfls
+#         obsfile = lmc_obs_file
+#         atmfile = lmc_atm_file
+#     if gal_or_lmc == 'gal':
+#         spfiles = gal_spfiles
+#         opalfile = gal_opal_file
+#         plotfiles = gal_plotfls
+#         obsfile = gal_obs_file
+#         atmfile = gal_atm_file
+#     if gal_or_lmc == 'tst':
+#         spfiles = tst_spfiles
+#         opalfile = tst_opal_file
+#         plotfiles = tst_plotfls
+#         obsfile = tst_obs_file
+#     # raise NameError('Wrong name: {}'.format(gal_or_lmc))
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-set_sp_oopal_obs('gal')
+# set_sp_oopal_obs('gal')
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''=================================================NEW=TABLE========================================================'''
 
@@ -233,7 +242,7 @@ set_sp_oopal_obs('gal')
 #
 # ntbl.check_if_opals_same_range()
 # ntbl.get_new_opal(0.008)
-from Phys_Math_Labels import Physics
+from PhysMath import Physics
 print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.139, 3.4))
 
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
@@ -349,22 +358,31 @@ from FilesWork import Read_Atmosphere_File
 
 # save_atm_table('t_eff', obsfile, atmfile, opalfile, 'Fe')
 
-from FilesWork import Creation
-# make = Creation(opalfile, 'Fe', 1000)
+from FilesWork import OPAL_work
+# make = OPAL_work('gal', 'Fe', 1000)
+# make.set_plots_clean=True
+
 # make.save_t_k_rho(3.5, None, 1000)
 # make.from_t_k_rho__to__t_lm_rho(1.0)
-# make.save_t_rho_k(None, None)
+# make.save_t_rho_k(None, None, 4.1, 5.6)
+# make.plot_t_rho_kappa('lmc', 'Fe')
+
 
 from FilesWork import SP_file_work
-spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
-# spcls.save_y_yc_z_relation('l', 'lm', 'pol', True)
-# spcls.save_y_yc_z_relation('lm', 'r', 'pol', True)
-# spcls.save_y_yc_z_relation('lm', 'l', 'pol', True)
+spcls = SP_file_work(0.1, 'gal', output_dir, plot_dir)
+spcls.set_clean_plots = True
+spcls.set_extrapol_pars = [0, 0, 0, 0] # in %: v, ^, <-, ->
+spcls.set_int_or_pol = 'pol' # to save
+
+# spcls.save_y_yc_z_relation('l', 'lm',  True)
+# spcls.save_y_yc_z_relation('lm', 'r',  True)
+# spcls.save_y_yc_z_relation('lm', 'l',  True)
 # spcls.save_min_max_lm('lm')
+# spcls.save_y_yc_z_relation('lm', 'r',  True)
 
 # spcls.test()
 
-# spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
+
 # spcls.save_min_max_lm('l')
 # # spcls.separate_sp_by_fname()
 # spcls.save_y_yc_z_relation('lm', 'mdot', 'pol', True)
@@ -372,53 +390,67 @@ spcls = SP_file_work(spfiles, 0.1, opalfile, output_dir, plot_dir)
 
 # spcls.save_x_y_yc_evol_relation('m', 'ys')
 
-# spcls.plot_x_y_z_for_yc('mdot', 'lm', 'tau', 1.0, 100, 'min', False, True)
+# spcls.plot_x_y_z_for_yc('t', 'lm', 'r', 1.0, 100, 'min', False, True)
 # spcls.save_x_y_z('mdot', 'lm', 'r_env', 500, 'max', False, 'IntUni') #    Uni, IntUni, 1dLinear, 1dCubic methods availabel
-# spcls.plot_x_y_z('t', 'lm', 'r', [0.4], 100, 'min', True)
+# spcls.plot_x_y_z('t', 'lm', 'r', [1.0], 100, 'min', True)
 
-# spcls.plot_t_llm_mdot_for_yc(1.0, 'lm', 'min', True)
-# spcls.save_t_llm_mdot('lm', 1.0, 'Fe', 500, 'min', True)
-# spcls.plot_t_llm_mdot_for_yc_const_r(1., 1.5,'lm', 'min', True)
+# spcls.plot_t_llm_mdot_for_yc(1.0, 'lm', 1.0, 'Fe', 'min')
+# spcls.save_t_llm_mdot('lm', 1.0, 'Fe', 500, 'max', True)
+# spcls.plot_t_llm_mdot_for_yc_const_r(1.0, 1.0, 'lm', 1.0, 'Fe', 'min')
 # spcls.save_y_yc_z_relation_sp('t', 'lm', 'r', 'pol', True)
-# spcls.save_t_llm_mdot_const_r('lm', 0.8, 'HeII', 1.0, 500, 'min', True)
+# spcls.save_t_llm_mdot_const_r('lm', 1.0, 'Fe', 1.0, 500, 'min', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
 '''=======================================================TABLES====================================================='''
 
-from main_methods import Table
-tbl = Table(get_files(sse_locaton + 'ga_z002/', ['20sm/y10/sp/'], [], 'sm.data'))
-tbl.latex_table(['mdot-', 'teff-', 't-', 'teff/ts4-', 'mfp-', 'mfp/c-', 'HP-', 'tpar-'],
-                [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+from MainClasses import Table
+# tbl = Table(get_files(sse_locaton + 'ga_z002/', ['20sm/y10/sp/'], [], 'sm.data'))
+# tbl.latex_table(['mdot-', 'teff-', 't-', 'teff/ts4-', 'mfp-', 'mfp/c-', 'HP-', 'tpar-'],
+#                 [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
 # sys.exit('FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK')
 
-from main_methods import PlotTable
-pltbl = PlotTable(get_files(sse_locaton + 'ga_z0008/', ['13sm/'], [], 'plot1'), [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1])
-pltbl.latex_table(['mdot', 't', 'lm'], [0.2, 0.2, 0.2])
+from MainClasses import PrintTable
+# pltbl = PrintTable(get_files(sse_locaton + 'ga_z0008/', ['13sm/'], [], 'plot1'), [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1])
+# pltbl.latex_table(['mdot', 't', 'lm'], [0.2, 0.2, 0.2])
 # sys.exit('FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK') # 'env_ev_pj/18sm/sp_evol/'
 
 '''====================================================MAIN=METHODS=================================================='''
 
-comb = Combine()
-
-comb.set_opal_used = opalfile
-comb.set_sp_files = select_sp_files(spfiles, [], [], [])
-comb.set_sm_files = get_files(sse_locaton + 'ga_z002_2/', ['20sm/y10/sp55/'], ['4.50'], 'sm.data') # MANUAL SET FOR SM FILES
-comb.set_obs_file = obsfile
-comb.set_plot_files = get_files(sse_locaton + 'ga_z002/', [], [], '.plot1')
+from MainClasses import HRD
+hrd = HRD('gal')
+hrd.set_obs_file = 'gal_wne'
+# hrd.plot_hrd('mdot', 'lm', True)
+# hrd.plot_hrd_treks('lm', True)
 
 
-comb.set_files()
+from MainClasses import GenericMethods
+sm = GenericMethods(get_files(sse_locaton + 'ga_z002/', ['10sm/y10/sp/'], ['4.00', '4.50', '5.00', '5.50'], 'sm.data'))
+# sm.inflection_point('r','u',None)
+# sm.plot_multiple_inflect_point('r', 'rho', False, None, 12)
+
+
+# comb = Combine()
+#
+# comb.set_metal = 'gal'
+# comb.set_sp_files = select_sp_files(spfiles, [], [], [])
+# comb.set_sm_files = get_files(sse_locaton + 'ga_z0004/', ['10sm/y10/'], ['6.90'], 'sm.data')
+# # get_files(sse_locaton + 'ga_z002/', ['10sm/y10/sp55/'], ['3.50'], 'sm.data') # MANUAL SET FOR SM FILES
+# comb.set_obs_file = obsfile
+# comb.set_plot_files = get_files(sse_locaton + 'ga_z002/', [], [], '.plot1')
+#
+#
+# comb.set_files()
 
 
 
 # comb.sp_xy_last_points('m','l','mdot', 4)
 
-# comb.xy_profile('r','u','mdot','lm', True, True) # Pg/P_total
+# comb.xy_profile('t','kappa','mdot','lm', True, True) # Pg/P_total
 # comb.dxdy_profile('r', 'kappa', 'mdot', 'lm', False, True)
 # comb.xyy_profile('t','Pg/P_total', 'L/Ledd','mdot', 'HP', 'mfp', True, True)
 # comb.xy_last_points('r','u','mdot',False)
 # comb.hrd2('l', False)
-comb.hrd('t_eff', 'l', True, False)
+# comb.hrd('t_eff', 'lm', True, True, False)
 # comb.mdot_check()
 # comb.evol_mdot()
 # comb.time_analysis(50)
@@ -429,50 +461,44 @@ comb.hrd('t_eff', 'l', True, False)
 # comb.plot_t_mdot_lm()
 # comb.plot_t_l_mdot('lm', 0, True, False, 5.22, None)
 # comb.min_mdot_sp('lm', 1.)
-
-# from main_methods import Crit_Mdot
-# mdot = Crit_Mdot()
-# mdot.sp_files = spfiles
-# mdot.opal_used = opalfile
-# mdot.obs_files = obsfile
-
-# mdot.set_files('Fe', 1.0)
-
-# mdot.plot_test_min_mdot(1.0)
-# mdot.save_yc_llm_mdot_cr()
+'''-------------------------------------------------------CRITICAL MDOT---------------------------------------------'''
+from MainClasses import Critical_Mdot
+mdot = Critical_Mdot('gal', 'Fe', 1.0, 'gal')
+# mdot.save_yc_llm_mdot_cr()      # yc_lm_l, yc_lm_r are used and should be for [10] Yc values
 # mdot.save_yc_llm_mdot_cr_const_r(1.0)
-# mdot.min_mdot_sp_set('lm', [1.0], None, None)
+# mdot.plot_test_min_mdot(1.0)
+
+
+from MainClasses import Plot_Critical_Mdot
+cr = Plot_Critical_Mdot('gal', 'Fe', 1.0)
+# cr.plot_cr_mdot('lm',1.0,None,None,True)
+# cr.plot_cr_mdot_obs('lm',1.0,None,None,True)
 
 # --- --- ---
 
-# from main_methods import Sonic_HRD
-# shrd = Sonic_HRD()
-# shrd.opal_used = opalfile
-# shrd.sp_files = select_sp_files(spfiles, [], [], [])
-# shrd.sm_files = smfiles
-# shrd.obs_files = obsfile
-# shrd.plot_files = plotfiles
-#
-# shrd.set_files('Fe', 1.0)
-#
-# shrd.plot_sonic_hrd(1.0, 'lm', 1.0, False)
+from MainClasses import Plot_Sonic_HRD
+shrd = Plot_Sonic_HRD('gal', 'Fe', 1.0)
+
+
+shrd.plot_sonic_hrd(1.0, 'lm')
 # shrd.plot_sonic_hrd_set('lm', [1.0], 1.0, 0.1)
 # shrd.plot_sonic_hrd_const_r('lm', 1., [1.0])
+# shrd.plot_ts_y('t_eff', 1.0, 'lm')
 
 '''=================================================MULTIPLE=BUMP=METHODS============================================'''
 
-# from main_methods import Plot_Multiple_Crit_Mdots
-# pmm = Plot_Multiple_Crit_Mdots([obsfile], [opalfile])
-# pmm.coeff = [1.0, 0.8]
-# pmm.r_cr =  [None, 1.0]
-# pmm.bump =  ['Fe', 'HeII']
-# pmm.yc   =  [1.0, 1.0]
-# pmm.opal =  [opalfile, opalfile]
-# pmm.y_coord=['lm', 'lm']
+from MainClasses import Plot_Multiple_Crit_Mdots
+# pmm = Plot_Multiple_Crit_Mdots('lm')
+# pmm.set_coeff = [1.0]  #[1.0, 0.8]
+# pmm.set_r_cr =  [None] #[None, 1.0]
+# pmm.set_bump =  ['Fe'] #['Fe', 'HeII']
+# pmm.set_yc   =  [1.0]  #[1.0, 1.0]
+# pmm.set_metal = ['gal']#['gal', opalfile]
+# pmm.set_y_coord=['lm'] #['lm', 'lm']
+#
+# pmm.plot_crit_mdots(False, None, plotfiles)
 
-# pmm.plot_crit_mdots(False, 'r_env', plotfiles)
-
-# from main_methods import Plot_Tow_Sonic_HRDs
+from MainClasses import Plot_Tow_Sonic_HRDs
 # pts = Plot_Tow_Sonic_HRDs([obsfile], [opalfile])
 # pts.coeff = [1.0, 0.8]
 # pts.rs =  [None, 1.0]
@@ -648,18 +674,19 @@ comb.hrd('t_eff', 'l', True, False)
 
 
 
-folder = '/media/vnedora/HDD/sse/ga_z002_2/20sm/y10/test/'
-mdot='4.80'
+folder = '/media/vnedora/HDD/sse/ga_z002/15sm/y10/sp/'
+mdot='5.30'
 
 from FilesWork import Read_Wind_file
 wind = Read_Wind_file.from_wind_dat_file(folder + '{}.wind'.format(mdot))
 
+from FilesWork import Read_SM_data_file
 smfl = Read_SM_data_file.from_sm_data_file(folder + '{}sm.data'.format(mdot))
 
 #plfl = Read_Plot_file.from_file(sse_locaton +'ga_z002/' + folder + '{}.plot1'.format(mdot), True)
 #print('PLOT: R_s: {}; Tau: {}'.format(plfl.r_n_rsun[-1], plfl.tauatR[-1]))
-from Phys_Math_Labels import Labels
-from Phys_Math_Labels import Get_Z
+from FilesWork import Labels
+from FilesWork import Get_Z
 
 def esc_vel(m, r):
     '''
@@ -712,7 +739,7 @@ def plot_tau(x_v_n, y_v_n, smcls, wndcls, opal_used, log=True):
     ax.legend()
     plt.show()
 
-def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
+def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, metal, log):
     x_core = smcls.get_col(x_v_n)
     y_core = smcls.get_col(y_v_n)
     #
@@ -731,9 +758,9 @@ def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
         y_wind2 = wndcls.get_col('kappa_eff')
         plt.plot(x_wind, y_wind2, '.', color='orange', label='kappa_eff')
 
-    if opal_used!=None:
+    if metal!=None:
         lm = Physics.loglm(smcls.get_col('l')[-1], smcls.get_col('xm')[-1])
-        tlt = 'z{}_lm{}_log(mdot){}'.format(Get_Z.z(opal_used), '%.1f' % lm, '%.2f' % smcls.get_col('mdot')[-1])
+        tlt = 'z{}_lm{}_log(mdot){}'.format(Get_Z.z(metal), '%.1f' % lm, '%.2f' % smcls.get_col('mdot')[-1])
         plt.title(tlt)
 
     ax = plt.subplot(111)
@@ -792,8 +819,8 @@ def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, opal_used, log):
     ax.legend()
     plt.show()
 
-plot_core_wind('r', 't', smfl, wind, opalfile, False)
-# plot_tau('r', '13', smfl, wind, opalfile, True)
+plot_core_wind('r', 'u', smfl, wind, 'gal', False)
+# plot_tau('r', 'tau', smfl, wind, opalfile, True)
 # tsm = smfl.get_col('t')
 #
 # r_wind = suca.r/Constants.solar_r

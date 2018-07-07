@@ -17,7 +17,7 @@ import numpy as np
 from ply.ctokens import t_COMMENT
 from scipy import interpolate
 
-from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import LinearRegression
 # import scipy.ndimage
 # from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
@@ -25,37 +25,181 @@ import matplotlib.pyplot as plt
 import os
 #-----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------CLASSES-----------------------------------------------------
-from Phys_Math_Labels import Errors
-from Phys_Math_Labels import Math
-from Phys_Math_Labels import Physics
-from Phys_Math_Labels import Constants
-from Phys_Math_Labels import Labels
-from Phys_Math_Labels import Plots
-from Phys_Math_Labels import Get_Z
+from PhysMath import Math, Physics, Constants
 
-
-from OPAL import Read_Table
-from OPAL import Row_Analyze
 from OPAL import Table_Analyze
-from OPAL import OPAL_Interpol
-from OPAL import New_Table
 
-from FilesWork import Read_Observables
-from FilesWork import Read_Plot_file
-from FilesWork import Read_SM_data_file
-from FilesWork import Read_SP_data_file
-from FilesWork import Save_Load_tables
-from FilesWork import SP_file_work
-from FilesWork import Opacity_Bump
+from FilesWork import Read_Observables, Read_Plot_file, Read_SM_data_file, Read_SP_data_file, Save_Load_tables
+from FilesWork import Save_Load_tables, T_kappa_bump, Files, Labels, Get_Z
 
-from PhysPlots import PhysPlots
+from FilesWork import PlotObs, PlotBackground
+
+# from PhysPlots import PhysPlots
 #-----------------------------------------------------------------------------------------------------------------------
+
+class GenericMethods():
+    def __init__(self, sm_files):
+
+        # if len(file) > 1: raise IOError('More than 1 sm.data file given {}'.format(len(file)))
+
+        self.sm_cls = []
+        for file in sm_files:
+            self.sm_cls.append(Read_SM_data_file(file))
+        if len(self.sm_cls) == 0: print('Warning! No sm_files froided')
+
+
+
+    @staticmethod
+    def formula(t, kappa, gamma):
+        '''
+        left2 = d(ln(kappa) / d(ln(t))
+        right2 = 1 - (1/gamma)
+        :param t:
+        :param kappa:
+        :param gamma:
+        :return:
+        '''
+        t = 10 ** t
+        kappa = 10 ** kappa
+
+        left2 = np.gradient(np.log(kappa), np.log(t))
+        right2 = 1 - (1 / gamma)
+        return left2, right2
+
+    def inflection_point(self, v_n_x=None, v_n_add=None, ax=None, clean=False):
+
+
+
+        left, right = self.formula(self.get_col('t'), self.get_col('kappa'), self.get_col('L/Ledd'))
+
+        if ax == None:
+            plot_show = True
+        else:
+            plot_show = False
+
+        if v_n_x != None:
+            if ax == None:
+                plt.figure()
+                ax = plt.subplot(111)
+            ax.set_xlabel(Labels.lbls(v_n_x), color='k')
+            ax.tick_params('y', colors='k')
+            ax.grid()
+
+            x_coord = self.get_col(v_n_x)
+            ax.plot(x_coord, left, '-', color='red', label='Left')
+            ax.plot(x_coord, right, '-', color='blue', label='Right')
+
+            xp, yp = Math.interpolated_intercept(x_coord, left, right)
+            ax.plot(xp, yp, 'X', color='black')
+
+            if v_n_add != None:
+                y2 = self.get_col(v_n_add)
+                if v_n_add == 'kappa': y2 = 10**y2
+
+                y2 = y2/y2.max()
+
+                ax2 = ax.twinx()
+                ax2.plot(x_coord, y2, '--', color='gray')
+                ax2.set_ylabel(Labels.lbls(v_n_add), color='gray')
+        if not clean:
+            ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        if plot_show:
+            plt.legend()
+            plt.show()
+
+    def plot_multiple_inflect_point(self, v_n_x, v_n_y, plot_inflect=True, clean=False, fsz=12):
+
+        if len(self.sm_cls) == 0: raise IOError('No sm.data classes found')
+
+        # if ax == None:
+        #     plot_show = True
+        # else:
+        #     plot_show = False
+
+        # if ax == None:
+        plt.figure()
+        ax = plt.subplot(111)
+        ax.set_xlabel(Labels.lbls(v_n_x), color='k', fontsize=fsz)
+        ax.set_ylabel(Labels.lbls(v_n_y), color='k', fontsize=fsz)
+        # ax.tick_params('y', colors='k')
+        # ax.tick_params('x', colors='k')
+
+        if plot_inflect:
+            ax2 = ax.twinx()
+            ax2.minorticks_on()
+            # ax2.set_ylabel(None, color='gray', fontsize=fsz)
+        else: ax2 = None
+
+
+        x_y_infl = np.zeros(2)
+        i = 0
+        for cl in self.sm_cls:
+
+            mdot_str = "%.2f" % cl.get_col('mdot')[-1]
+
+            x_coord = cl.get_col(v_n_x)
+            y2 = cl.get_col(v_n_y)
+            if v_n_y == 'kappa': y2 = 10 ** y2
+            # y2 = y2 / y2.max()
+            ax.plot(x_coord, y2, '-', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            ax.plot(x_coord[-1], y2[-1], 'X', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            ax.annotate('{}'.format(mdot_str), xy=(x_coord[-1], y2[-1]), textcoords='data',
+                        horizontalalignment='left')
+
+
+            if v_n_y == 'u':
+                u_s = cl.get_sonic_u()
+                ax.plot(x_coord, u_s, '--', color='gray')
+
+
+
+            if plot_inflect:
+                left, right = self.formula(cl.get_col('t'), cl.get_col('kappa'), cl.get_col('L/Ledd'))
+
+                xp, yp = Math.interpolated_intercept(x_coord, left, right)
+                if v_n_x == 'r': x_y_infl = np.vstack((x_y_infl, [xp[0][0], yp[0][0]]))
+                # if v_n_x == 't': x_y_infl = np.vstack((x_y_infl, [xp[-1], yp[-1]]))
+
+                ind = Math.find_nearest_index(x_coord, xp[0][0])+100
+
+                ax2.plot(x_coord[:ind], left[:ind], '--', color='C' + str(Math.get_0_to_max([i], 9)[i]),
+                         label='{}:{} (L)'.format(Labels.lbls('mdot'), mdot_str))
+                ax2.plot(x_coord[:ind], right[:ind], '-.', color='C' + str(Math.get_0_to_max([i], 9)[i] + 1),
+                         label='{}:{} (R)'.format(Labels.lbls('mdot'), mdot_str))
+
+                ax.plot(xp[0][0], y2[Math.find_nearest_index(x_coord,xp[0][0])], 'X', color='black')
+
+                ax2.plot(xp, yp, 'X', color='black')
+            i = i + 1
+
+
+
+        if not clean:
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', fontsize=fsz, ncol=1)
+
+        if plot_inflect: plt.xlim(0, x_y_infl[1:,0].max())
+        if v_n_y == 'Pg/P_total': ax.axhline(y=0.15, ls='dashed', color='gray')
+
+        ax.grid()
+        plt.xticks(fontsize=fsz)
+        plt.yticks(fontsize=fsz)
+        ax.tick_params('y', labelsize=fsz)
+        ax.tick_params('x', labelsize=fsz)
+
+        plt.minorticks_on()
+        plt.show()
+
+
+class SingleSmFileAnalyze:
+    def __init__(self):
+        pass
+
 
 class Combine:
     output_dir = '../data/output/'
     plot_dir = '../data/plots/'
 
-    set_opal_used = ''
+    set_metal = ''
     set_sm_files = []
     set_sp_files = []
 
@@ -67,112 +211,164 @@ class Combine:
     def __init__(self):
         pass
 
+
+
     def set_files(self):
         self.mdl = []
         for file in self.set_sm_files:
-            self.mdl.append( Read_SM_data_file.from_sm_data_file(file) )
+            self.mdl.append( Read_SM_data_file(file) )
 
         self.spmdl=[]
         for file in self.set_sp_files:
             self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
 
         # self.nums = Num_Models(smfls, plotfls)
-        self.obs = Read_Observables(self.set_obs_file, self.set_opal_used)
+        # self.obs = Read_Observables(self.set_obs_file, self.set_metal)
+
+
 
     # --- METHODS THAT DO NOT REQUIRE OPAL TABLES ---
-    def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = True, clean = False):
+    def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = True, clean = False, fsz=12):
 
-        def get_m_r_envelope(smcl, t_lim1=5.1, t_lim2=5.3):
-            '''
-            Looks for a loal extremum between t_lim1 and t_lim2, and, if the extremem != sonic point: returns
-            length and mass of whatever is left
-            :param smcl:
-            :param t_lim1:
-            :param t_lim2:
-            :return:
-            '''
-
-            def get_envelope_l_or_m(v_n, cls, t_start, depth = 1000):
-                t = cls.get_col('t')
-                ind = Math.find_nearest_index(t,t_start) - 1 # just before the limit, so we don't need to interpolate across the whole t range
-                t = t[ind:]
-                var = cls.get_col(v_n)
-                var = var[ind:]
-
-
-                value = interpolate.InterpolatedUnivariateSpline(t[::-1], var[::-1])(t_start)
-
-                # print('-_-: {}'.format(var[-1]-value))
-
-                return (var[-1]-value)
-
-            t = smcl.get_col('t')  # x - axis
-            u = smcl.get_col('u')  # y - axis
-
-            # if t.min() > t_lim1 and t_lim2 > t.min():
-            # i1 = Math.find_nearest_index(t, t_lim2)
-            # i2 = Math.find_nearest_index(t, t_lim1)
-
-            # t_cropped= t[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t,
-            #                                                                          t_lim1)][::-1]   # t_lim2 > t_lim1 and t is Declining
-            # u_cropped = u[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t, t_lim1)][::-1]
-
-            # print('<<<<<<<<<<<SIZE: {} {} (i1:{}, i2:{}) >>>>>>>>>>>>>>>>'.format(len(t), len(u), i1, i2))
-
-            tp, up = Math.get_max_by_interpolating(t, u, False, 5.2)
-            if Math.find_nearest_index(t,tp) < len(t)-1: # if the tp is not the last point of the t array ( not th sonic point)
-
-                print('<<<<<<<<<<<Coord: {} {} >>>>>>>>>>>>>>>>'.format("%.2f" % tp, "%.2f" % up))
-
-                print('L_env: {}'.format(get_envelope_l_or_m('r', smcl, tp)))
-                print('M_env: {}'.format(np.log10(get_envelope_l_or_m('xm', smcl, tp))))
-
-                # var = get_envelope_l_or_m('r', smcl, tp)
-                return tp, up
-            else:
-                return None, None
-
-
-
-            # else: return None, None
-
-        def inflection_point(cl):
-            kappa = 10**cl.get_col('kappa')
-            t = 10**cl.get_col('t')
-            gamma = cl.get_col('L/Ledd')
-
-            u = cl.get_col('Pg')
-
-            dkappa = []
-            dt = []
-            t_=[]
-            kappa_ = []
-            gamma_ = []
-
-            left = []
-            right = []
-
-            u_ = []
-
-            for i in range(1, len(kappa)):
-                dkappa = np.append(dkappa, kappa[i]-kappa[i-1])
-                dt = np.append(dt, t[i] - t[i-1])
-                t_ = np.append(t_, t[i-1] + (t[i]-t[i-1])/2)
-                kappa_ = np.append(kappa_, kappa[i-1] + (kappa[i]-kappa[i-1])/2)
-                gamma_ = np.append(gamma_, gamma[i-1] + (gamma[i]-gamma[i-1])/2)
-                u_ = np.append(u_, u[i-1] + (u[i]-u[i-1])/2)
-            for i in range(len(kappa_)):
-                right = np.append(right, (t_[i]/kappa_[i])*(dkappa[i]/dt[i]))
-                left = np.append(left, (1-1/gamma_[i]))
-
-
-
-            u_norm = u_/u_.max()
-
-            plt.plot(np.log10(t_), u_norm, '-.', color='gray')
-            plt.plot(np.log10(t_), left, '-', color='black')
-            plt.plot(np.log10(t_), right, '-', color='red')
-            plt.show()
+        # def get_m_r_envelope(smcl, t_lim1=5.1, t_lim2=5.3):
+        #     '''
+        #     Looks for a loal extremum between t_lim1 and t_lim2, and, if the extremem != sonic point: returns
+        #     length and mass of whatever is left
+        #     :param smcl:
+        #     :param t_lim1:
+        #     :param t_lim2:
+        #     :return:
+        #     '''
+        #
+        #     def get_envelope_l_or_m(v_n, cls, t_start, depth = 1000):
+        #         t = cls.get_col('t')
+        #         ind = Math.find_nearest_index(t,t_start) - 1 # just before the limit, so we don't need to interpolate across the whole t range
+        #         t = t[ind:]
+        #         var = cls.get_col(v_n)
+        #         var = var[ind:]
+        #
+        #
+        #         value = interpolate.InterpolatedUnivariateSpline(t[::-1], var[::-1])(t_start)
+        #
+        #         # print('-_-: {}'.format(var[-1]-value))
+        #
+        #         return (var[-1]-value)
+        #
+        #     t = smcl.get_col('t')  # x - axis
+        #     u = smcl.get_col('u')  # y - axis
+        #
+        #     # if t.min() > t_lim1 and t_lim2 > t.min():
+        #     # i1 = Math.find_nearest_index(t, t_lim2)
+        #     # i2 = Math.find_nearest_index(t, t_lim1)
+        #
+        #     # t_cropped= t[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t,
+        #     #                                                                          t_lim1)][::-1]   # t_lim2 > t_lim1 and t is Declining
+        #     # u_cropped = u[Math.find_nearest_index(t, t_lim2):Math.find_nearest_index(t, t_lim1)][::-1]
+        #
+        #     # print('<<<<<<<<<<<SIZE: {} {} (i1:{}, i2:{}) >>>>>>>>>>>>>>>>'.format(len(t), len(u), i1, i2))
+        #
+        #     tp, up = Math.get_max_by_interpolating(t, u, False, 5.2)
+        #     if Math.find_nearest_index(t,tp) < len(t)-1: # if the tp is not the last point of the t array ( not th sonic point)
+        #
+        #         print('<<<<<<<<<<<Coord: {} {} >>>>>>>>>>>>>>>>'.format("%.2f" % tp, "%.2f" % up))
+        #
+        #         print('L_env: {}'.format(get_envelope_l_or_m('r', smcl, tp)))
+        #         print('M_env: {}'.format(np.log10(get_envelope_l_or_m('xm', smcl, tp))))
+        #
+        #         # var = get_envelope_l_or_m('r', smcl, tp)
+        #         return tp, up
+        #     else:
+        #         return None, None
+        #
+        #
+        #
+        #     # else: return None, None
+        #
+        # def inflection_point(sm_cl, v_n_x=None, v_n_add=None, ax=None):
+        #
+        #     def formula(t, kappa, gamma):
+        #         '''
+        #         left2 = d(ln(kappa) / d(ln(t))
+        #         right2 = 1 - (1/gamma)
+        #         :param t:
+        #         :param kappa:
+        #         :param gamma:
+        #         :return:
+        #         '''
+        #         right2 = np.gradient(np.log(kappa), np.log(t))
+        #         left2 = 1 - (1 / gamma)
+        #         return left2, right2
+        #
+        #     left, right = formula(sm_cl.get_col('t'),sm_cl.get_col('kappa'),sm_cl.get_col('L/Ledd'))
+        #
+        #     if ax==None: plot_show=False
+        #     else: plot_show=True
+        #
+        #     if v_n_x!=None:
+        #         if ax==None:
+        #             plt.figure()
+        #             ax = plt.subplot(111)
+        #         ax.set_xlabel(Labels.lbls(v_n_x),  color='k')
+        #         ax.tick_params('y', colors='k')
+        #         ax.grid()
+        #
+        #         x_coord = sm_cl.get_col(v_n_x)
+        #         ax.plot(x_coord, left, '-', color='red', label='Left')
+        #         ax.plot(x_coord, right, '-', color='blue', label='Right')
+        #         if v_n_add != None:
+        #             y2 = sm_cl.get_col(v_n_add)
+        #             ax2 = ax1.twinx()
+        #             ax2.plot(x_coord, y2, '--', color='gray')
+        #             ax2.set_ylabel(Labels.lbls(v_n_add), color='gray')
+        #     if plot_show:
+        #         plt.show()
+        #
+        #
+        # def inflection_point(cl):
+        #     kappa = 10**cl.get_col('kappa')
+        #     t = 10**cl.get_col('t')
+        #     r = cl.get_col('r')
+        #     gamma = cl.get_col('L/Ledd')
+        #
+        #     u = cl.get_col('u')
+        #
+        #     dkappa = []
+        #     dt = []
+        #     t_=[]
+        #     kappa_ = []
+        #     gamma_ = []
+        #
+        #     left = []
+        #     right = []
+        #
+        #     u_ = []
+        #     r_ = []
+        #
+        #     for i in range(1, len(kappa)):
+        #         dkappa = np.append(dkappa, kappa[i]-kappa[i-1])
+        #         dt = np.append(dt, t[i] - t[i-1])
+        #         t_ = np.append(t_, t[i-1] + (t[i] - t[i-1])/2)
+        #         r_ = np.append(r_, r[i-1] + (r[i] - r[i-1])/2)
+        #         kappa_ = np.append(kappa_, kappa[i-1] + (kappa[i]-kappa[i-1])/2)
+        #         gamma_ = np.append(gamma_, gamma[i-1] + (gamma[i]-gamma[i-1])/2)
+        #         u_ = np.append(u_, u[i-1] + (u[i]-u[i-1])/2)
+        #     for i in range(len(kappa_)):
+        #
+        #         right = np.append(right, (t_[i]/kappa_[i])*(dkappa[i]/dt[i]))
+        #         left = np.append(left, (1-1/gamma_[i]))
+        #
+        #     right2 = np.gradient(np.log(kappa), np.log(t))
+        #     left2 = 1 - (1/gamma)
+        #
+        #     u_norm = u_#/u_.max()
+        #
+        #     r_ = np.log10(t_)
+        #
+        #     # plt.plot(r, u_norm, '-.', color='gray')
+        #     plt.plot(r, left2, '.', color='black')
+        #     plt.plot(r, right2, '.', color='red')
+        #     plt.xlabel(Labels.lbls('r'))
+        #     plt.show()
 
 
         fig = plt.figure()
@@ -183,7 +379,7 @@ class Combine:
 
         for i in range(len(self.set_sm_files)):
 
-            inflection_point(self.mdl[i])
+            # inflection_point(self.mdl[i])
 
             x =      self.mdl[i].get_col(v_n1)
             y      = self.mdl[i].get_col(v_n2)          # simpler syntaxis
@@ -222,14 +418,14 @@ class Combine:
                 plt.axhline(y=0.15, color='black')
 
 
-            tp, up = get_m_r_envelope(self.mdl[i])
-            if tp != None:
-                ax1.plot(tp, up, 'X', color='black')
+            # tp, up = get_m_r_envelope(self.mdl[i])
+            # if tp != None:
+            #     ax1.plot(tp, up, 'X', color='black')
 
 
 
-        ax1.set_xlabel(Labels.lbls(v_n1))
-        ax1.set_ylabel(Labels.lbls(v_n2))
+        ax1.set_xlabel(Labels.lbls(v_n1), fontsize=fsz)
+        ax1.set_ylabel(Labels.lbls(v_n2), fontsize=fsz)
 
         ax1.grid(which='both')
         ax1.grid(which='minor', alpha=0.2)
@@ -457,310 +653,6 @@ class Combine:
         # array_sort = np.sort(array.view('i8, f8, f8, f8, f8, f8'), order=['f0'], axis=0).view(np.float)
         array_shaped = np.reshape(array, (np.int(len(array)/6), 6))
         print(array_shaped)
-
-    def hrd2(self, l_or_lm, clean=False):
-
-        fig, ax = plt.subplots(1, 1)
-        ax.set_title('HRD')
-        ax.set_xlabel(Labels.lbls('t_eff'))
-        ax.set_ylabel(Labels.lbls(l_or_lm))
-
-
-        def get_yc_min_for_m_init(m_in, m_yc_ys_lims):
-            m_vals = m_yc_ys_lims[1:, 0]
-            yc_vals = m_yc_ys_lims[0, 1:]
-            ys_arr = m_yc_ys_lims[1:, 1:]
-
-
-            m_ind = Math.find_nearest_index(m_vals, m_in)
-            #if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
-
-            ys_row = ys_arr[m_ind, ::-1]
-            yc_row = yc_vals[::-1]
-            ys_zams= ys_arr[m_ind, -1]
-
-
-
-            for i in range(len(ys_row)):
-                if ys_row[i] < ys_zams:
-                    print('----------------------- {} {} -------------------------'.format(m_in, yc_vals[i]))
-                    return yc_row[i-1]
-            print('----------------------- {} -------------------------'.format(yc_row[-1]))
-            return yc_row[-1]
-
-
-            #
-            #
-            # if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
-            #
-            # ind = Math.find_nearest_index(m_vals, m_in)
-            # for i in range(len(yc_vals)):
-            #     if ys_arr[ind, i] < ys_arr[ind, -1]: # if the surface compostion has changed
-            #         print('----------------------- {} {} -------------------------'.format( m_in, yc_vals[i]))
-            #         return yc_vals[i-1] # return the yc for which ys has not yet changed
-            # print('----------------------- {} -------------------------'.format(yc_vals[0]))
-            # return yc_vals[0]
-            # # for i in range(len(m_vals)):
-
-
-        if len(self.set_plot_files) > 0:
-            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.set_opal_used, '')
-            plcls = []
-            for i in range(len(self.set_plot_files)):
-                plcls.append(Read_Plot_file.from_file(self.set_plot_files[i]))
-
-
-                if l_or_lm == 'l':
-                    llm_plot = plcls[i].l_
-                else:
-                    llm_plot = plcls[i].lm_
-
-                m_init = plcls[i].m_[0]
-                teff_plot = plcls[i].t_eff
-                yc_plot = plcls[i].y_c
-                # ys_plot =
-
-                # ================================ PLOTTING THE NORMAN FULL TRACKS =====================================
-
-                if not clean:
-
-                    ax.plot(teff_plot, llm_plot, '-', color='gray')
-
-                    for j in range(10):
-                        ind = Math.find_nearest_index(plcls[i].y_c, (j / 10))
-                        # print(plfl.y_c[i], (i/10))
-                        x_p = teff_plot[ind]
-                        y_p = llm_plot[ind]
-                        plt.plot(x_p, y_p, '.', color='red')
-                        if not clean:
-                            ax.annotate('{} {}'.format("%.2f" % plcls[i].y_c[ind], "%.2f" % plcls[i].mdot_[ind]), xy=(x_p, y_p),
-                                        textcoords='data')
-
-                # ================================== PLOTTING ONLY THE WNE PHASE =======================================
-
-                yc_min = get_yc_min_for_m_init(m_init, m_yc_ys_lims)
-
-                teff_plot2 = []
-                llm_plot2 = []
-                yc_plot2 = []
-                for k in range(len(yc_plot)):
-                    if yc_plot[k] > yc_min:
-                        teff_plot2 = np.append(teff_plot2, teff_plot[k])
-                        llm_plot2 = np.append(llm_plot2, llm_plot[k])
-                        yc_plot2 = np.append(yc_plot2, yc_plot[k])
-
-                ax.plot(teff_plot2, llm_plot2, '-.', color='black')
-                ax.annotate('M:{}'.format("%.1f"%m_init), xy=(teff_plot2[0], llm_plot2[0]), textcoords='data', horizontalalignment='left')
-                ax.annotate('Yc:{}'.format("%.1f" % yc_min), xy=(teff_plot2[-1], llm_plot2[-1]), textcoords='data')
-
-        plt.gca().invert_xaxis()  # inverse x axis
-        if not clean:
-            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plot_name = self.output_dir + 'hrd.pdf'
-        plt.savefig(plot_name)
-        plt.show()
-
-
-
-    def evol_mdot(self):
-
-        fig, ax = plt.subplots(1, 1)
-        ax.set_title('HRD')
-        ax.set_xlabel(Labels.lbls('yc'))
-        ax.set_ylabel(Labels.lbls('mdot'))
-
-        def get_yc_min_for_m_init(m_in, m_yc_ys_lims):
-            m_vals = m_yc_ys_lims[1:, 0]
-            yc_vals = m_yc_ys_lims[0, 1:]
-            ys_arr = m_yc_ys_lims[1:, 1:]
-
-            m_ind = Math.find_nearest_index(m_vals, m_in)
-            if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
-
-            ys_row = ys_arr[m_ind, ::-1]
-            yc_row = yc_vals[::-1]
-            ys_zams = ys_arr[m_ind, -1]
-
-            for i in range(len(ys_row)):
-                if ys_row[i] < ys_zams:
-                    print('----------------------- {} {} -------------------------'.format(m_in, yc_vals[i]))
-                    return yc_row[i - 1]
-            print('----------------------- {} -------------------------'.format(yc_row[-1]))
-            return yc_row[-1]
-
-            #
-            #
-            # if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
-            #
-            # ind = Math.find_nearest_index(m_vals, m_in)
-            # for i in range(len(yc_vals)):
-            #     if ys_arr[ind, i] < ys_arr[ind, -1]: # if the surface compostion has changed
-            #         print('----------------------- {} {} -------------------------'.format( m_in, yc_vals[i]))
-            #         return yc_vals[i-1] # return the yc for which ys has not yet changed
-            # print('----------------------- {} -------------------------'.format(yc_vals[0]))
-            # return yc_vals[0]
-            # # for i in range(len(m_vals)):
-
-        # yc_vals = [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, ]
-        yc_vals = [1.0, 0.9,  0.8,  0.7,  0.6,  0.5,  0.4,  0.3, 0.2 ]
-        v_n_conds = ['yc', 'mdot', 'lm']
-
-        if len(self.set_plot_files) > 0:
-            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.set_opal_used, '')
-            plcls = []
-            for i in range(len(self.set_plot_files)):
-                plcls.append(Read_Plot_file.from_file(self.set_plot_files[i]))
-
-                # size = '{'
-                # head = ''
-                # for i in range(len(v_n_conds)):
-                #     size = size + 'c'
-                #     head = head + '{}'.format(v_n_conds[i])
-                #     if i != len(v_n_conds) - 1: size = size + ' '
-                #     if i != len(v_n_conds) - 1: head = head + ' & '
-                #     # if i % 2 == 0: size = size + ' '
-                # head = head + ' \\\\'  # = \\
-                #
-                # size = size + '}'
-                #
-                # print('\\begin{table}[h!]')
-                # print('\\begin{center}')
-                # print('\\begin{tabular}' + '{}'.format(size))
-                # print('\\hline')
-                # print(head)
-                # print('\\hline\\hline')
-                #
-                # # for i in range(len(self.smfiles)):
-                # # 1 & 6 & 87837 & 787 \\
-                # row = ''
-                # for j in range(len(v_n_conds)):
-                #     val = "%{}f".format(0.2) % self.mdl[i].get_col(v_n_conds[j])
-                #     row = row + val
-                #     if j != len(v_n_conds) - 1: row = row + ' & '
-                # row = row + ' \\\\'  # = \\
-                # print(row)
-                #
-                # print('\\hline')
-                # print('\\end{tabular}')
-                # print('\\end{center}')
-                # print('\\caption{NAME_ME}')
-                # print('\\label{tbl:1}')
-                # print('\\end{table}')
-
-
-
-                yc_plot = plcls[i].y_c
-                mdot_plot = plcls[i].mdot_
-
-                mdot_res = []
-
-                for j in range(len(yc_vals)):
-                    ind = Math.find_nearest_index(yc_plot, yc_vals[j])
-                    mdot_res = np.append(mdot_res, plcls[i].mdot_[ind])
-                    print('{} & {} & {}'.format("%.2f"%plcls[i].y_c[ind],"%.2f"% plcls[i].mdot_[ind],"%.2f"% plcls[i].lm_[ind]))
-                    # print(plcls[i].y_c[ind], ' & ', plcls[i].mdot_[ind] )
-
-                    # for k in range(len(yc_plot)):
-                    #     ind = Math.find_nearest_index()
-                    #     if np.round(yc_plot[k], 2) == np.round(yc_vals[j], 2):
-                    #         mdot_res = np.append(mdot_res, plcls[i].mdot_[k])
-
-                print('a')
-
-
-    def hrd(self, v_n_x, l_or_lm, obs=True, clean=False):
-
-        fig, ax = plt.subplots(1, 1)
-
-
-        if obs:
-            Plots.plot_obs_x_llm(ax, self.obs, l_or_lm, v_n_x, 1.0, True, False)
-
-        ax.set_title('HRD')
-        ax.set_xlabel(Labels.lbls(v_n_x))
-        ax.set_ylabel(Labels.lbls(l_or_lm))
-
-        # plt.xlim(t1, t2)
-        ax.grid(which='major', alpha=0.2)
-        if not clean:
-            plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
-
-        # res = self.obs.get_x_y_of_all_observables('t', 'l', 'type')
-        #
-        # for i in range(len(res[0][:, 1])):
-        #     ax.annotate(int(res[0][i, 0]), xy=(res[0][i, 1], res[0][i, 2]), textcoords='data')  # plot numbers of stars
-        #     plt.plot(res[0][i, 1], res[0][i, 2], marker='^', color='C' + str(int(res[0][i, 3])),
-        #              ls='')  # plot color dots)))
-        #
-        # for j in range(len(res[1][:, 0])):
-        #     plt.plot(res[1][j, 1], res[1][j, 2], marker='^', color='C' + str(int(res[1][j, 3])), ls='',
-        #              label='WN' + str(int(res[1][j, 3])))
-
-        ind_arr = []
-
-        for j in range(len(self.set_plot_files)):
-            ind_arr.append(j)
-            col_num = Math.get_0_to_max(ind_arr, 9)
-            plfl = Read_Plot_file.from_file(self.set_plot_files[j])
-
-            mod_x = plfl.t_eff
-            if l_or_lm == 'l':
-                mod_y = plfl.l_
-            else:
-                mod_y = Physics.loglm(plfl.l_, plfl.m_)
-
-
-
-            color = 'C' + str(col_num[j])
-
-            fname = self.set_plot_files[j].split('/')[-2] + self.set_plot_files[j].split('/')[-1]# get the last folder in which the .plot1 is
-
-            time = plfl.time - plfl.time[0]
-            time_max = time.max()
-            plt.plot(mod_x, mod_y, '-', color=color, label = ('{}'.format("%.1f" % plfl.m_[0]) +
-                                                              ' M$_{\odot}$'+' {} Myr'.format( "%.2f" % (time_max
-                                                                                               / 1000000))) )
-                     # label='{}, m:({}->{})'.format(fname, "%.1f" % plfl.m_[0], "%.1f" % plfl.m_[-1]) )
-                     # str("%.2f" % plfl.m_[0]) + ' to ' + str("%.2f" % plfl.m_[-1]) + ' solar mass')
-
-
-            imx  = Math.find_nearest_index( plfl.y_c, plfl.y_c.max() )
-
-
-            # plt.plot(mod_x[imx], mod_y[imx], 'x')
-
-            # ax.annotate("%.4f" % plfl.y_c.max(), xy=(mod_x[imx], mod_y[imx]), textcoords='data')
-
-            # plt.plot()
-
-            print(str(np.int(plfl.m_[0])))
-            ax.annotate("%.1f"%plfl.m_[0], xy=(mod_x[0], mod_y[0]), fontsize=12, textcoords='data')
-
-            for i in range(10):
-                ind = Math.find_nearest_index(plfl.y_c, (i / 10))
-                # print(plfl.y_c[i], (i/10))
-                x_p = mod_x[ind]
-                y_p = mod_y[ind]
-                plt.plot(x_p, y_p, '.', color='red')
-                if not clean:
-                    ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % plfl.mdot_[ind]), xy=(x_p, y_p),
-                            textcoords='data')
-
-
-                # ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % (time[ind]/time_max)) , xy=(x_p, y_p), textcoords='data')
-
-        ax.grid(which='both')
-        ax.grid(which='minor', alpha=0.2)
-
-        plt.gca().invert_xaxis() # inverse x axis
-
-        plt.grid()
-        if not clean:
-            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plot_name = self.output_dir + 'hrd.pdf'
-        plt.savefig(plot_name)
-
-        plt.show()
 
     def time_analysis(self, percent_of_lifetime, yc_steps = 10):
 
@@ -993,15 +885,14 @@ class Combine:
         :return:
         '''
         if not ref_t_llm_vrho.any():
-            print('\t__ No *ref_t_llm_vrho* is provided. Loading {} interp. opacity table.'.format(self.set_opal_used))
-            t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.set_opal_used, self.output_dir)
+            print('\t__ No *ref_t_llm_vrho* is provided. Loading {} interp. opacity table.'.format(self.set_metal))
+            t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.set_metal, self.output_dir)
             table = Physics.t_kap_rho_to_t_llm_rho(t_k_rho, l_or_lm)
         else:
             table = ref_t_llm_vrho
 
         t_ref = table[0, 1:]
         llm_ref=table[1:, 0]
-        # rho_ref=table[1:, 1:]
 
 
         '''=======================================ESTABLISHING=LIMITS================================================'''
@@ -1324,12 +1215,12 @@ class Combine:
 
         return t_l_or_lm_r, t_llm_vrho
 
-    def plot_t_rho_kappa(self, bump, var_for_label1, var_for_label2,  n_int_edd = 1000, plot_edd = True):
+    def plot_t_rho_kappa(self, bump, var_for_label1, var_for_label2,  n_int_edd = 1000, plot_edd = False):
         # self.int_edd = self.tbl_anlom_OPAL_table(self.op_name, 1, n_int, load_lim_cases)
 
         # t_k_rho = self.opal.interp_opal_table(t1, t2, rho1, rho2)
 
-        t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k', self.set_opal_used, bump, self.output_dir)
+        t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k', self.set_metal, bump, self.output_dir)
 
         # t_rho_k = Math.extrapolate(t_rho_k,None,None,10,None,500,2)
 
@@ -1340,9 +1231,9 @@ class Combine:
 
         fig = plt.figure(figsize=plt.figaspect(0.8))
         ax = fig.add_subplot(111)  # , projection='3d'
-        z = Get_Z.z(self.set_opal_used.split('/')[-1])
-        Plots.plot_color_background(ax, t_rho_k, 't', 'rho', 'k', self.set_opal_used, '{}'.format(z))
-        Plots.plot_edd_kappa(ax, t, self.mdl, self.set_opal_used, 1000)
+        # z = Get_Z.z(self.set_opal_used.split('/')[-1])
+        PlotBackground.plot_color_background(ax, t_rho_k, 't', 'rho', 'k', self.set_metal, 'z:{}'.format(Get_Z.z(self.set_metal)))
+        # Plot.plot_edd_kappa(ax, t, self.mdl, self.set_metal, 1000)
 
         # plt.figure()
         # levels = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
@@ -1360,7 +1251,7 @@ class Combine:
         Table_Analyze.plot_k_vs_t = False  # there is no need to plot just one kappa in the range of availability
 
         if plot_edd:  # n_model_for_edd_k.any():
-            clas_table_anal = Table_Analyze(self.set_opal_used, 1000, False, self.output_dir, self.plot_dir)
+            clas_table_anal = Table_Analyze(Files.get_opal(self.set_metal), 1000, False, self.output_dir, self.plot_dir)
 
             for i in range(len(self.set_sm_files)):  # self.nmdls
                 mdl_m = self.mdl[i].get_cond_value('xm', 'sp')
@@ -1401,7 +1292,7 @@ class Combine:
 
     def plot_t_mdot_lm(self, v_lbl, r_s = 1., lim_t1_mdl = 5.2, lim_t2_mdl = None):
 
-        t_rho_k = Save_Load_tables.load_table('t_rho_k', 't', 'rho', 'k', self.set_opal_used, self.output_dir)
+        t_rho_k = Save_Load_tables.load_table('t_rho_k', 't', 'rho', 'k', self.set_metal, self.output_dir)
 
         t_s= t_rho_k[0, 1:]  # x
         rho= t_rho_k[1:, 0]  # y
@@ -2076,7 +1967,323 @@ class Combine:
     #     plt.savefig(plot_name)
     #     plt.show()
 
-class PlotTable:
+
+class HRD(PlotObs):
+    def __init__(self, gal_or_lmc):
+
+        self.set_obs_file = Files.get_obs_file(gal_or_lmc)
+        self.set_atm_file = Files.get_atm_file(gal_or_lmc)
+        self.set_plot_files = Files.get_plot_files(gal_or_lmc)
+        self.set_metal = gal_or_lmc
+
+        # PlotObs.__init__(self, gal_or_lmc, self.set_obs_file, self.set_atm_file)
+
+        self.set_clean            = False
+        self.set_use_gaia         = True
+        self.set_use_atm_file     = True
+        self.set_load_yc_l_lm     = True
+        self.set_load_yc_nan_lmlim= True
+        self.set_check_lm_for_wne = True
+
+
+    def plot_hrd_treks(self, l_or_lm, clean=False, fsz=12):
+
+        fig, ax = plt.subplots(1, 1)
+        # ax.set_title('HRD')
+        ax.set_xlabel(Labels.lbls('t_eff'), fontsize=fsz)
+        ax.set_ylabel(Labels.lbls(l_or_lm), fontsize=fsz)
+
+
+        def get_yc_min_for_m_init(m_in, m_yc_ys_lims):
+            m_vals = m_yc_ys_lims[1:, 0]
+            yc_vals = m_yc_ys_lims[0, 1:]
+            ys_arr = m_yc_ys_lims[1:, 1:]
+
+
+            m_ind = Math.find_nearest_index(m_vals, m_in)
+            #if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
+
+            ys_row = ys_arr[m_ind, ::-1]
+            yc_row = yc_vals[::-1]
+            ys_zams= ys_arr[m_ind, -1]
+
+
+
+            for i in range(len(ys_row)):
+                if ys_row[i] < ys_zams:
+                    print('----------------------- {} {} -------------------------'.format(m_in, yc_vals[i]))
+                    return yc_row[i-1]
+            print('----------------------- {} -------------------------'.format(yc_row[-1]))
+            return yc_row[-1]
+
+
+            #
+            #
+            # if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
+            #
+            # ind = Math.find_nearest_index(m_vals, m_in)
+            # for i in range(len(yc_vals)):
+            #     if ys_arr[ind, i] < ys_arr[ind, -1]: # if the surface compostion has changed
+            #         print('----------------------- {} {} -------------------------'.format( m_in, yc_vals[i]))
+            #         return yc_vals[i-1] # return the yc for which ys has not yet changed
+            # print('----------------------- {} -------------------------'.format(yc_vals[0]))
+            # return yc_vals[0]
+            # # for i in range(len(m_vals)):
+
+        x_y_z = np.zeros(3)
+        if len(self.set_plot_files) > 0:
+            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.set_metal, '')
+            plcls = []
+            for i in range(len(self.set_plot_files)):
+                plcls.append(Read_Plot_file.from_file(self.set_plot_files[i]))
+
+
+                if l_or_lm == 'l':
+                    llm_plot = plcls[i].l_
+                else:
+                    llm_plot = plcls[i].lm_
+
+                m_init = plcls[i].m_[0]
+                teff_plot = plcls[i].t_eff
+                yc_plot = plcls[i].y_c
+                # ys_plot =
+
+                # ================================ PLOTTING THE NORMAN FULL TRACKS =====================================
+
+                if not clean:
+
+                    ax.plot(teff_plot, llm_plot, '-', color='gray')
+
+                    for j in range(10):
+                        ind = Math.find_nearest_index(plcls[i].y_c, (j / 10))
+                        # print(plfl.y_c[i], (i/10))
+                        x_p = teff_plot[ind]
+                        y_p = llm_plot[ind]
+                        plt.plot(x_p, y_p, '.', color='red')
+                        if not clean:
+                            ax.annotate('{} {}'.format("%.2f" % plcls[i].y_c[ind], "%.2f" % plcls[i].mdot_[ind]), xy=(x_p, y_p),
+                                        textcoords='data')
+
+                # ================================== PLOTTING ONLY THE WNE PHASE =======================================
+
+                yc_min = get_yc_min_for_m_init(m_init, m_yc_ys_lims)
+
+
+                teff_plot2 = []
+                llm_plot2 = []
+                yc_plot2 = []
+                for k in range(len(yc_plot)):
+                    if yc_plot[k] > yc_min:
+                        teff_plot2 = np.append(teff_plot2, teff_plot[k])
+                        llm_plot2 = np.append(llm_plot2, llm_plot[k])
+                        yc_plot2 = np.append(yc_plot2, yc_plot[k])
+                        x_y_z = np.vstack((x_y_z, [teff_plot[k], llm_plot[k], yc_plot[k]]))
+
+                ax.plot(teff_plot2, llm_plot2, '-.', color='black')
+                ax.annotate('{}'.format("%0.f" % m_init), xy=(teff_plot2[0], llm_plot2[0]), textcoords='data', horizontalalignment='right')
+                ax.annotate('{}'.format("%.1f" % yc_min), xy=(teff_plot2[-1], llm_plot2[-1]), textcoords='data', horizontalalignment='left')
+
+
+        sc = ax.scatter(x_y_z[1:,0], x_y_z[1:,1], c=x_y_z[1:,2], marker='.', cmap=plt.get_cmap('RdYlBu_r'))
+
+        clb = plt.colorbar(sc)
+        clb.ax.set_title(Labels.lbls('Yc'), fontsize=fsz)
+
+        ax.minorticks_on()
+
+        plt.xticks(fontsize=fsz)
+        plt.yticks(fontsize=fsz)
+
+        plt.gca().invert_xaxis()  # inverse x axis
+        if not clean:
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = Files.output_dir + 'hrd.pdf'
+        plt.savefig(plot_name)
+        plt.show()
+
+    def plot_evol_mdot(self):
+
+        fig, ax = plt.subplots(1, 1)
+        ax.set_title('HRD')
+        ax.set_xlabel(Labels.lbls('yc'))
+        ax.set_ylabel(Labels.lbls('mdot'))
+
+        def get_yc_min_for_m_init(m_in, m_yc_ys_lims):
+            m_vals = m_yc_ys_lims[1:, 0]
+            yc_vals = m_yc_ys_lims[0, 1:]
+            ys_arr = m_yc_ys_lims[1:, 1:]
+
+            m_ind = Math.find_nearest_index(m_vals, m_in)
+            if np.abs(m_in - m_vals[m_ind]) > 0.1: raise ValueError('Correct m_in is not found')
+
+            ys_row = ys_arr[m_ind, ::-1]
+            yc_row = yc_vals[::-1]
+            ys_zams = ys_arr[m_ind, -1]
+
+            for i in range(len(ys_row)):
+                if ys_row[i] < ys_zams:
+                    print('----------------------- {} {} -------------------------'.format(m_in, yc_vals[i]))
+                    return yc_row[i - 1]
+            print('----------------------- {} -------------------------'.format(yc_row[-1]))
+            return yc_row[-1]
+
+            #
+            #
+            # if not np.round(m_in, 1) in m_vals: raise ValueError('m_init({}) not in m_vals({}) from table file [evol_yc_m_ys]'.format(m_in, m_vals))
+            #
+            # ind = Math.find_nearest_index(m_vals, m_in)
+            # for i in range(len(yc_vals)):
+            #     if ys_arr[ind, i] < ys_arr[ind, -1]: # if the surface compostion has changed
+            #         print('----------------------- {} {} -------------------------'.format( m_in, yc_vals[i]))
+            #         return yc_vals[i-1] # return the yc for which ys has not yet changed
+            # print('----------------------- {} -------------------------'.format(yc_vals[0]))
+            # return yc_vals[0]
+            # # for i in range(len(m_vals)):
+
+        # yc_vals = [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, ]
+        yc_vals = [1.0, 0.9,  0.8,  0.7,  0.6,  0.5,  0.4,  0.3, 0.2 ]
+        v_n_conds = ['yc', 'mdot', 'lm']
+
+        if len(self.set_obs_file) > 0:
+            m_yc_ys_lims = Save_Load_tables.load_table('evol_yc_m_ys', 'evol_yc', 'm', 'ys', self.set_metal, '')
+            plcls = []
+            for i in range(len(self.set_obs_file)):
+                plcls.append(Read_Plot_file.from_file(self.set_obs_file[i]))
+
+                # size = '{'
+                # head = ''
+                # for i in range(len(v_n_conds)):
+                #     size = size + 'c'
+                #     head = head + '{}'.format(v_n_conds[i])
+                #     if i != len(v_n_conds) - 1: size = size + ' '
+                #     if i != len(v_n_conds) - 1: head = head + ' & '
+                #     # if i % 2 == 0: size = size + ' '
+                # head = head + ' \\\\'  # = \\
+                #
+                # size = size + '}'
+                #
+                # print('\\begin{table}[h!]')
+                # print('\\begin{center}')
+                # print('\\begin{tabular}' + '{}'.format(size))
+                # print('\\hline')
+                # print(head)
+                # print('\\hline\\hline')
+                #
+                # # for i in range(len(self.smfiles)):
+                # # 1 & 6 & 87837 & 787 \\
+                # row = ''
+                # for j in range(len(v_n_conds)):
+                #     val = "%{}f".format(0.2) % self.mdl[i].get_col(v_n_conds[j])
+                #     row = row + val
+                #     if j != len(v_n_conds) - 1: row = row + ' & '
+                # row = row + ' \\\\'  # = \\
+                # print(row)
+                #
+                # print('\\hline')
+                # print('\\end{tabular}')
+                # print('\\end{center}')
+                # print('\\caption{NAME_ME}')
+                # print('\\label{tbl:1}')
+                # print('\\end{table}')
+
+
+
+                yc_plot = plcls[i].y_c
+                mdot_plot = plcls[i].mdot_
+
+                mdot_res = []
+
+                for j in range(len(yc_vals)):
+                    ind = Math.find_nearest_index(yc_plot, yc_vals[j])
+                    mdot_res = np.append(mdot_res, plcls[i].mdot_[ind])
+                    print('{} & {} & {}'.format("%.2f"%plcls[i].y_c[ind],"%.2f"% plcls[i].mdot_[ind],"%.2f"% plcls[i].lm_[ind]))
+                    # print(plcls[i].y_c[ind], ' & ', plcls[i].mdot_[ind] )
+
+                    # for k in range(len(yc_plot)):
+                    #     ind = Math.find_nearest_index()
+                    #     if np.round(yc_plot[k], 2) == np.round(yc_vals[j], 2):
+                    #         mdot_res = np.append(mdot_res, plcls[i].mdot_[k])
+
+                print('a')
+
+    def plot_hrd(self, v_n_x, l_or_lm, obs=True):
+
+        fig, ax = plt.subplots(1, 1)
+
+
+        if obs:
+            self.plot_all_x_llm(ax, l_or_lm, v_n_x, 1.0, True, True)
+
+        ax.set_title('HRD')
+        ax.set_xlabel(Labels.lbls(v_n_x))
+        ax.set_ylabel(Labels.lbls(l_or_lm))
+
+        # plt.xlim(t1, t2)
+        ax.grid(which='major', alpha=0.2)
+        if not self.set_clean:
+            plt.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+
+        # ind_arr.append(j)
+        # col_num = Math.get_0_to_max(ind_arr, 9)
+        # plfl = Read_Plot_file.from_file(self.set_obs_file)
+        #
+        # mod_x = plfl.t_eff
+        # if l_or_lm == 'l':
+        #     mod_y = plfl.l_
+        # else:
+        #     mod_y = Physics.loglm(plfl.l_, plfl.m_)
+        #
+        # color = 'C' + str(col_num[j])
+        #
+        # fname = self.set_obs_file[j].split('/')[-2] + self.set_obs_file[j].split('/')[
+        #     -1]  # get the last folder in which the .plot1 is
+        #
+        # time = plfl.time - plfl.time[0]
+        # time_max = time.max()
+        # plt.plot(mod_x, mod_y, '-', color=color, label=('{}'.format("%.1f" % plfl.m_[0]) +
+        #                                                 ' M$_{\odot}$' + ' {} Myr'.format("%.2f" % (time_max
+        #                                                                                             / 1000000))))
+        # # label='{}, m:({}->{})'.format(fname, "%.1f" % plfl.m_[0], "%.1f" % plfl.m_[-1]) )
+        # # str("%.2f" % plfl.m_[0]) + ' to ' + str("%.2f" % plfl.m_[-1]) + ' solar mass')
+        #
+        # imx = Math.find_nearest_index(plfl.y_c, plfl.y_c.max())
+        #
+        # # plt.plot(mod_x[imx], mod_y[imx], 'x')
+        #
+        # # ax.annotate("%.4f" % plfl.y_c.max(), xy=(mod_x[imx], mod_y[imx]), textcoords='data')
+        #
+        # # plt.plot()
+        #
+        # print(str(np.int(plfl.m_[0])))
+        # ax.annotate("%.1f" % plfl.m_[0], xy=(mod_x[0], mod_y[0]), fontsize=12, textcoords='data')
+        #
+        # for i in range(10):
+        #     ind = Math.find_nearest_index(plfl.y_c, (i / 10))
+        #     # print(plfl.y_c[i], (i/10))
+        #     x_p = mod_x[ind]
+        #     y_p = mod_y[ind]
+        #     plt.plot(x_p, y_p, '.', color='red')
+        #     if not self.set_clean:
+        #         ax.annotate('{} {}'.format("%.2f" % plfl.y_c[ind], "%.2f" % plfl.mdot_[ind]), xy=(x_p, y_p),
+        #                     textcoords='data')
+        #
+        ax.grid(which='both')
+        ax.grid(which='minor', alpha=0.2)
+
+        plt.gca().invert_xaxis() # inverse x axis
+
+        plt.grid()
+        if not self.set_clean:
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = Files.plot_dir + 'hrd.pdf'
+        plt.savefig(plot_name)
+
+        plt.show()
+
+
+
+
+class PrintTable:
     def __init__(self, plotfiles, yc_arr):
         self.plotfiles = plotfiles
         self.yc_arr = yc_arr
@@ -2265,29 +2472,35 @@ class Table:
 
 
 
-class Crit_Mdot:
-    output_dir = '../data/output/'
-    plot_dir = '../data/plots/'
+class Critical_Mdot:
 
-    opal_used = ''
-    sp_files = []
+    def __init__(self, metal, bump, coeff, sp_files_metal):
 
-    obs_files =  ''
+        self.set_metal = metal
+        self.set_sp_files=Files.get_sp_files(sp_files_metal, 'cr')
+        self.set_output_dir = Files.output_dir
+        self.set_plot_dir = Files.plot_dir
 
-    def __init__(self):
-        pass
+        self.set_bump = bump
+        self.set_coeff = coeff
 
-    def set_files(self, bump, coeff):
+        self.lim_t1, self.lim_t2 = T_kappa_bump.t_for_bump(bump)
+        self.spmdl = []
 
-        self.bump = bump
-        self.coeff = coeff
-        self.lim_t1, self.lim_t2 = Opacity_Bump.t_for_bump(bump)
-        self.spmdl=[]
-        for file in self.sp_files:
-            self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
+        for file in self.set_sp_files:
+            self.spmdl.append(Read_SP_data_file(file, self.set_output_dir, self.set_plot_dir))
+
+    # def set_files(self, bump, coeff):
+    #
+    #     self.bump = bump
+    #     self.coeff = coeff
+    #     self.lim_t1, self.lim_t2 = T_kappa_bump.t_for_bump(bump)
+    #     self.spmdl=[]
+    #     for file in self.set_sp_files:
+    #         self.spmdl.append(Read_SP_data_file(file, self.set_output_dir, self.set_plot_dir))
 
         # self.nums = Num_Models(smfls, plotfls)
-        self.obs = Read_Observables(self.obs_files, self.opal_used)
+        # self.obs = Read_Observables(self.obs_files, self.set_metal)
 
     @staticmethod
     def interp(x, y, x_grid):
@@ -2502,12 +2715,12 @@ class Crit_Mdot:
 
             return new_l, lm_op, mdot_cr
 
-        if self.bump != 'Fe':
+        if self.set_bump != 'Fe':
             raise NameError('This function is not available for bumps other than Fe.')
-        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.coeff), 't',  '{}lm'.format(self.coeff),
-                                               'rho', self.opal_used, 'Fe', self.output_dir)
-        yc_lm_l  = Save_Load_tables.load_table('yc_lm_l',  'yc', 'lm', 'l',   self.opal_used, '', self.output_dir)
-        yc_lm_r  = Save_Load_tables.load_table('yc_lm_r',  'yc', 'lm', 'r',   self.opal_used, '', self.output_dir)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.set_coeff), 't', '{}lm'.format(self.set_coeff),
+                                               'rho', self.set_metal, 'Fe', self.set_output_dir)
+        yc_lm_l  = Save_Load_tables.load_table('yc_lm_l',  'yc', 'lm', 'l', self.set_metal, '', self.set_output_dir)
+        yc_lm_r  = Save_Load_tables.load_table('yc_lm_r',  'yc', 'lm', 'r', self.set_metal, '', self.set_output_dir)
 
         t_lm_rho, yc_lm_l, yc_lm_r = self.common_y3(t_lm_rho, yc_lm_l, yc_lm_r)
 
@@ -2549,11 +2762,11 @@ class Crit_Mdot:
         yc_l_mdot_int  = Math.combine(yc, l_grid,  mdot_int_l.T)
         yc_lm_mdot_int = Math.combine(yc, lm_grid, mdot_int_lm.T)
 
-        table_name = '{}_{}{}_{}'.format('yc', self.coeff, 'l', 'mdot_cr')
-        Save_Load_tables.save_table(yc_l_mdot_pol, self.opal_used, self.bump, table_name, 'yc', '{}l'.format(self.coeff), 'mdot_cr')
+        table_name = '{}_{}{}_{}'.format('yc', self.set_coeff, 'l', 'mdot_cr')
+        Save_Load_tables.save_table(yc_l_mdot_pol, self.set_metal, self.set_bump, table_name, 'yc', '{}l'.format(self.set_coeff), 'mdot_cr')
 
-        table_name = '{}_{}{}_{}'.format('yc', self.coeff,'lm', 'mdot_cr')
-        Save_Load_tables.save_table(yc_lm_mdot_pol, self.opal_used, self.bump, table_name, 'yc', '{}lm'.format(self.coeff), 'mdot_cr')
+        table_name = '{}_{}{}_{}'.format('yc', self.set_coeff, 'lm', 'mdot_cr')
+        Save_Load_tables.save_table(yc_lm_mdot_pol, self.set_metal, self.set_bump, table_name, 'yc', '{}lm'.format(self.set_coeff), 'mdot_cr')
 
         if plot:
             self.plot_4arrays(yc_l_mdot_int, yc_l_mdot_pol, yc_lm_mdot_int, yc_lm_mdot_pol)
@@ -2578,9 +2791,9 @@ class Crit_Mdot:
 
             return new_l, lm_op, mdot_cr
 
-        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.coeff), 't', '{}lm'.format(self.coeff),
-                                               'rho', self.opal_used, self.bump, self.output_dir)
-        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', self.opal_used, '', self.output_dir)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.set_coeff), 't', '{}lm'.format(self.set_coeff),
+                                               'rho', self.set_metal, self.set_bump, self.set_output_dir)
+        yc_lm_l = Save_Load_tables.load_table('yc_lm_l', 'yc', 'lm', 'l', self.set_metal, '', self.set_output_dir)
 
         t_lm_rho, yc_lm_l = self.common_y2(t_lm_rho, yc_lm_l)
 
@@ -2619,13 +2832,13 @@ class Crit_Mdot:
         yc_l_mdot_int = Math.combine(yc, l_grid, mdot_int_l.T)
         yc_lm_mdot_int = Math.combine(yc, lm_grid, mdot_int_lm.T)
 
-        table_name = '{}_{}{}_{}'.format('yc',self.coeff, 'l', 'mdot_cr_r_{}'.format(r_cr))
-        Save_Load_tables.save_table(yc_l_mdot_pol, self.opal_used, self.bump, table_name, 'yc',
-                                    '{}l'.format(self.coeff), 'mdot_cr_r_{}'.format(r_cr))
+        table_name = '{}_{}{}_{}'.format('yc', self.set_coeff, 'l', 'mdot_cr_r_{}'.format(r_cr))
+        Save_Load_tables.save_table(yc_l_mdot_pol, self.set_metal, self.set_bump, table_name, 'yc',
+                                    '{}l'.format(self.set_coeff), 'mdot_cr_r_{}'.format(r_cr))
 
-        table_name = '{}_{}{}_{}'.format('yc',self.coeff, 'lm', 'mdot_cr_r_{}'.format(r_cr))
-        Save_Load_tables.save_table(yc_lm_mdot_pol, self.opal_used, self.bump, table_name, 'yc',
-                                    '{}lm'.format(self.coeff), 'mdot_cr_r_{}'.format(r_cr))
+        table_name = '{}_{}{}_{}'.format('yc', self.set_coeff, 'lm', 'mdot_cr_r_{}'.format(r_cr))
+        Save_Load_tables.save_table(yc_lm_mdot_pol, self.set_metal, self.set_bump, table_name, 'yc',
+                                    '{}lm'.format(self.set_coeff), 'mdot_cr_r_{}'.format(r_cr))
 
         if plot:
             self.plot_4arrays(yc_l_mdot_int, yc_l_mdot_pol, yc_lm_mdot_int, yc_lm_mdot_pol)
@@ -2648,18 +2861,18 @@ class Crit_Mdot:
 
             return Math.combine(t, lm_op, m_dot), ts, lm, mdot_cr
 
-        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.coeff), 't', '{}lm'.format(self.coeff),
-                                               'rho', self.opal_used, self.bump, self.output_dir)
+        t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.set_coeff), 't', '{}lm'.format(self.set_coeff),
+                                               'rho', self.set_metal, self.set_bump, self.set_output_dir)
 
         t_lm_mdot, ts, lm, mdot = l_lm_mdot_rows_r_const(t_lm_rho, r_cr, self.lim_t1, self.lim_t2)
 
         fig = plt.figure(figsize=plt.figaspect(0.8))
         ax = fig.add_subplot(111)  # , projection='3d'
-        Plots.plot_color_background(ax, t_lm_mdot, 't', 'lm', 'mdot', self.opal_used, 'Test')
+        PlotBackground.plot_color_background(ax, t_lm_mdot, 't', 'lm', 'mdot', self.set_metal, 'Test')
         ax.plot(ts, lm, '.-', color = 'red')
         plt.show()
 
-    def min_mdot_sp_set(self, l_or_lm, yc_vals, r_cr = None, v_n_background = None):
+    def plot_cr_mdot_sp_set(self, l_or_lm, yc_vals, r_cr = None, v_n_background = None):
         '''
         PLOTS the set of llm(mdot), with l->m relation assumed from yc_vals.
         :param l_or_lm:
@@ -2670,13 +2883,13 @@ class Crit_Mdot:
 
 
         if r_cr == None:
-            name = '{}_{}{}_{}'.format('yc', self.coeff, l_or_lm, 'mdot_cr')
-            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.coeff)+l_or_lm,
-                                                         'mdot_cr', self.opal_used, self.bump)
+            name = '{}_{}{}_{}'.format('yc', self.set_coeff, l_or_lm, 'mdot_cr')
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.set_coeff) + l_or_lm,
+                                                         'mdot_cr', self.set_metal, self.set_bump)
         else:
-            name = '{}_{}{}_{}_r_{}'.format('yc', self.coeff, l_or_lm, 'mdot_cr', r_cr)
-            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.coeff) + l_or_lm,
-                                                         'mdot_cr_r_{}'.format(r_cr), self.opal_used, self.bump)
+            name = '{}_{}{}_{}_r_{}'.format('yc', self.set_coeff, l_or_lm, 'mdot_cr', r_cr)
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.set_coeff) + l_or_lm,
+                                                         'mdot_cr_r_{}'.format(r_cr), self.set_metal, self.set_bump)
 
         yc    = yc_llm_mdot_cr[0, 1:]
         llm   = yc_llm_mdot_cr[1:, 0]
@@ -2710,30 +2923,32 @@ class Crit_Mdot:
                 ax.text(0.1, 0.9, 'R:{}'.format(r_cr), style='italic',
                         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
-            if self.coeff != 1.0:
-                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+            if self.set_coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
                         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
 
             '''=============================OBSERVABELS==============================='''
 
-            Plots.plot_obs_mdot_llm(ax, self.obs, l_or_lm, yc_val)
+
+
+            # PlotObs.plot_obs_mdot_llm(ax, self.obs, l_or_lm, yc_val)
 
             '''=============================BACKGROUND================================'''
             if v_n_background != None:
-                yc_mdot_llm_z = Save_Load_tables.load_3d_table(self.opal_used,
+                yc_mdot_llm_z = Save_Load_tables.load_3d_table(self.set_metal,
                                                                'yc_mdot_{}_{}'.format(l_or_lm, v_n_background),
-                                                               'yc', 'mdot', l_or_lm, v_n_background, self.output_dir)
+                                                               'yc', 'mdot', l_or_lm, v_n_background, self.set_output_dir)
 
                 yc_ind = Physics.ind_of_yc(yc_mdot_llm_z[:, 0, 0], yc_val)
                 mdot_llm_z = yc_mdot_llm_z[yc_ind, :, :]
 
-                Plots.plot_color_background(ax, mdot_llm_z, 'mdot', l_or_lm, v_n_background, 'Yc:{}'.format(yc_val))
+                PlotBackground.plot_color_background(ax, mdot_llm_z, 'mdot', l_or_lm, v_n_background, 'Yc:{}'.format(yc_val))
 
         # --- --- WATER MARK --- --- ---
         fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
         plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
-        plot_name = self.plot_dir + 'minMdot_l.pdf'
+        plot_name = self.set_plot_dir + 'minMdot_l.pdf'
         plt.savefig(plot_name)
         plt.show()
 
@@ -2990,36 +3205,242 @@ class Crit_Mdot:
     #
     #         plt.show()
 
-class Plot_Multiple_Crit_Mdots:
 
-    output_dir = '../data/output/'
-    plot_dir = '../data/plots/'
+class Plot_Critical_Mdot(PlotObs):
 
-    y_coord = []
-    coeff = []
-    r_cr = []
-    opal = []
-    bump = []
-    yc   = []
+    def __init__(self, metal, bump, coef):
 
-    def __init__(self, obs_files, opal_for_obs_background):
+        self.set_metal = metal
+        self.set_coeff = coef
+        self.set_bump = bump
+
+        PlotObs.__init__(self, self.set_metal,
+                         Files.get_obs_file(self.set_metal), Files.get_atm_file(self.set_metal))
+
+        self.set_clean = False
+        self.set_use_gaia = False
+        self.set_use_atm_file = True
+        self.set_load_yc_l_lm = True
+        self.set_load_yc_nan_lmlim = True
+        self.set_check_lm_for_wne = True
+
+        self.set_do_plot_obs_err = True
+        self.set_do_plot_evol_err = True
+        self.set_do_plot_line_fit = True
+
+    def plot_cr_mdot(self, l_or_lm, yc_val, r_cr = None, ax = None, fill_gray=True, fsz=12):
+
+        if r_cr == None:
+            name = '{}_{}{}_{}'.format('yc', self.set_coeff, l_or_lm, 'mdot_cr')
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.set_coeff) + l_or_lm,
+                                                         'mdot_cr', self.set_metal, self.set_bump)
+        else:
+            name = '{}_{}{}_{}_r_{}'.format('yc', self.set_coeff, l_or_lm, 'mdot_cr', r_cr)
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.set_coeff) + l_or_lm,
+                                                         'mdot_cr_r_{}'.format(r_cr), self.set_metal, self.set_bump)
+
+        yc = yc_llm_mdot_cr[0, 1:]
+        llm = yc_llm_mdot_cr[1:, 0]
+        mdot2d = yc_llm_mdot_cr[1:, 1:]
+
+        if not yc_val in yc:
+            raise ValueError('Value yc_val[{}] not in yc:\n\t {}'.format(yc_val, yc))
+
+
+        ind = Math.find_nearest_index(yc, yc_val)
+        mdot = mdot2d[:, ind]
+
+        show_plot = False
+        if ax == None: # if the plotting class is not given:
+            fig = plt.figure()
+            fig.subplots_adjust(hspace=0.2, wspace=0.3)
+            ax = fig.add_subplot(1,1,1)
+            show_plot = True
+
+
+        ax.plot(mdot, llm, '-', color='black')
+        if fill_gray: ax.fill_between(mdot, llm, color="lightgray")
+
+        if r_cr != None and not self.set_clean:
+            ax.text(0.1, 0.9, 'R:{}'.format(r_cr), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
+
+        if self.set_coeff != 1.0 and not self.set_clean:
+            ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
+
+        if show_plot:
+            ax.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+            ax.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1, fontsize=fsz)
+            plot_name = Files.plot_dir + 'cr_mdot_{}_{}_{}{}.pdf'.format(self.set_metal, self.set_bump, self.set_coeff,
+                                                                         l_or_lm)
+            ax.set_xlabel(Labels.lbls('mdot'), fontsize=fsz)
+            ax.set_ylabel(Labels.lbls(l_or_lm), fontsize=fsz)
+            # plt.grid()
+            plt.xticks(fontsize=fsz)
+            plt.yticks(fontsize=fsz)
+            plt.savefig(plot_name)
+            plt.show()
+        else:
+            return ax
+
+    def plot_cr_mdot_obs(self, l_or_lm, yc_val, r_cr = None, ax = None, fill_gray=True, obs_err=True, evol_err=True, fsz=12):
+
+        show_plot = False
+        if ax == None: # if the plotting class is not given:
+            fig = plt.figure()
+            fig.subplots_adjust(hspace=0.2, wspace=0.3)
+            ax = fig.add_subplot(1,1,1)
+            show_plot = True
+
+        self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax, fill_gray)
+
+        self.plot_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
+
+
+        if show_plot:
+            ax.text(0.05, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+            ax.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1, fontsize=fsz)
+            plot_name = Files.plot_dir + 'cr_mdot_{}_{}_{}{}.pdf'.format(self.set_metal, self.set_bump, self.set_coeff,
+                                                                         l_or_lm)
+            ax.set_xlabel(Labels.lbls('mdot'), fontsize=fsz)
+            ax.set_ylabel(Labels.lbls(l_or_lm), fontsize=fsz)
+
+            plt.xticks(fontsize=fsz)
+            plt.yticks(fontsize=fsz)
+            # plt.grid()
+            plt.savefig(plot_name)
+            plt.show()
+        else:
+            return ax
+
+    def plot_cr_mdot_sp_set(self, l_or_lm, yc_vals, r_cr = None, ax=None):
+        '''
+        PLOTS the set of llm(mdot), with l->m relation assumed from yc_vals.
+        :param l_or_lm:
+        :param yc_vals:
+        :return:
+        '''
+
+
+
+        if r_cr == None:
+            name = '{}_{}{}_{}'.format('yc', self.set_coeff, l_or_lm, 'mdot_cr')
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.set_coeff) + l_or_lm,
+                                                         'mdot_cr', self.set_metal, self.set_bump)
+        else:
+            name = '{}_{}{}_{}_r_{}'.format('yc', self.set_coeff, l_or_lm, 'mdot_cr', r_cr)
+            yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(self.set_coeff) + l_or_lm,
+                                                         'mdot_cr_r_{}'.format(r_cr), self.set_metal, self.set_bump)
+
+        yc    = yc_llm_mdot_cr[0, 1:]
+        llm   = yc_llm_mdot_cr[1:, 0]
+        mdot2d= yc_llm_mdot_cr[1:, 1:]
+
+        for i in range(len(yc_vals)):
+            if not yc_vals[i] in yc:
+                raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc_vals[i], yc))
+
+        yc_vals = np.sort(yc_vals, axis=0)
+
+        yc_n = len(yc_vals)
+
+        fig = plt.figure()
+        fig.subplots_adjust(hspace=0.2, wspace=0.3)
+
+        for i in range(1, yc_n+1):
+            print(i)
+            yc_val = yc_vals[i-1]
+
+            ind = Math.find_nearest_index(yc, yc_val)
+            mdot = mdot2d[:, ind]
+
+            if yc_n % 2 == 0: ax = fig.add_subplot(2, yc_n/2, i)
+            else:             ax = fig.add_subplot(1, yc_n, i)
+
+            ax.plot(mdot, llm, '-',    color='black')
+            ax.fill_between(mdot, llm, color="lightgray")
+
+            if r_cr != None:
+                ax.text(0.1, 0.9, 'R:{}'.format(r_cr), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+            if self.set_coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+
+            '''=============================OBSERVABELS==============================='''
+
+
+
+            # PlotObs.plot_obs_mdot_llm(ax, self.obs, l_or_lm, yc_val)
+
+            '''=============================BACKGROUND================================'''
+            if False:
+                yc_mdot_llm_z = Save_Load_tables.load_3d_table(self.set_metal,
+                                                               'yc_mdot_{}_{}'.format(l_or_lm, v_n_background),
+                                                               'yc', 'mdot', l_or_lm, v_n_background, self.set_output_dir)
+
+                yc_ind = Physics.ind_of_yc(yc_mdot_llm_z[:, 0, 0], yc_val)
+                mdot_llm_z = yc_mdot_llm_z[yc_ind, :, :]
+
+                PlotBackground.plot_color_background(ax, mdot_llm_z, 'mdot', l_or_lm, v_n_background, 'Yc:{}'.format(yc_val))
+
+        # --- --- WATER MARK --- --- ---
+        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+        plt.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=1)
+        plot_name = Files.plot_dir + 'cr_mdot_{}_{}_{}{}.pdf'.format(self.set_metal, self.set_bump, self.set_coeff,
+                                                                          l_or_lm)
+        plt.savefig(plot_name)
+        plt.show()
+
+
+
+
+class Plot_Multiple_Crit_Mdots(PlotObs):
+
+    output_dir = Files.output_dir
+    plot_dir = Files.plot_dir
+
+    def __init__(self,  l_or_lm):
         '''
         Table name expected: ' yc_0.8lm_mdot_cr_r_1.0__HeII_table_x '
         :param tables:
         :param yc:
         :param obs_files:
         '''
-        self.opal_def = opal_for_obs_background
-        self.obs = []
-        self.obs_files = obs_files
-        for i in range(len(obs_files)):
-            self.obs.append(Read_Observables(obs_files[i], opal_for_obs_background[i]))
+        self.set_y_coord = l_or_lm
+        self.set_metal = []
+        self.set_coeff = []
+        self.set_bump = []
+        self.set_r_cr = []
+        self.set_yc = []
+
+        # zeroes file goes for observables
+        PlotObs.__init__(self, self.set_metal[0],
+                         Files.get_obs_file(self.set_metal[0]), Files.get_atm_file(self.set_metal[0]))
+
+
+        self.set_clean              = False
+        self.set_use_gaia           = True
+        self.set_use_atm_file       = True
+        self.set_load_yc_l_lm       = True
+        self.set_load_yc_nan_lmlim  = True
+        self.set_check_lm_for_wne   = True
+
+        self.set_do_plot_obs_err    = True
+        self.set_do_plot_evol_err   = True
+        self.set_do_plot_line_fit   = True
+
 
     def plot_crit_mdots(self, clean = False, v_n_background = None, plfls=list()):
 
-        n = len(self.y_coord)
+        n = len(self.set_y_coord)
 
-        if len(self.coeff) != n or len(self.r_cr) != n or len(self.opal) != n or len(self.bump) != n or len(self.yc) != n:
+        if len(self.set_coeff) != n or len(self.set_r_cr) != n or len(self.set_metal) != n or len(self.set_bump) != n or len(self.set_yc) != n:
             raise ValueError('Length of all input array must me the same. Given: {}')
 
         fig = plt.figure(figsize=plt.figaspect(0.8))
@@ -3032,24 +3453,24 @@ class Plot_Multiple_Crit_Mdots:
         max_mdot = []
         for i in range(n):
 
-            l_or_lm = self.y_coord[i]
-            coeff   = self.coeff[i]
-            r_cr    = self.r_cr[i]
-            opal    = self.opal[i]
-            bump    = self.bump[i]
-            yc      = self.yc[i]
-            z = Get_Z.z(opal)
+            l_or_lm = self.set_y_coord[i]
+            coeff   = self.set_coeff[i]
+            r_cr    = self.set_r_cr[i]
+            metal    = self.set_metal[i]
+            bump    = self.set_bump[i]
+            yc      = self.set_yc[i]
+            z = Get_Z.z(metal)
 
             if r_cr == None:
                 name = '{}_{}{}_{}'.format('yc', coeff, l_or_lm, 'mdot_cr')
                 lbl.append( 'z:{}({}) K:{}'.format(z, bump, coeff) )
                 yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(coeff) + l_or_lm,
-                                                             'mdot_cr', opal, bump)
+                                                             'mdot_cr', metal, bump)
             else:
                 name = '{}_{}{}_{}_r_{}'.format('yc', coeff, l_or_lm, 'mdot_cr', r_cr)
                 lbl.append( 'z:{}({}) K:{} R:{}'.format(z, bump, coeff, r_cr) )
                 yc_llm_mdot_cr = Save_Load_tables.load_table(name, 'yc', str(coeff) + l_or_lm,
-                                                             'mdot_cr_r_{}'.format(r_cr), opal, bump)
+                                                             'mdot_cr_r_{}'.format(r_cr), metal, bump)
 
             yc_arr = yc_llm_mdot_cr[0,  1:]
             llm    = yc_llm_mdot_cr[1:, 0]
@@ -3075,23 +3496,26 @@ class Plot_Multiple_Crit_Mdots:
                         bbox={'facecolor': 'C'+str(i+1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
 
-        for i in range(len(self.obs_files)):
-            l_or_lm = self.y_coord[i]
-            yc = self.yc[i]
-            Plots.plot_obs_mdot_llm(ax, self.obs[i], l_or_lm, yc, clean)
+        self.plot_all_x_llm(ax, self.set_y_coord, 'mdot', self.set_yc[0], True, True)
+
+        # for i in range(len(self.obs_files)):
+        #     l_or_lm = self.set_y_coord[i]
+        #     yc = self.set_yc[i]
+        #
+        #     PlotBackground.plot_obs_mdot_llm(ax, self.obs[i], l_or_lm, yc, clean)
 
         # --- --- BACKGROUND --- --- ---
         if v_n_background != None:
-            yc_mdot_llm_z = Save_Load_tables.load_3d_table(self.opal[0],
-                                                           'yc_mdot_{}_{}'.format(self.y_coord[0], v_n_background),
-                                                           'yc', 'mdot', self.y_coord[0], v_n_background, self.output_dir)
+            yc_mdot_llm_z = Save_Load_tables.load_3d_table(self.set_metal[0],
+                                                           'yc_mdot_{}_{}'.format(self.set_y_coord[0], v_n_background),
+                                                           'yc', 'mdot', self.set_y_coord[0], v_n_background, self.output_dir)
 
-            yc_ind = Physics.ind_of_yc(yc_mdot_llm_z[:, 0, 0], self.yc[0])
+            yc_ind = Physics.ind_of_yc(yc_mdot_llm_z[:, 0, 0], self.set_yc[0])
             mdot_llm_z = yc_mdot_llm_z[yc_ind, :, :]
 
             # mdot_llm_z = Math.extrapolate(mdot_llm_z, 10, 0, 0, 0, 500)
 
-            Plots.plot_color_background(ax, mdot_llm_z, 'mdot', self.y_coord[0], v_n_background, self.opal[0], '', 0.6, clean)
+            PlotBackground.plot_color_background(ax, mdot_llm_z, 'mdot', self.set_y_coord[0], v_n_background, self.set_metal[0], '', 0.6, clean)
 
 
         # --- --- WATER MARK -- -- --
@@ -3164,459 +3588,99 @@ class Plot_Multiple_Crit_Mdots:
         plt.legend()
         plt.show()
 
-class Sonic_HRD:
 
-    output_dir = '../data/output/'
-    plot_dir = '../data/plots/'
+from FilesWork import PlotBackground2
+class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
-    opal_used = ''
-    sp_files = []
+    def __init__(self, gal_or_lmc, bump, coeff):
 
-    obs_files =  ''
+        self.lim_t1, self.lim_t2 = T_kappa_bump.t_for_bump(bump)
 
-    def __init__(self):
-        pass
+        self.set_exrtrapolation = [5, 0, 0, 20] # <-, ->, v, ^
+        self.set_show_extrap_borders = True
 
-    def set_files(self, bump, coeff):
+        PlotObs.__init__(self, gal_or_lmc, Files.get_obs_file(gal_or_lmc), Files.get_atm_file(gal_or_lmc))
+        PlotBackground2.__init__(self)
 
-        self.coeff = coeff
-        self.bump = bump
-        self.lim_t1, self.lim_t2 = Opacity_Bump.t_for_bump(bump)
+        self.set_metal  =     gal_or_lmc
+        self.set_coeff      = coeff
+        self.set_bump       = bump
 
-        self.spmdl=[]
-        for file in self.sp_files:
-            self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
+        self.set_clean          = True
+        self.set_use_gaia       = False
+        self.set_use_atm_file   = True
+        self.set_load_yc_l_lm   = True
+        self.set_load_yc_nan_lmlim  = True
+        self.set_check_lm_for_wne   = True
 
-        # self.nums = Num_Models(smfls, plotfls)
-        self.obs = Read_Observables(self.obs_files, self.opal_used)
-
-    # def save_y_yc_z_relation_sp(self, x_v_n, y_v_n, z_v_n, save, plot=False, yc_prec=0.1, depth=100):
-    #
-    #     def x_y_z_sort(x_arr, y_arr, z_arr=None, sort_by_012=0):
-    #         '''
-    #         RETURNS x_arr, y_arr, (z_arr) sorted as a matrix by a row, given 'sort_by_012'
-    #         :param x_arr:
-    #         :param y_arr:
-    #         :param z_arr:
-    #         :param sort_by_012:
-    #         :return:
-    #         '''
-    #
-    #         if z_arr == None and sort_by_012 < 2:
-    #             if len(x_arr) != len(y_arr):
-    #                 raise ValueError('len(x)[{}]!= len(y)[{}]'.format(len(x_arr), len(y_arr)))
-    #
-    #             x_y_arr = []
-    #             for i in range(len(x_arr)):
-    #                 x_y_arr = np.append(x_y_arr, [x_arr[i], y_arr[i]])
-    #
-    #             x_y_sort = np.sort(x_y_arr.view('float64, float64'), order=['f{}'.format(sort_by_012)], axis=0).view(np.float)
-    #             x_y_arr_shaped = np.reshape(x_y_sort, (int(len(x_y_sort) / 2), 2))
-    #             return x_y_arr_shaped[:,0], x_y_arr_shaped[:,1]
-    #
-    #         if z_arr != None:
-    #             if len(x_arr) != len(y_arr) or len(x_arr)!=len(z_arr):
-    #                 raise ValueError('len(x)[{}]!= len(y)[{}]!=len(z_arr)[{}]'.format(len(x_arr), len(y_arr), len(z_arr)))
-    #
-    #             x_y_z_arr = []
-    #             for i in range(len(x_arr)):
-    #                 x_y_z_arr = np.append(x_y_z_arr, [x_arr[i], y_arr[i], z_arr[i]])
-    #
-    #             x_y_z_sort = np.sort(x_y_z_arr.view('float64, float64, float64'), order=['f{}'.format(sort_by_012)], axis=0).view(
-    #                 np.float)
-    #             x_y_z_arr_shaped = np.reshape(x_y_z_sort, (int(len(x_y_z_sort) / 3), 3))
-    #             return x_y_z_arr_shaped[:, 0], x_y_z_arr_shaped[:, 1], x_y_z_arr_shaped[:, 2]
-    #
-    #     if not y_v_n in ['m', 'l', 'lm', 'Yc']:
-    #         raise NameError('y_v_n must be one of [{}] , give:{}'.format(['m', 'l', 'lm', 'Yc'], y_v_n))
-    #
-    #     append_crit = True
-    #
-    #     yc, cls = self.separate_sp_by_crit_val('Yc', yc_prec)
-    #
-    #     def x_y_limits(cls, min_or_max):
-    #         x_mins = []
-    #         y_mins = []
-    #         x_maxs = []
-    #         y_maxs = []
-    #         for cl in cls:
-    #             x = cl.get_sonic_cols(x_v_n)
-    #             y = cl.get_sonic_cols(y_v_n)
-    #             if append_crit:
-    #                 x = np.append(x, cl.get_crit_value(x_v_n))
-    #                 y = np.append(y, cl.get_crit_value(y_v_n))
-    #             x_mins = np.append(x_mins, x.min())
-    #             y_mins = np.append(y_mins, y.min())
-    #             x_maxs = np.append(x_maxs, x.max())
-    #             y_maxs = np.append(y_maxs, y.max())
-    #         if min_or_max == 'min':
-    #             return x_mins.max(), x_maxs.min(), y_mins.max(), y_maxs.min()
-    #         if min_or_max == 'max':
-    #             return x_mins.min(), x_maxs.max(), y_mins.min(), y_maxs.max()
-    #         else:
-    #             raise NameError('min_or_max can be only: [{}, or {}] given: {}'.format('min', 'max', min_or_max))
-    #
-    #
-    #
-    #     def set_xgrid_ygrid(yc_val, cls, use_opal_ml_rel=True, opal_used = None):
-    #         if use_opal_ml_rel:
-    #
-    #             t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', opal_used)
-    #
-    #             y_grid = None
-    #             x_grid = None
-    #         else:
-    #             x1, x2, y1, y2 = x_y_limits(cls, 'max')
-    #             x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
-    #             y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
-    #         return x_grid, y_grid
-    #
-    #     def x_y_z(cls):
-    #         '''
-    #         cls = set of classes of sp. files with the same Yc.
-    #         :param cls:
-    #         :return:
-    #         '''
-    #
-    #         x1, x2, y1, y2 = x_y_limits(cls, 'max')
-    #         x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
-    #         y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
-    #
-    #         y_zg = np.zeros(len(x_grid)+1)     # +1 for y-value (l,lm,m,Yc)
-    #
-    #         for cl in cls:                    # INTERPOLATING EVERY ROW to achive 'depth' number of points
-    #             x =  cl.get_sonic_cols(x_v_n)
-    #             y =  cl.get_crit_value(y_v_n) # Y should be unique value for a given Yc (like m, l/lm, or Yc)
-    #             z =  cl.get_sonic_cols(z_v_n)
-    #
-    #             if append_crit:
-    #                 x = np.append(x, cl.get_crit_value(x_v_n))
-    #                 z = np.append(z, cl.get_crit_value(z_v_n))
-    #             xi, zi = x_y_z_sort(x, z)
-    #
-    #             z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
-    #             y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
-    #
-    #             plt.plot(xi, zi, '.', color='red')
-    #             plt.plot(x_grid, z_grid, '-', color='red')
-    #
-    #         y_zg = np.delete(y_zg, 0, 0)
-    #         y = y_zg[:,0]
-    #         zi = y_zg[:, 1:]
-    #
-    #         z_grid2 = np.zeros(len(y_grid))
-    #         for i in range(len(x_grid)):   # INTERPOLATING EVERY COLUMN to achive 'depth' number of points
-    #             z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:,i])(y_grid) ))
-    #         z_grid2 = np.delete(z_grid2, 0, 0)
-    #
-    #         x_y_z_final = Math.combine(x_grid, y_grid, z_grid2.T)
-    #
-    #         from Phys_Math_Labels import Plots
-    #         Plots.plot_color_table(x_y_z_final, x_v_n, y_v_n, z_v_n)
-    #
-    #         plt.show()
-    #         print('a')
-    #
-    #     x_y_z(cls[0])
-    #
-    #
-    #     # for i in range(len(yc)):
-    #     #     x_y_z(cls[i])
-    #
-    #
-    #
-    #
-    #             # x_y_z = []
-    #             # for j in range(len(y)):
-    #             #     x_y_z = np.append(x_y_z, [x[j], y[j], z[j]])
-    #             #
-    #             # x_y_z_sort = np.sort(x_y_z.view('float64, float64, float64'), order=['f0'], axis=0).view(np.float)
-    #             # x_y_z_shaped = np.reshape(x_y_z_sort, (int(len(x_y_z_sort) / 3), 3))
-    #             #
-    #             # x_grid = np.mgrid[x_y_z_shaped[0, 0]:x_y_z_shaped[-1, 0]:depth*1j]
-    #             # f = interpolate.InterpolatedUnivariateSpline(x_y_z_shaped[:,0],x_y_z_shaped[:,2]) # follows the data
-    #             # z_grid = f(x_grid)
-    #             #
-    #             # y_xi_zi = []
-    #             # for j in range(len(y)):
-    #             #     y_xi_zi = np.append(y_xi_zi, [y[j], ])
-    #             #
-    #             #
-    #             # plt.plot(x_y_z_shaped[:,0],x_y_z_shaped[:,1], '.', color='red')
-    #             # # plt.plot(x_grid, z_grid, '-', color='red')
-    #             # plt.show()
-    #             # print('B')
-    #
-    #         # yc_x_y_z = np.append(yc_x_y_z, x_y_z_shaped)
-    #
-    #
-    #     # yc_x_y_z = np.reshape(yc_x_y_z, (len(yc), int(len(x_y_z_sort) / 3), 3))
-    #
-    #
-    #     # print('a')
-    #
-    #
-    #
-    #
-    #
-    #
-    #
-    #     # y_ = []
-    #     # for i in range(len(self.sp_files)):
-    #     #     y_ = np.append(y_, self.spmdl[i].get_crit_value(y_v_n))
-    #     # y_grid = np.mgrid[y_.min():y_.max():depth*1j]
-    #     #
-    #     # z2d_pol = np.zeros(len(y_grid))
-    #     # z2d_int = np.zeros(len(y_grid))
-    #     #
-    #     #
-    #     # fig = plt.figure(figsize=plt.figaspect(1.0))
-    #     #
-    #     # ax1 = fig.add_subplot(221)
-    #     # ax1.grid()
-    #     # ax1.set_ylabel(Labels.lbls(z_v_n))
-    #     # ax1.set_xlabel(Labels.lbls(y_v_n))
-    #     # ax1.set_title('INTERPOLATION')
-    #     #
-    #     # ax2 = fig.add_subplot(222)
-    #     # ax2.grid()
-    #     # ax2.set_ylabel(Labels.lbls(y_v_n))
-    #     # ax2.set_xlabel(Labels.lbls(z_v_n))
-    #     # ax2.set_title('EXTRAPOLATION')
-    #     #
-    #     # for i in range(len(yc)):
-    #     #     y_z = []
-    #     #     for cl in cls[i]:
-    #     #         y_z = np.append(y_z, [cl.get_crit_value(y_v_n), cl.get_crit_value(z_v_n)])
-    #     #     y_z_sort = np.sort(y_z.view('float64, float64'), order=['f0'], axis=0).view(np.float)
-    #     #     y_z_shaped = np.reshape(y_z_sort, (int(len(y_z_sort) / 2), 2))
-    #     #
-    #     #     '''----------------------------POLYNOMIAL EXTRAPOLATION------------------------------------'''
-    #     #     print('\n\t Yc = {}'.format(yc[i]))
-    #     #     y_pol, z_pol = Math.fit_plynomial(y_z_shaped[:, 0], y_z_shaped[:, 1], 3, depth, y_grid)
-    #     #     z2d_pol = np.vstack((z2d_pol, z_pol))
-    #     #     color = 'C' + str(int(yc[i] * 10)-1)
-    #     #     ax2.plot(y_pol, z_pol, '--', color=color)
-    #     #     ax2.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
-    #     #
-    #     #     '''------------------------------INTERPOLATION ONLY---------------------------------------'''
-    #     #     y_int, z_int = interp(y_z_shaped[:, 0], y_z_shaped[:, 1], y_grid)
-    #     #     z2d_int = np.vstack((z2d_int, z_int))
-    #     #     ax1.plot(y_int, z_int, '--', color=color)
-    #     #     ax1.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
-    #     #
-    #     # ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-    #     # ax2.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-    #     #
-    #     # z2d_int = np.delete(z2d_int, 0, 0)
-    #     # z2d_pol = np.delete(z2d_pol, 0, 0)
-    #     #
-    #     # yc_llm_m_pol = Math.combine(yc, y_grid, z2d_pol.T)  # changing the x/y
-    #     # yc_llm_m_int = Math.combine(yc, y_grid, z2d_int.T)  # changing the x/y
-    #     #
-    #     # table_name = '{}_{}_{}'.format('yc', y_v_n, z_v_n)
-    #     # if save == 'int':
-    #     #     Save_Load_tables.save_table(yc_llm_m_int, opal_used, table_name, 'yc', y_v_n, z_v_n)
-    #     # if save == 'pol':
-    #     #     Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
-    #     #
-    #     # # Save_Load_tables.save_table(yc_llm_m_pol, opal_used, table_name, 'yc', y_v_n, z_v_n)
-    #     #
-    #     # if plot:
-    #     #
-    #     #     levels = []
-    #     #
-    #     #     if z_v_n == 'r':
-    #     #         levels = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5]
-    #     #     if z_v_n == 'm':
-    #     #         levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
-    #     #     if z_v_n == 'mdot':
-    #     #         levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
-    #     #     if z_v_n == 'l':
-    #     #         levels = [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
-    #     #     if z_v_n == 'lm':
-    #     #         levels = [4.0, 4.05, 4.1, 4.15, 4.2, 4.25, 4.3, 4.35,  4.4, 4.45,
-    #     #                   4.5, 4.55,  4.6, 4.65,  4.7, 4.75, 4.8, 4.85,  4.9, 4.95, 5.0]
-    #     #     if z_v_n == 't':
-    #     #         levels = [5.15, 5.16,5.17,5.18,5.19,5.20,5.21,5.22,5.23,5.24,5.25,5.26,5.27,5.28,5.29,5.30]
-    #     #
-    #     #
-    #     #     ax = fig.add_subplot(223)
-    #     #
-    #     #     # ax = fig.add_subplot(1, 1, 1)
-    #     #     ax.set_xlim(yc_llm_m_int[0,1:].min(), yc_llm_m_int[0,1:].max())
-    #     #     ax.set_ylim(yc_llm_m_int[1:,0].min(), yc_llm_m_int[1:,0].max())
-    #     #     ax.set_ylabel(Labels.lbls(y_v_n))
-    #     #     ax.set_xlabel(Labels.lbls('Yc'))
-    #     #
-    #     #     contour_filled = plt.contourf(yc_llm_m_int[0, 1:], yc_llm_m_int[1:, 0], yc_llm_m_int[1:,1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
-    #     #     # plt.colorbar(contour_filled, label=Labels.lbls('m'))
-    #     #     contour = plt.contour(yc_llm_m_int[0, 1:], yc_llm_m_int[1:, 0], yc_llm_m_int[1:,1:], levels, colors='k')
-    #     #
-    #     #     clb = plt.colorbar(contour_filled)
-    #     #     clb.ax.set_title(Labels.lbls(z_v_n))
-    #     #
-    #     #     plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
-    #     #     #ax.set_title('MASS-LUMINOSITY RELATION')
-    #     #
-    #     #     # plt.ylabel(l_or_lm)
-    #     #     # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-    #     #     # plt.savefig(name)
-    #     #
-    #     #
-    #     #
-    #     #
-    #     #     ax = fig.add_subplot(224)
-    #     #
-    #     #     # ax = fig.add_subplot(1, 1, 1)
-    #     #     ax.set_xlim(yc_llm_m_pol[0, 1:].min(), yc_llm_m_pol[0, 1:].max())
-    #     #     ax.set_ylim(yc_llm_m_pol[1:, 0].min(), yc_llm_m_pol[1:, 0].max())
-    #     #     ax.set_ylabel(Labels.lbls(y_v_n))
-    #     #     ax.set_xlabel(Labels.lbls('Yc'))
-    #     #
-    #     #
-    #     #     contour_filled = plt.contourf(yc_llm_m_pol[0, 1:], yc_llm_m_pol[1:, 0], yc_llm_m_pol[1:, 1:], levels,
-    #     #                                   cmap=plt.get_cmap('RdYlBu_r'))
-    #     #     # plt.colorbar(contour_filled, label=Labels.lbls('m'))
-    #     #     contour = plt.contour(yc_llm_m_pol[0, 1:], yc_llm_m_pol[1:, 0], yc_llm_m_pol[1:, 1:], levels, colors='k')
-    #     #
-    #     #     clb = plt.colorbar(contour_filled)
-    #     #     clb.ax.set_title(Labels.lbls(z_v_n))
-    #     #
-    #     #     plt.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
-    #     #     #ax.set_title('MASS-LUMINOSITY RELATION')
-    #     #
-    #     #     # plt.ylabel(l_or_lm)
-    #     #     # ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-    #     #
-    #     #
-    #     #     plt.show()
-    #
-    #     # yc_llm_m_pol
-    #
-    #
-    # def plot_t_l_mdot(self, l_or_lm, rs, plot_obs, plot_nums, lim_t1 = None, lim_t2 = None):
-    #
-    #     # ---------------------LOADING-INTERPOLATED-TABLE---------------------------
-    #
-    #     t_k_rho = Save_Load_tables.load_table('t_k_rho', 't', 'k', 'rho', self.opal_used, self.output_dir)
-    #     t_llm_rho = t_kap_rho_to_t_llm_rho(t_k_rho, l_or_lm)
-    #
-    #
-    #
-    #     #---------------------Getting KAPPA[], T[], RHO2D[]-------------------------
-    #
-    #     if rs == 0: # here in *t_llm_r* and in *t_llm_rho*  t, and llm are equivalent
-    #         t_llm_r = self.sp_get_r_lt_table2('r', l_or_lm, True, t_llm_rho)
-    #         t   = t_llm_r[0, 1:]
-    #         llm = t_llm_r[1:,0]
-    #         rs  = t_llm_r[1:,1:]
-    #
-    #         t_llm_rho = Math.crop_2d_table(t_llm_rho, t.min(), t.max(), llm.min(), llm.max())
-    #         rho = t_llm_rho[1:, 1:]
-    #
-    #         vrho  = Physics.get_vrho(t, rho, 2) # MU assumed constant!
-    #         m_dot = Physics.vrho_mdot(vrho, rs, 'tl')
-    #
-    #     else:
-    #         t = t_llm_rho[0, 1:]
-    #         llm = t_llm_rho[1:,0]
-    #         rho = t_llm_rho[1:, 1:]
-    #
-    #         vrho = Physics.get_vrho(t, rho, 2)
-    #         m_dot = Physics.vrho_mdot(vrho, rs, '')
-    #
-    #
-    #     #-------------------------------------------POLT-Ts-LM-MODT-COUTUR------------------------------------
-    #
-    #     name = self.plot_dir + 'rs_lm_minMdot_plot.pdf'
-    #
-    #     fig = plt.figure()
-    #     ax = fig.add_subplot(1, 1, 1)
-    #     plt.xlim(t.min(), t.max())
-    #     plt.ylim(llm.min(), llm.max())
-    #     plt.ylabel(Labels.lbls(l_or_lm))
-    #     plt.xlabel(Labels.lbls('ts'))
-    #     levels = [-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2]
-    #     contour_filled = plt.contourf(t, llm, m_dot, levels, cmap=plt.get_cmap('RdYlBu_r'))
-    #     plt.colorbar(contour_filled, label=Labels.lbls('mdot'))
-    #     contour = plt.contour(t, llm, m_dot, levels, colors='k')
-    #     plt.clabel(contour, colors='k', fmt='%2.1f', fontsize=12)
-    #     plt.title('SONIC HR DIAGRAM')
-    #
-    #
-    #     # plt.ylabel(l_or_lm)
-    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-    #     plt.savefig(name)
-    #
-    #     #--------------------------------------------------PLOT-MINS----------------------------------------------------
-    #
-    #     # plt.plot(mins[0, :], mins[1, :], '-.', color='red', label='min_Mdot (rs: {} )'.format(r_s_))
-    #
-    #     #-----------------------------------------------PLOT-OBSERVABLES------------------------------------------------
-    #     if plot_obs:
-    #         classes = []
-    #         classes.append('dum')
-    #         x = []
-    #         y = []
-    #         for star_n in self.obs.stars_n:
-    #             xyz = self.obs.get_xyz_from_yz(star_n, l_or_lm, 'mdot', t, llm, m_dot, lim_t1, lim_t2)
-    #             if xyz.any():
-    #                 x = np.append(x, xyz[0, 0])
-    #                 y = np.append(y, xyz[1, 0])
-    #                 for i in range(len(xyz[0,:])):
-    #                     plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='')  # plot color dots)))
-    #                     ax.annotate(int(star_n), xy=(xyz[0,i], xyz[1,i]),
-    #                                 textcoords='data')  # plot numbers of stars
-    #                     if self.obs.get_star_class(star_n) not in classes:
-    #                         plt.plot(xyz[0, i], xyz[1, i], marker=self.obs.get_clss_marker(star_n), markersize='9', color=self.obs.get_class_color(star_n), ls='', label='{}'.format(self.obs.get_star_class(star_n)))  # plot color dots)))
-    #                         classes.append(self.obs.get_star_class(star_n))
-    #
-    #         fit = np.polyfit(x, y, 1)  # fit = set of coeddicients (highest first)
-    #         f = np.poly1d(fit)
-    #         fit_x_coord = np.mgrid[(x.min()-1):(x.max()+1):1000j]
-    #         plt.plot(fit_x_coord, f(fit_x_coord), '-.', color='blue')
-    #
-    #     #--------------------------------------------------_NUMERICALS--------------------------------------------------
-    #
-    #
-    #     plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-    #     plt.gca().invert_xaxis()
-    #     plt.savefig(name)
-    #     plt.show()
+        self.set_do_plot_obs_err  = False
+        self.set_do_plot_evol_err = False
+        self.set_do_plot_line_fit = True
 
 
-    def plot_sonic_hrd(self, yc_val, l_or_lm, alpha=1.0, clean=False):
-        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, self.bump,
-                                                       'yc_t_{}{}_mdot'.format(self.coeff, l_or_lm),
-                                                       'yc', 't', str(self.coeff) + l_or_lm, 'mdot')
+        self.set_label_sise=12
+        self.set_rotate_labels=295
+        self.set_alpha=1.0
+        self.set_show_contours=False
+
+    def plot_sonic_hrd(self, yc_val, l_or_lm):
+
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump,
+                                                       'yc_t_{}{}_mdot'.format(self.set_coeff, l_or_lm),
+                                                       'yc', 't', str(self.set_coeff) + l_or_lm, 'mdot')
+
 
         yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
         t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
 
-        t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, 10, 5, 500, 4)
 
-        fig = plt.figure(figsize=plt.figaspect(0.8))
+        fig = plt.figure() # figsize=plt.figaspect(0.8)
         ax = fig.add_subplot(111) # , projection='3d'
-        Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used, 'Yc:{}'.format(yc_val), alpha, clean)
-        Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, self.lim_t1, self.lim_t2, True, clean)
 
-        if not clean:
-            if self.coeff != 1.0:
-                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+        # EXTRAPOLATION
+        if sum(self.set_exrtrapolation) > 0:
+            left = self.set_exrtrapolation[0]
+            right = self.set_exrtrapolation[1]
+            down = self.set_exrtrapolation[2]
+            up = self.set_exrtrapolation[3]
+
+            if self.set_show_extrap_borders:
+                # if left != 0:
+                #     ax.axvline(x=t_llm_mdot[0, 1:].min(), ls='dashed', lw=3, color='black')
+                # if right != 0:
+                #     ax.axvline(x=t_llm_mdot[0, 1:].max(), ls='dashed', lw=3, color='black')
+                if down != 0:
+                    ax.axhline(y=t_llm_mdot[1:, 0].min(), ls='dashed', lw=3, color='black')
+                if up != 0:
+                    ax.axhline(y=t_llm_mdot[1:, 0].max(), ls='dashed', lw=3, color='black')
+
+            _, t_llm_mdot = Math.extrapolate2(t_llm_mdot, left, right, down, up, 500, 4, True)
+
+        self.plot_color_background(ax, t_llm_mdot, 'ts', l_or_lm, 'mdot', self.set_metal, 'Yc:{}'.format(yc_val))
+
+        self.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
+
+
+
+        if not self.set_clean:
+            if self.set_coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
                         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
 
         # --- --- WATER MARK --- --- ---
-        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+        if not self.set_clean:
+            fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
 
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2, fontsize=self.set_label_size)
         plt.gca().invert_xaxis()
         plt.show()
 
-    def plot_sonic_hrd_set(self, l_or_lm, yc_arr, yc1 = None, yc2 = None):
+    def plot_sonic_hrd_set(self, l_or_lm, yc_arr):
 
-        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, self.bump, 'yc_t_{}{}_mdot'
-                                                       .format(self.coeff, l_or_lm),'yc', 't', str(self.coeff) + l_or_lm, 'mdot')
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump, 'yc_t_{}{}_mdot'
+                                                       .format(self.set_coeff, l_or_lm),'yc', 't',
+                                                       str(self.set_coeff) + l_or_lm, 'mdot')
         yc = yc_t_llm_mdot[:, 0, 0]
 
         for i in range(len(yc_arr)):
@@ -3643,16 +3707,16 @@ class Sonic_HRD:
 
             # fig = plt.figure(figsize=plt.figaspect(0.8))
             # ax = fig.add_subplot(111)  # , projection='3d'
-            Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used,'Yc:{}'.format(yc_val))
-            Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, yc1, yc2, self.lim_t1, self.lim_t2)
+            PlotBackground.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.set_metal, 'Yc:{}'.format(yc_val))
+            self.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
 
-            if self.coeff != 1.0:
-                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+            if self.set_coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
                         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
 
         plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plot_name = self.plot_dir + 'sonic_HRD.pdf'
+        plot_name = Files.plot_dir + 'sonic_HRD.pdf'
         plt.savefig(plot_name)
         plt.gca().invert_xaxis()
         plt.show()
@@ -3660,8 +3724,8 @@ class Sonic_HRD:
     # def plot_sonic_hrd_const_r(self, l_or_lm, r, yc, yc1=None, yc2=None):
     def plot_sonic_hrd_const_r(self, l_or_lm, rs, yc_arr):
 
-        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.opal_used, self.bump, 'yc_t_{}{}_mdot_rs_{}'.format(self.coeff, l_or_lm, rs),
-                                                       'yc', 't', str(self.coeff) + l_or_lm, 'mdot_rs_{}'.format(rs))
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump, 'yc_t_{}{}_mdot_rs_{}'.format(self.set_coeff, l_or_lm, rs),
+                                                       'yc', 't', str(self.set_coeff) + l_or_lm, 'mdot_rs_{}'.format(rs))
         yc = yc_t_llm_mdot[:, 0, 0]
 
         for i in range(len(yc_arr)):
@@ -3681,33 +3745,95 @@ class Sonic_HRD:
 
             ind = Math.find_nearest_index(yc, yc_val)
             t_llm_mdot = yc_t_llm_mdot[ind, :, :]
-            t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, 10, 5, 500, 'unispline') # 2 is better to linear part
+
+
+            # limits, t_llm_mdot = Math.extrapolate2(t_llm_mdot, None, None, None, 5, 500, 'IntUni', True) # 2 is better to linear part
+
 
             if yc_n % 2 == 0: ax = fig.add_subplot(2, yc_n/2, i)
             else:             ax = fig.add_subplot(1, yc_n, i)
 
+            # EXTRAPOLATION
+            if sum(self.set_exrtrapolation) > 0:
+                left = self.set_exrtrapolation[0]
+                right = self.set_exrtrapolation[1]
+                down = self.set_exrtrapolation[2]
+                up = self.set_exrtrapolation[3]
+
+                if self.set_show_extrap_borders:
+                    # if left != 0:
+                    #     ax.axvline(x=t_llm_mdot[0, 1:].min(), ls='dashed', lw=3, color='black')
+                    # if right != 0:
+                    #     ax.axvline(x=t_llm_mdot[0, 1:].max(), ls='dashed', lw=3, color='black')
+                    if down !=0:
+                        ax.axhline(y=t_llm_mdot[1:,0].min(), ls='dashed', lw=3, color='black')
+                    if up != 0:
+                        ax.axhline(y=t_llm_mdot[1:,0].max(), ls='dashed', lw=3, color='black')
+
+                _, t_llm_mdot = Math.extrapolate2(t_llm_mdot, left, right, down, up, 500, 4, True)
+
+
+
             # fig = plt.figure(figsize=plt.figaspect(0.8))
             # ax = fig.add_subplot(111)  # , projection='3d'
-            Plots.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.opal_used,'Yc:{} Rs:{}'.format(yc_val, rs))
-            Plots.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, self.obs, l_or_lm, self.lim_t1, self.lim_t2)
+            self.plot_color_background(ax, t_llm_mdot, 'ts', l_or_lm, 'mdot', self.set_metal, 'Yc:{} Rs:{}'.format(yc_val, rs))
+            self.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
 
-            if self.coeff != 1.0:
-                ax.text(0.5, 0.9, 'K:{}'.format(self.coeff), style='italic',
+
+
+            if self.set_coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
                         bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
 
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
-        plot_name = self.plot_dir + 'sonic_HRD_const_rs.pdf'
+
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2, fontsize=self.set_label_size)
+        plot_name = Files.plot_dir + 'sonic_HRD_const_rs.pdf'
         plt.savefig(plot_name)
         plt.gca().invert_xaxis()
         plt.show()
 
+    def plot_ts_y(self, v_n_y, yc_val, l_or_lm):
 
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump,
+                                                       'yc_t_{}{}_mdot'.format(self.set_coeff, l_or_lm),
+                                                       'yc', 't', str(self.set_coeff) + l_or_lm, 'mdot')
 
-    def test(self):
-        pass
+        yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
+        t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
+        # lm_max = t_llm_mdot[1:, 0].max()
+        # t_min = t_llm_mdot[0, 1:].min()
 
+        limits, t_llm_mdot = Math.extrapolate2(t_llm_mdot, None, None, None, 30, 500, 4, True)
 
+        fig = plt.figure(figsize=plt.figaspect(0.8))
+        ax = fig.add_subplot(111)  # , projection='3d'
+
+        #PlotBackground.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.set_metal,
+                                             #'Yc:{}'.format(yc_val), alpha, self.set_clean)
+
+        self.set_do_plot_obs_err = False
+        self.set_do_plot_evol_err = False
+        self.set_do_plot_line_fit = True
+        self.plot_all_obs_ts_y_mdot(ax, v_n_y, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
+
+        # ax.axhline(y=lm_max, ls='dashed', lw=3, color='black')
+        # ax.axvline(x=t_min, ls='dashed', lw=3, color='black')
+
+        ax.set_xlabel(Labels.lbls('ts'), fontsize=12)
+        ax.set_ylabel(Labels.lbls(v_n_y), fontsize=12)
+
+        if not self.set_clean:
+            if self.set_coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+
+        # --- --- WATER MARK --- --- ---
+        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+
+        # plt.gca().invert_xaxis()
+        plt.show()
 
     # def t_llm_cr_sp(self, t_k_rho, yc_val, opal_used):
     #     kap = t_k_rho[1:, 0]
@@ -4098,7 +4224,7 @@ class Plot_Tow_Sonic_HRDs:
     y_coord = []
     coeff = []
     rs = []
-    opal = []
+    metals = []
     bump = []
     yc = []
 
@@ -4121,9 +4247,9 @@ class Plot_Tow_Sonic_HRDs:
         n = len(self.y_coord)
         if n > 2: raise ValueError('Only 2 sHRDs available now')
 
-        if len(self.coeff) != n or len(self.rs) != n or len(self.opal) != n or len(self.bump) != n or len(self.yc) != n:
+        if len(self.coeff) != n or len(self.rs) != n or len(self.metals) != n or len(self.bump) != n or len(self.yc) != n:
             raise ValueError('Length of all input array must me the same. Given: {}, {}, {}, {}, {}'
-                             .format(len(self.coeff), len(self.rs), len(self.opal), len(self.bump), len(self.yc) != n))
+                             .format(len(self.coeff), len(self.rs), len(self.metals), len(self.bump), len(self.yc) != n))
 
         def load_t_llm_mdot(l_or_lm, coeff, rs, opal, bump, yc):
             lbl = []
@@ -4158,12 +4284,12 @@ class Plot_Tow_Sonic_HRDs:
             t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, 10, 5, 500, 4)
             return t_llm_mdot, lbl
 
-        t_llm_mdot1, lbl1 = load_t_llm_mdot(self.y_coord[0], self.coeff[0], self.rs[0], self.opal[0], self.bump[0], self.yc[0])
-        t_llm_mdot2, lbl2 = load_t_llm_mdot(self.y_coord[1], self.coeff[1], self.rs[1], self.opal[1], self.bump[1], self.yc[1])
+        t_llm_mdot1, lbl1 = load_t_llm_mdot(self.y_coord[0], self.coeff[0], self.rs[0], self.metals[0], self.bump[0], self.yc[0])
+        t_llm_mdot2, lbl2 = load_t_llm_mdot(self.y_coord[1], self.coeff[1], self.rs[1], self.metals[1], self.bump[1], self.yc[1])
 
 
         def plot_background(ax, table, opal):
-            from Phys_Math_Labels import Levels
+            from PhysMath import Levels
             levels = Levels.get_levels('mdot', opal)
 
             contour_filled = ax.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
@@ -4188,8 +4314,8 @@ class Plot_Tow_Sonic_HRDs:
         plt.setp(ax2.get_yticklabels(), visible=False)
 
         # Plot data
-        im1, cf1 = plot_background(ax1, t_llm_mdot1, self.opal[0])
-        im2, cf2 = plot_background(ax2, t_llm_mdot2, self.opal[1])
+        im1, cf1 = plot_background(ax1, t_llm_mdot1, self.metals[0])
+        im2, cf2 = plot_background(ax2, t_llm_mdot2, self.metals[1])
 
 
         ax1_stars = Plots.plot_obs_t_llm_mdot_int(ax2, t_llm_mdot2, self.obs[0], self.y_coord[1], None, None, False, clean)

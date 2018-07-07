@@ -22,10 +22,10 @@ import matplotlib.pyplot as plt
 import os
 #-----------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------CLASSES-----------------------------------------------------
-from Phys_Math_Labels import Errors
-from Phys_Math_Labels import Math
-from Phys_Math_Labels import Physics
-from Phys_Math_Labels import Constants
+from PhysMath import Errors
+from PhysMath import Math
+from PhysMath import Physics
+from PhysMath import Constants
 
 from PhysPlots import PhysPlots
 #-----------------------------------------------------------------------------------------------------------------------

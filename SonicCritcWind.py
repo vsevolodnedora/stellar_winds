@@ -9,10 +9,10 @@ import numpy as np
 from scipy import interpolate
 import matplotlib.pyplot as plt
 
-from Phys_Math_Labels import Math
-from Phys_Math_Labels import Physics
-from Phys_Math_Labels import Constants
-from Phys_Math_Labels import Labels
+from PhysMath import Math
+from PhysMath import Physics
+from PhysMath import Constants
+from PhysMath import Labels
 
 from FilesWork import Read_SM_data_file
 from FilesWork import Read_Wind_file

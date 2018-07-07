@@ -25,22 +25,11 @@ import matplotlib.pyplot as plt
 import os
 #-----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------CLASSES-----------------------------------------------------
-from Phys_Math_Labels import Errors
-from Phys_Math_Labels import Math
-from Phys_Math_Labels import Physics
-from Phys_Math_Labels import Constants
-from Phys_Math_Labels import Labels
 
-from OPAL import Read_Table
-from OPAL import Row_Analyze
-from OPAL import Table_Analyze
-from OPAL import OPAL_Interpol
-from OPAL import New_Table
+from PhysMath import Math, Constants
 
-from FilesWork import Read_Observables
-from FilesWork import Read_Plot_file
-from FilesWork import Read_SM_data_file
-from FilesWork import Read_Wind_file
+from FilesWork import Read_Plot_file, Read_SM_data_file, Read_Wind_file, Labels
+
 
 class Criticals_:
     def __init__(self, smfiles, out_dir, plot_dir, dirs_not_to_be_included):

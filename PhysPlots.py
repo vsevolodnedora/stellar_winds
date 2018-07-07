@@ -19,10 +19,10 @@ import matplotlib.pyplot as plt
 import os
 #-----------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------CLASSES-----------------------------------------------------
-from Phys_Math_Labels import Errors
-from Phys_Math_Labels import Math
-from Phys_Math_Labels import Physics
-from Phys_Math_Labels import Constants
+from PhysMath import Errors
+from PhysMath import Math
+from PhysMath import Physics
+from PhysMath import Constants
 
 class PhysPlots:
     def __init__(self):
@@ -400,11 +400,16 @@ class PhysPlots:
         #-------------------------------------VERT/HORISONTAL LINES------------------------------
         if lim_k1 != None:
             lbl = 'k1: ' + str("%.2f" % lim_k1)
-            plt.axhline(y=lim_k1, color='r', linestyle='dashed', label=lbl)
+            plt.axhline(y=lim_k1, color='r', linestyle='dashed',
+                        label='k1:{} lm1:{} l:{}'.format("%.2f" % lim_k1,
+                                                    "%.2f" % Physics.logk_loglm(lim_k1),
+                                                    "%.2f" % Physics.lm_to_l_langer(Physics.logk_loglm(lim_k1))))
 
         if lim_k2 != None:
-            lbl = 'k1: ' + str("%.2f" % lim_k2)
-            plt.axhline(y=lim_k2, color='r', linestyle='dashed', label=lbl)
+            plt.axhline(y=lim_k2, color='r', linestyle='dashed',
+                        label='k2:{} lm2:{} l:{}'.format("%.2f" % lim_k2,
+                                                         "%.2f" % Physics.logk_loglm(lim_k2),
+                                                         "%.2f" % Physics.lm_to_l_langer(Physics.logk_loglm(lim_k2))))
 
         if lim_t1 != None:
             lbl = 't1: ' + str("%.2f" % lim_t1)

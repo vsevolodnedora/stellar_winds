@@ -816,7 +816,8 @@ class SonicPointAlgorithm:
             plt.plot(cl.get_col('r'), cl.get_col('u'), '-', color='gray')
             plt.plot(cl.get_col('r'), cl.get_sonic_u(), '-', color='blue')
             plt.show()
-            raise ValueError('Multiple Sonic Point Found. (if it is OK, turn of the *check_for_mult_sp*')
+            raise ValueError('Multiple Sonic Point Found. (if it is OK, turn of the *check_for_mult_sp* Mdot: {}'
+                             .format(cl.get_col('mdot')[-1]))
 
         if rs_p.any():              # if the sonic point has to be found by interpolating
             rs_p = rs_p[0][0]
@@ -1057,7 +1058,7 @@ class SonicPointAlgorithm:
         self.r_u_mdot_max = r_u_mdot_max
         self.r_t_mdot_max = r_t_mdot_max
         self.out_names = out_names
-        self.out_arr = out_arr
+        self.out_arr = np.array(out_arr)
 
 
         return r_u_mdot_max, r_t_mdot_max, out_names, out_arr
@@ -1526,7 +1527,7 @@ class ExtrapolateCriticals(PlotProfiles):
         self.v_n_cr = v_n_cr
         self.cr_val = value_cr
         self.extrapol_method = 'IntUni' # Use 'test' to check different methods
-
+        self.set_extrapol_lim_t = [6.5, 3.18]
 
         self.set_do_plots = True
 
@@ -1540,12 +1541,30 @@ class ExtrapolateCriticals(PlotProfiles):
         if not v_n in self.sp_names: raise NameError('v_n base for extrapolation ({}) not found in sonic array ({} \n '
                                                      .format(v_n, self.sp_names))
 
+        # limit extrapolation:
+
+
+        sp_ts_ind = self.sp_names.index('t-sp')
+        sp_ts_row = self.sp_arr[:, sp_ts_ind]
+
+        sp_y_row = []
+        sp_x_row = []
+
         sp_y_ind = self.sp_names.index(v_n)
-        sp_y_row = self.sp_arr[:, sp_y_ind]
-
         sp_x_ind = self.sp_names.index(self.v_n_cr)
-        sp_x_row = self.sp_arr[:, sp_x_ind]
 
+        for i in range(len(sp_ts_row)):
+            if sp_ts_row[i] >= np.array(self.set_extrapol_lim_t).min() and \
+                sp_ts_row[i] <= np.array(self.set_extrapol_lim_t).max():
+                sp_x_row = np.append(sp_x_row, self.sp_arr[i, sp_x_ind])
+                sp_y_row = np.append(sp_y_row, self.sp_arr[i, sp_y_ind])
+
+        # sp_y_ind = self.sp_names.index(v_n)
+        # sp_y_row = self.sp_arr[:, sp_y_ind]
+        #
+        # sp_x_ind = self.sp_names.index(self.v_n_cr)
+        # sp_x_row = self.sp_arr[:, sp_x_ind]
+        #
         cr_x_val = self.cr_val
 
         if self.extrapol_method!='test':
@@ -1565,14 +1584,11 @@ class ExtrapolateCriticals(PlotProfiles):
 
     def main_extrapol_cycle(self):
 
-
-
         def set_v_ns_for_plotting(set_v_ns_cr, v_n_cr):
             v_ns = []
             for v_n in set_v_ns_cr:
                 v_ns.append([v_n_cr, v_n])
             return v_ns
-
 
         self.set_v_ns = set_v_ns_for_plotting(self.set_v_ns_cr, self.v_n_cr)
 
@@ -1580,7 +1596,6 @@ class ExtrapolateCriticals(PlotProfiles):
             fig = plt.figure()
             self.set_plot_ax(fig)
             self.set_labels_for_all()
-
 
         cr_row = []
         cr_names = []
@@ -1605,7 +1620,7 @@ class NativeMassLoss(PlotProfiles):
         PlotProfiles.__init__(self, sm_cls, wnd_cls)
 
 
-
+        self.set_use_poly_fit_core=True
         self.sm_cls = sm_cls
         self.wnd_cls = wnd_cls
         self.set_u_min = 0.5
@@ -1674,7 +1689,8 @@ class NativeMassLoss(PlotProfiles):
         if len(r_core) < 5 or len(u_core) < 5:
             raise ValueError('No core profiles: len(r_core): {} Mdot:{}'.format(len(r_core), cl.get_col('mdot')[-1]))
 
-        r_core, u_core = self.grid(r_core, u_core, method, depth)
+        if self.set_use_poly_fit_core:
+            r_core, u_core = self.grid(r_core, u_core, method, depth)
 
         return r_core, u_core
 
@@ -1685,7 +1701,8 @@ class NativeMassLoss(PlotProfiles):
 
         r_wind, u_wind = r_wind[:ind], u_wind[:ind]
 
-        if method!='' and depth!=0: r_wind, u_wind = self.grid(r_wind, u_wind, method, depth)
+        if self.set_use_poly_fit_core:
+            if method!='' and depth!=0: r_wind, u_wind = self.grid(r_wind, u_wind, method, depth)
 
         return r_wind, u_wind
 
@@ -1698,7 +1715,11 @@ class NativeMassLoss(PlotProfiles):
             plt.plot( mdot, delta, 'X', color='red')
             plt.axhline(y=0, ls='dashed', color='gray')
             plt.show()
-            raise ValueError('More than two solutions found (while 1 is actually needed :( )')
+            print('ERROR! More than two solutions found (while 1 is actually needed :( )')
+            return mdot[-1]
+
+        if len(mdot) < 1:
+            return np.nan
 
         return mdot[-1]
 
@@ -1713,38 +1734,41 @@ class NativeMassLoss(PlotProfiles):
 
         arr = np.zeros(2)
         self.set_u_min = self.get_inner_boundary()
-        self.plot_sm_all(None, '.', 'blue')
-        self.plot_wind_all('mdot', '.', 'red')
+        if self.set_do_plot_native_tech:
+            self.plot_sm_all(None, '.', 'blue')
+            self.plot_wind_all('mdot', '.', 'red')
         # self.plot_wind_all('mdot', '-', 'gray')
 
         for i in range(len(self.sm_cls)):
 
             mdot = self.sm_cls[i].get_col('mdot')[-1]
 
+
             r_core, u_core = self.get_int_r_u_core(self.sm_cls[i], 'Uni', 1000, True) # select rising part = True
-            self.plot_additional('r', 'u', r_core, u_core, '-', 'gray')
+            if self.set_do_plot_native_tech: self.plot_additional('r', 'u', r_core, u_core, '-', 'gray')
             grad_core = np.gradient(r_core, u_core)
 
 
             r_wind, u_wind = self.get_r_u_wind(self.wnd_cls[i], 'Uni', 1000) # '' and 0 if no interpolation is needed.
-            self.plot_additional('r', 'u', r_wind, u_wind, '-', 'gray')
+            if self.set_do_plot_native_tech: self.plot_additional('r', 'u', r_wind, u_wind, '-', 'gray')
             grad_wind = np.gradient(r_wind, u_wind)
 
             arr = np.vstack((arr, [mdot, (grad_core[-1]-grad_wind[0]) ]))
 
-        mdot_nat = self.get_mdot(arr[1:,0], arr[1:,1])
+        if self.set_do_plot_native_tech:
+            self.plot_additional(None, 'delta_grad_u', arr[1:,0], arr[1:,1],'.','black')
+            self.plot_additional('mdot', 'delta_grad_u', arr[1:, 0], arr[1:, 1], '-', 'black')
 
-        self.plot_additional(None, 'delta_grad_u', arr[1:,0], arr[1:,1],'.','black')
-        self.plot_additional('mdot', 'delta_grad_u', arr[1:, 0], arr[1:, 1], '-', 'black')
 
-        self.plot_vertial('mdot', 'delta_grad_u', mdot_nat, 'dashed', 'black')
-        self.plot_horisontal('mdot', 'delta_grad_u', 0., 'dashed', 'black')
+        mdot_nat = self.get_mdot(arr[1:, 0], arr[1:, 1])
 
         if self.set_do_plot_native_tech:
+            self.plot_vertial('mdot', 'delta_grad_u', mdot_nat, 'dashed', 'black')
+            self.plot_horisontal('mdot', 'delta_grad_u', 0., 'dashed', 'black')
             plt.show()
 
-        self.mdot_naitive = mdot_nat
-        return mdot_nat
+        self.mdot_naitive = np.float(mdot_nat)
+        return np.float(mdot_nat)
 
 class Wind:
 
@@ -1777,9 +1801,28 @@ class Wind:
             value = Math.interpolate_arr(tau_arr, arr, np.array([tau_ph]), self.set_interpol_method_ph_values)
 
             if value == None or value == np.inf or value == -np.inf or value > arr.max() or value < arr.min():
+                print('Error wrong value of {} at tau={}, where tau[{}, {}]'.format(v_n, tau_ph, tau_arr.min(), tau_arr.max()))
                 r = cl.get_col('r')
-                plt.plot(r, arr, '.', color='black')
+                plt.plot(arr, tau_arr, '.', color='black')
+                plt.axvline(x=value, ls='solid', color='blue')
+                plt.axvline(x=arr.max(), ls='dashed', color='red')
+                plt.axvline(x=arr.min(), ls='dashed', color='red')
+                plt.axhline(y=tau_ph, ls='solid', color='blue')
+                plt.xlabel(v_n)
+                plt.ylabel('tau')
+
+                mdot = cl.get_col('mdot')[-3]
+                plt.title('ERROR Out of TAU at Mdot: {}'.format(mdot))
                 plt.show()
+
+                # plt.plot(r, arr, '.', color='black')
+                # plt.axvline(x=value, ls='solid', color='blue')
+                # plt.axvline(x=arr.max(), ls='dashed', color='red')
+                # plt.axvline(x=arr.min(), ls='dashed', color='red')
+                # plt.xlabel('r')
+                # plt.ylabel(v_n)
+                # plt.show()
+                return np.nan
                 raise ValueError('Error in interpolation Photospheric Value for {} value is {}'.format(v_n, value))
             else:
                 return value
@@ -2168,7 +2211,7 @@ class CommonMethods:
 
 '''======================================================MAIN========================================================'''
 
-def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y):
+def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y, new_fold='/'):
 
     mdl = []
     wnd = []
@@ -2189,6 +2232,8 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y):
     sp.v_n_sonic =     ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp'] # sp - means 'at sonic point'
     sp.v_n_core_surf = ['l-1', 'xm-1', 'He4-0', 'He4-1', 'mdot-1']  # 1 means surface, 0 means core
     sp.v_n_env =       ['t-env', 'u-env', 'r-env', 'm-env']         # env - menas envelope coordinate
+
+    sp.ts_lim = 3.18 # set 5.18 if only iron bump needed
 
     sp.set_check_for_mult_sp=True
     sp.set_compute_envelope=True
@@ -2217,7 +2262,11 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y):
     n_mdot = NativeMassLoss(smdl, swnd)
 
     n_mdot.set_v_ns = [['mdot', 'delta_grad_u'], ['r', 'u']]  # [['mdot', 'delta_grad_u']]#
-    n_mdot.upper_wind_bound = 'u=100'
+    n_mdot.upper_wind_bound = 'u=300'
+    n_mdot.set_use_poly_fit_core = True
+    n_mdot.set_use_poly_fit_wind = True
+
+    n_mdot.set_do_plot_native_tech=True
 
     n_mdot.main_cycle()
 
@@ -2231,6 +2280,7 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y):
 
     cr2.set_v_ns_cr = ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tau-sp', 'r-sp', 't-sp', 'r-ph', 't-ph']  # for extrapolating (must also ne in sonic v_ns)
     cr2.set_do_plots = True
+    cr2.set_extrapol_lim_t = [6.5, 5.18] # if some sonic models should be not used for extra/interpol
 
     cr2.main_extrapol_cycle()
 
@@ -2256,10 +2306,11 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y):
     plt.show()
 
     # --------------------------------------------------| SETTINGS for SAVING |-----------------------------------------
+
     save = SavingOutput()
     save.set_dirs_not_to_be_included = ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'HDD']
     save.set_input_dirs = input_dir
-    save.set_output_dir = '../data/sp_w_files/' + out_fname_z_m_y
+    save.set_output_dir = '../data/sp_w_files{}'.format(new_fold) + out_fname_z_m_y
     save.set_sp_fold_head = 'SP'
 
     save.save_out_arr(out_names, out_arr)
@@ -2293,11 +2344,11 @@ def ga_crit_main(smfiles, input_dir, out_fname_z_m_y):
     # --------------------------------------------------| SETTINGS for CRITICALS |--------------------------------------
     cr = CriticalMdotRT(smdl, r_u_mdot_max, r_t_mdot_max)
     # ['r', 'u'], ['r', 't'], ['mdot', 'delta_u'], ['mdot', 'delta_t']
-    cr.set_v_ns =  [['mdot', 'delta_u']]   # PLOTS
-    cr.set_do_plot_tech=True       # switch for tech plots
+    cr.set_v_ns =  [['r', 'u'], ['r', 't'], ['mdot', 'delta_u'], ['mdot', 'delta_t']]   # PLOTS
+    cr.set_do_plot_tech=False       # switch for tech plots
 
-    cr.set_initialize_plots()
-    cr.plot_sm_all()
+    # cr.set_initialize_plots()
+    # cr.plot_sm_all()
 
     cr.main_crit_method()
 
@@ -2309,7 +2360,7 @@ def ga_crit_main(smfiles, input_dir, out_fname_z_m_y):
     cr2 = ExtrapolateCriticals(sp_out_names, sp_out_arr, 'mdot-1', cr_mdot)
 
     cr2.set_v_ns_cr = ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp'] # for extrapolating (must also ne in sonic v_ns)
-    cr2.set_do_plots = True
+    cr2.set_do_plots = False
 
     cr2.main_extrapol_cycle()
 
@@ -2325,18 +2376,18 @@ def ga_crit_main(smfiles, input_dir, out_fname_z_m_y):
 
     pp.set_v_ns = [['r', 'u'], ['r', 't'], ['r', 'kappa'], ['t', 'L/Ledd']]
 
-    fig = plt.figure()
-    pp.set_plot_ax(fig)
-    pp.set_labels_for_all()
-    pp.plot_sm_all()
-    pp.plot_r_ut_mdot_max(r_t_mdot_max, 't')
-    pp.plot_r_ut_mdot_max(r_u_mdot_max, 'u')
-    pp.plot_vertial('r','u',cr_r,'dashed','red')
-    pp.plot_out_arr_points()
-
-
-    plt.legend()
-    plt.show()
+    # fig = plt.figure()
+    # pp.set_plot_ax(fig)
+    # pp.set_labels_for_all()
+    # pp.plot_sm_all()
+    # pp.plot_r_ut_mdot_max(r_t_mdot_max, 't')
+    # pp.plot_r_ut_mdot_max(r_u_mdot_max, 'u')
+    # pp.plot_vertial('r','u',cr_r,'dashed','red')
+    # pp.plot_out_arr_points()
+    #
+    #
+    # plt.legend()
+    # plt.show()
 
     # --------------------------------------------------| SETTINGS for SAVING |-----------------------------------------
     save = SavingOutput()
@@ -2376,7 +2427,7 @@ output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
 sse_locaton = '/media/vnedora/HDD/sse/'
 
-def load_files(z, m_set, y_set, sp=False):
+def load_files(z, m_set, y_set, sp=False, deep_fold=''):
 
     for m in m_set:
         for y in y_set:
@@ -2388,14 +2439,17 @@ def load_files(z, m_set, y_set, sp=False):
 
             # smfiles_ga = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
 
-            if sp: sp='sp55/'
+            if sp: sp='sp55/' + deep_fold
             else: sp=''
 
             smfiles_sp  = get_files(sse_locaton + root_name, [folder_name+sp], [], 'sm.data')
 
+            if deep_fold!='' and deep_fold!=None: deep_fold = '_' + deep_fold + '/'
+            else: deep_fold = '/'
             if sp:
                 wind_fls    = get_files(sse_locaton + root_name, [folder_name+sp], [], 'wind')
-                cr = sp_wind_main(smfiles_sp, wind_fls, smfiles_sp[0].split('/')[:-1], out_name)
+
+                cr = sp_wind_main(smfiles_sp, wind_fls, smfiles_sp[0].split('/')[:-1], out_name, deep_fold)
             else:
                 ga = ga_crit_main(smfiles_sp, smfiles_sp[0].split('/')[:-1], out_name)
 
@@ -2404,11 +2458,11 @@ def load_files(z, m_set, y_set, sp=False):
             print('m:{}, y:{} DONE'.format(m,y))
 
 
-
-load_files('004', [10], [10], False)
+# 11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
+load_files('002', [14], [10], True, 'b075/')
 
 def manual(full_path, sp=True):
-    sm_files = get_files('',[full_path],[],'sm.data')
+    sm_files = get_files('', [full_path], [], 'sm.data')
 
     out_name='test.data'
     if sp:

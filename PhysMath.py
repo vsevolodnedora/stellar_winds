@@ -617,7 +617,7 @@ class Math:
         return Math.combine(x, y, z)
 
     @staticmethod
-    def fit_plynomial(x, y, order, depth, new_x = np.empty(0, )):
+    def fit_polynomial(x, y, order, depth, new_x = np.empty(0, )):
         '''
         RETURNS new_x, f(new_x)
         :param x:
@@ -815,9 +815,12 @@ class Math:
 
         z_y = np.delete(z_y, 0, 0)
 
-        res = interpolate.InterpolatedUnivariateSpline(y_c,z_y)(y_val)
+        if len(z_y) == 1:
+            return z_y
+        else:
+            res = interpolate.InterpolatedUnivariateSpline(y_c,z_y)(y_val)
 
-        return res
+            return res
         #
         # # y_grid = np.mgrid[y.min():y.max():depth * 1j]
         # z_x = np.zeros(1)
@@ -878,7 +881,7 @@ class Math:
                 return interpolate.InterpolatedUnivariateSpline(x_arr, y_arr)(x_grid)
             else:
                 if method in [1, 2, 3, 4, 5, 6]:
-                    new_x, new_y = Math.fit_plynomial(x_arr, y_arr, method, depth, x_grid)
+                    new_x, new_y = Math.fit_polynomial(x_arr, y_arr, method, depth, x_grid)
                     return new_y
                 if method == 'Uni':
                     new_y = interpolate.UnivariateSpline(x_arr, y_arr)(x_grid)
@@ -963,7 +966,7 @@ class Math:
                 return interpolate.InterpolatedUnivariateSpline(x_arr, y_arr)(x_grid)
             else:
                 if method in [1, 2, 3, 4, 5, 6]:
-                    new_x, new_y = Math.fit_plynomial(x_arr, y_arr, method, depth, x_grid)
+                    new_x, new_y = Math.fit_polynomial(x_arr, y_arr, method, depth, x_grid)
                     return new_y
                 if method == 'Uni':
                     new_y = interpolate.UnivariateSpline(x_arr, y_arr)(x_grid)
@@ -1114,7 +1117,7 @@ class Math:
 
         if method == 'poly4' or method == 'test':
             # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
-            tmp, y_val = Math.fit_plynomial(x, y, 4, 0, np.array([x_val]))
+            tmp, y_val = Math.fit_polynomial(x, y, 4, 0, np.array([x_val]))
             if ax_plot != None:
                 ax_plot.plot(x_val, y_val, 'x', color='blue',
                              label='poly4 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
@@ -1122,7 +1125,7 @@ class Math:
 
         if method == 'poly3' or method == 'test':
             # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
-            tmp, y_val = Math.fit_plynomial(x, y, 3, 0, np.array([x_val]))
+            tmp, y_val = Math.fit_polynomial(x, y, 3, 0, np.array([x_val]))
             if ax_plot != None:
                 ax_plot.plot(x_val, y_val, 'x', color='orange',
                              label='poly3 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
@@ -1130,7 +1133,7 @@ class Math:
 
         if method == 'poly2' or method == 'test':
             # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
-            tmp, y_val = Math.fit_plynomial(x, y, 2, 0, np.array([x_val]))
+            tmp, y_val = Math.fit_polynomial(x, y, 2, 0, np.array([x_val]))
             if ax_plot != None:
                 ax_plot.plot(x_val, y_val, 'x', color='cyan',
                              label='poly2 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
@@ -1138,7 +1141,7 @@ class Math:
 
         if method == 'poly1' or method == 'test':
             # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
-            tmp, y_val = Math.fit_plynomial(x, y, 1, 0, np.array([x_val]))
+            tmp, y_val = Math.fit_polynomial(x, y, 1, 0, np.array([x_val]))
             if ax_plot != None:
                 ax_plot.plot(x_val, y_val, 'x', color='green',
                              label='poly1 x_p:{} y_p:{}'.format("%.2f" % x_val, "%.2f" % y_val))
@@ -1238,7 +1241,32 @@ class Math:
             new_y = interpolate.interp1d(x, y, kind='linear', bounds_error=False)(new_x)
             return new_y
 
-        raise NameError('Interpolation method is not recognised, Use: [IntUni Uni 1dCubic 1dLinear]')
+        if interp_method == 'poly5':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            new_x, new_y = Math.fit_polynomial(x, y, 5, 0, new_x)
+            return new_y
+
+        if interp_method == 'poly4':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            new_x, new_y = Math.fit_polynomial(x, y, 4, 0, new_x)
+            return new_y
+
+        if interp_method == 'poly3':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            new_x, new_y = Math.fit_polynomial(x, y, 3, 0, new_x)
+            return new_y
+
+        if interp_method == 'poly2':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            new_x, new_y = Math.fit_polynomial(x, y, 2, 0, new_x)
+            return new_y
+
+        if interp_method == 'poly1':
+            # y_val2 = Math.fit_plynomial(md_tau_sh[:,0], md_tau_sh[:,1], 4, 0, grid_mdot)
+            new_x, new_y = Math.fit_polynomial(x, y, 1, 0, new_x)
+            return new_y
+
+        raise NameError('Interpolation method is not recognised, Use: [IntUni Uni 1dCubic 1dLinear, poly1..5]')
 
 
 class Physics:
@@ -1305,6 +1333,10 @@ class Physics:
             return res
         else:
             return(np.log10((10**log_l)/m))
+
+    @staticmethod
+    def lm_l__to_m(lm, l):
+        return 10**(l - lm)
 
     @staticmethod
     def loglm_logk(loglm, array = False):
@@ -1729,8 +1761,18 @@ class Physics:
         #--------------------------------------------------CHECKING IF Mdot of the STAR is WITHIN Mdot limit------------
         if star_z_coord > z_row_for_star_z.max() or star_z_coord < z_row_for_star_z.min(): # if true, you cannot solve the eq. for req. Mdot
             print('\t__Warning! Star: {} (lm: {}, mdot: {}) '
-                  'is beyond the mdot range ({}, {})'.format(num_of_model, "%.2f" % star_y_coord, "%.2f" % star_z_coord,
+                  'is beyond the mdot range ({}, {})'
+                  '\n\t\t Uning Extrapolation'.format(num_of_model, "%.2f" % star_y_coord, "%.2f" % star_z_coord,
                                                              "%.3f" % z_row_for_star_z.max(), "%.2f" % z_row_for_star_z.min()))
+            int_star_x_coord = [Math.extrapolate_value(z_row_for_star_z, x_1d_arr, star_z_coord, 'IntUni')]
+            print('\t\t Extrapl. Result: x:{} (where x_arr: [{} {}]'.format(int_star_x_coord, "%.2f" % x_1d_arr.max(), "%.2f" % x_1d_arr.min()))
+
+            z_fill = np.zeros(len(int_star_x_coord))
+            z_fill.fill(star_z_coord)
+            y_fill = np.zeros(len(int_star_x_coord))
+            y_fill.fill(star_y_coord)
+
+            # return np.vstack((np.array(int_star_x_coord), y_fill, z_fill))
             return np.empty(0, )  # returns empty - no sloution possoble for that star withing given mdot array.
 
 

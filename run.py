@@ -1016,7 +1016,8 @@ all_mdot_files=['3.00', '3.10', '3.20', '3.30', '3.40', '3.50', '3.60', '3.70', 
 all_mdot_values =[3.00, 3.10, 3.20, 3.30, 3.40, 3.50, 3.60, 3.70, 3.80, 3.90,
                4.00, 4.10, 4.20, 4.30, 4.40, 4.50, 4.60, 4.70, 4.80, 4.90,
                5.00, 5.10, 5.20, 5.30, 5.40, 5.50, 5.60, 5.70, 5.80, 5.90, 6.00]
-all_mdot_files = ['../'+mdot_file for mdot_file in all_mdot_files]
+# all_mdot_files = ['../'+mdot_file for mdot_file in all_mdot_files]
+
 # all_mdot_values =[3.00]
                   # 3.05, 3.10, 3.15, 3.20, 3.25, 3.30, 3.35, 3.40, 3.45, 3.50, 3.55, 3.60, 3.65, 3.70, 3.75, 3.80, 3.85, 3.90, 3.95,
                   # 4.00, 4.05, 4.10, 4.15, 4.20, 4.25, 4.30, 4.35, 4.40, 4.45, 4.50, 4.55, 4.60, 4.65, 4.70, 4.75, 4.80, 4.85, 4.90, 4.95,
@@ -1187,7 +1188,8 @@ def compute_for_steps(in_file, mdot_array, ref_mdat, maxzal):
         print('<================== COMPUTED: File:{} Mdot:{} ============================>'
               .format(last_computed, mdot_str))
 
-if mode=='listlist':
+# all_mdot_files = ['../'+mdot_file for mdot_file in all_mdot_files]
+if mode=='list':
 
     if len(all_mdot_values) != len(all_mdot_files):
         raise NameError('len(all_mdot_values){} != len(all_mdot_files){}'.format(len(all_mdot_values), len(all_mdot_files)))

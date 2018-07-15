@@ -4496,7 +4496,7 @@ class Tau_Map:
 
 
         mdot_grid = np.mgrid[-6.:-5.:100j]
-        mdot_grid, tau_grid = Math.fit_plynomial(mdot_tau_sorted[:,0], mdot_tau_sorted[:,1], 4, 100, mdot_grid)
+        mdot_grid, tau_grid = Math.fit_polynomial(mdot_tau_sorted[:, 0], mdot_tau_sorted[:, 1], 4, 100, mdot_grid)
 
 
 

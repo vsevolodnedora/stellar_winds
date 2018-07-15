@@ -93,114 +93,114 @@ output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
 sse_locaton = '/media/vnedora/HDD/sse/'
 
-gal_plotfls = get_files(sse_locaton + 'ga_z002/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
-                                                   '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
-                                                   '24sm/', '25sm/'], [], '.plot1')
-lmc_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
-                                                   '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
-                                                   '24sm/', '25sm/', '26sm/', '27sm/', '28sm/', '29sm/', '30sm/'
-                                                   ], [], '.plot1')
-tst_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '15sm/', '20sm/', '25sm/', '30sm/'], [], '.plot1')
-
-gal_spfiles = get_files('../data/sp_cr_files/', ['7z002/','8z002/','9z002/', '10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
-                                                 '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
-                                                 '22z002/', '23z002/', '24z002/', '25z002/', '26z002/', '27z002/',
-                                                 '28z002/', '29z002/', '30z002/'
-                                                 ], [], '.data')
-lmc_spfiles = get_files('../data/sp3_files/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
-                                              '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
-                                              # '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
-                                              # '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/',
-                                              # '30z0008/'
-                                              ], [], '.data')
-tst_spfiles = get_files('../data/sp3_files/', ['10z0008/'], [], '.data')
-
-lmc_obs_file = '../data/obs/lmc_wne.data'
-gal_obs_file = '../data/obs/gal_wne.data'
-tst_obs_file = ''
-
-lmc_opal_file = '../data/opal/table_x.data'
-gal_opal_file = '../data/opal/table8.data'
-tst_opal_file = ''
-
-gal_atm_file = '../data/atm/gal_atm_models.data'
-lmc_atm_file = '../data/atm/lmc_atm_models.data'
-
-smfiles = get_files(sse_locaton + 'ga_z0008/', ['13sm/y10/sp/'], [], 'sm.data')
-# smfiles = get_files(sse_locaton, ['zams_004/hecore/t1/'], [], 'sm.data')
-
-# lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
-# gal_ml_relation = '../data/output/l_yc_m_gal_wne.data'
-
-def select_sp_files(spfiles, req_z, req_m, req_yc):
-
-    res_spfiles = []
-
-    '''----------------------SELECT-req_z-FILES----------------------'''
-
-    z_files = []
-    for spfile in spfiles:
-
-        if len(req_z) == 0:
-            z_files.append(spfile)
-        else:
-            no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
-
-            # print(spfile, '   ', no_extens_sp_file)
-
-            for req_part in req_z:
-                if req_part in no_extens_sp_file.split('_')[1:]:
-                    if spfile not in z_files:
-                        req_z.append(spfile)
-                else:
-                    pass
-
-    print('__For z:{} requirement, {} SP-files selected.'.format(req_z, len(z_files)))
-    '''----------------------SELECT-req_m-FILES----------------------'''
-
-    zm_files = []
-    for spfile in z_files:
-
-        if len(req_m) == 0:
-            zm_files.append(spfile)
-        else:
-            no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
-
-            # print(spfile, '   ', no_extens_sp_file)
-
-            for req_part in req_m:
-                if req_part in no_extens_sp_file.split('_')[1:]:
-                    if spfile not in zm_files:
-                        zm_files.append(spfile)
-                else:
-                    pass
-
-
-    print('__For z:{} and m:{} requirement, {} SP-files selected.'.format(req_z, req_m, len(zm_files)))
-    '''----------------------SELECT-req_m-FILES----------------------'''
-
-    zmy_files = []
-    for spfile in zm_files:
-
-        if len(req_yc) == 0:
-            zmy_files.append(spfile)
-        else:
-            no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
-
-            # print(spfile, '   ', no_extens_sp_file)
-
-            for req_part in req_yc:
-                if req_part in no_extens_sp_file.split('_')[1:]:
-                    if spfile not in zmy_files:
-                        zmy_files.append(spfile)
-                else:
-                    pass
-
-
-
-    print('\t__ With Conditions: z:{}, m:{}, yc:{}, the {} sp_files selected.'.format(req_z, req_m, req_yc, len(zmy_files)))
-    print('\n')
-    return zmy_files
+# gal_plotfls = get_files(sse_locaton + 'ga_z002/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
+#                                                    '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
+#                                                    '24sm/', '25sm/'], [], '.plot1')
+# lmc_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
+#                                                    '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
+#                                                    '24sm/', '25sm/', '26sm/', '27sm/', '28sm/', '29sm/', '30sm/'
+#                                                    ], [], '.plot1')
+# tst_plotfls = get_files(sse_locaton +'ga_z0008/', ['10sm/', '15sm/', '20sm/', '25sm/', '30sm/'], [], '.plot1')
+#
+# gal_spfiles = get_files('../data/sp_cr_files/', ['7z002/','8z002/','9z002/', '10z002/', '11z002/', '12z002/', '13z002/', '14z002/', '15z002/',
+#                                                  '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/',
+#                                                  '22z002/', '23z002/', '24z002/', '25z002/', '26z002/', '27z002/',
+#                                                  '28z002/', '29z002/', '30z002/'
+#                                                  ], [], '.data')
+# lmc_spfiles = get_files('../data/sp3_files/', ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/',
+#                                               '15z0008/', '16z0008/', '17z0008/', '18z0008/', '19z0008/',
+#                                               # '20z0008/', '21z0008/', '22z0008/', '23z0008/', '24z0008/',
+#                                               # '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/',
+#                                               # '30z0008/'
+#                                               ], [], '.data')
+# tst_spfiles = get_files('../data/sp3_files/', ['10z0008/'], [], '.data')
+#
+# lmc_obs_file = '../data/obs/lmc_wne.data'
+# gal_obs_file = '../data/obs/gal_wne.data'
+# tst_obs_file = ''
+#
+# lmc_opal_file = '../data/opal/table_x.data'
+# gal_opal_file = '../data/opal/table8.data'
+# tst_opal_file = ''
+#
+# gal_atm_file = '../data/atm/gal_atm_models.data'
+# lmc_atm_file = '../data/atm/lmc_atm_models.data'
+#
+# smfiles = get_files(sse_locaton + 'ga_z0008/', ['13sm/y10/sp/'], [], 'sm.data')
+# # smfiles = get_files(sse_locaton, ['zams_004/hecore/t1/'], [], 'sm.data')
+#
+# # lmc_ml_relation = '../data/output/l_yc_m_lmc_wne.data'
+# # gal_ml_relation = '../data/output/l_yc_m_gal_wne.data'
+#
+# def select_sp_files(spfiles, req_z, req_m, req_yc):
+#
+#     res_spfiles = []
+#
+#     '''----------------------SELECT-req_z-FILES----------------------'''
+#
+#     z_files = []
+#     for spfile in spfiles:
+#
+#         if len(req_z) == 0:
+#             z_files.append(spfile)
+#         else:
+#             no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
+#
+#             # print(spfile, '   ', no_extens_sp_file)
+#
+#             for req_part in req_z:
+#                 if req_part in no_extens_sp_file.split('_')[1:]:
+#                     if spfile not in z_files:
+#                         req_z.append(spfile)
+#                 else:
+#                     pass
+#
+#     print('__For z:{} requirement, {} SP-files selected.'.format(req_z, len(z_files)))
+#     '''----------------------SELECT-req_m-FILES----------------------'''
+#
+#     zm_files = []
+#     for spfile in z_files:
+#
+#         if len(req_m) == 0:
+#             zm_files.append(spfile)
+#         else:
+#             no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
+#
+#             # print(spfile, '   ', no_extens_sp_file)
+#
+#             for req_part in req_m:
+#                 if req_part in no_extens_sp_file.split('_')[1:]:
+#                     if spfile not in zm_files:
+#                         zm_files.append(spfile)
+#                 else:
+#                     pass
+#
+#
+#     print('__For z:{} and m:{} requirement, {} SP-files selected.'.format(req_z, req_m, len(zm_files)))
+#     '''----------------------SELECT-req_m-FILES----------------------'''
+#
+#     zmy_files = []
+#     for spfile in zm_files:
+#
+#         if len(req_yc) == 0:
+#             zmy_files.append(spfile)
+#         else:
+#             no_extens_sp_file = spfile.split('.')[-2]  # getting rid of '.data'
+#
+#             # print(spfile, '   ', no_extens_sp_file)
+#
+#             for req_part in req_yc:
+#                 if req_part in no_extens_sp_file.split('_')[1:]:
+#                     if spfile not in zmy_files:
+#                         zmy_files.append(spfile)
+#                 else:
+#                     pass
+#
+#
+#
+#     print('\t__ With Conditions: z:{}, m:{}, yc:{}, the {} sp_files selected.'.format(req_z, req_m, req_yc, len(zmy_files)))
+#     print('\n')
+#     return zmy_files
 
 
 '''===============================================SETTING=FILES======================================================'''
@@ -319,20 +319,7 @@ print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.139, 3.4))
 # gray_analysis3('0008', [18], [9], True, False)
 # gray_analysis3('002', [10], [10], True)
 # 10,11,12,13,14,15,16,17,18,19,20,21,22,
-'''======================================================TAU========================================================='''
 
-from Sonic_Criticals import Criticals2
-from Sonic_Criticals import Tau_Map
-# smfiles_ga = get_files(sse_locaton + 'ga_z0008/', ['30sm/y4/'], [], 'sm.data')
-# smfiles_sp = get_files(sse_locaton + 'ga_z0008/', ['30sm/y4/sp/'], [], 'sm.data')
-# plotfls_sp = get_files(sse_locaton +'ga_z0008/', ['30sm/y4/sp/'], [], '.plot1')
-# tau = Criticals2(smfiles_ga, smfiles_sp, plotfls_sp, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'], output_dir)
-# # tau = Criticals(smfiles_ga, output_dir, plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])
-# # tau.sonic_criticals(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'], True)
-# tau.combine_ga_sp(1000, ['kappa-sp', 'L/Ledd-sp', 'rho-sp'], True)
-
-# tau = Tau_Map(-3.,-6.,-0.1, plotfls_sp, smfiles_sp, output_dir, plot_dir, ['sse', 'ga_z002', 'vnedora', 'media', 'vnedora', 'HDD'])
-# tau.interpolation_tau()
 '''====================================================CREATION======================================================'''
 from FilesWork import Read_Observables
 from FilesWork import Read_Atmosphere_File
@@ -360,25 +347,30 @@ from FilesWork import Read_Atmosphere_File
 
 from FilesWork import OPAL_work
 # make = OPAL_work('gal', 'Fe', 1000)
-# make.set_plots_clean=True
-
-# make.save_t_k_rho(3.5, None, 1000)
+# make.set_plots_clean=False
+#
+# make.save_t_k_rho(3.2, None, 1000)
 # make.from_t_k_rho__to__t_lm_rho(1.0)
 # make.save_t_rho_k(None, None, 4.1, 5.6)
 # make.plot_t_rho_kappa('lmc', 'Fe')
 
 
 from FilesWork import SP_file_work
-spcls = SP_file_work(0.1, 'gal', output_dir, plot_dir)
+spcls = SP_file_work(0.1, 'gal','wd', output_dir, plot_dir)
 spcls.set_clean_plots = True
 spcls.set_extrapol_pars = [0, 0, 0, 0] # in %: v, ^, <-, ->
 spcls.set_int_or_pol = 'pol' # to save
+spcls.set_init_fit_method='1dLinear'
+spcls.invert_xaxis = False
 
 # spcls.save_y_yc_z_relation('l', 'lm',  True)
 # spcls.save_y_yc_z_relation('lm', 'r',  True)
 # spcls.save_y_yc_z_relation('lm', 'l',  True)
 # spcls.save_min_max_lm('lm')
 # spcls.save_y_yc_z_relation('lm', 'r',  True)
+
+# spcls.save_t_llm_mdot('lm', 1.0, 'Fe', 500, 'max', True) # for sHRD
+
 
 # spcls.test()
 
@@ -390,8 +382,8 @@ spcls.set_int_or_pol = 'pol' # to save
 
 # spcls.save_x_y_yc_evol_relation('m', 'ys')
 
-# spcls.plot_x_y_z_for_yc('t', 'lm', 'r', 1.0, 100, 'min', False, True)
-# spcls.save_x_y_z('mdot', 'lm', 'r_env', 500, 'max', False, 'IntUni') #    Uni, IntUni, 1dLinear, 1dCubic methods availabel
+# spcls.plot_x_y_z_for_yc('mdot', 'lm', 't_eff', 1.0, 500, 'max', False, True)
+# spcls.save_x_y_z('mdot', 'lm', 't_eff', 500, 'max', False, '1dLinear') #    Uni, IntUni, 1dLinear, 1dCubic methods availabel
 # spcls.plot_x_y_z('t', 'lm', 'r', [1.0], 100, 'min', True)
 
 # spcls.plot_t_llm_mdot_for_yc(1.0, 'lm', 1.0, 'Fe', 'min')
@@ -401,6 +393,10 @@ spcls.set_int_or_pol = 'pol' # to save
 # spcls.save_t_llm_mdot_const_r('lm', 1.0, 'Fe', 1.0, 500, 'min', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
+'''=====================================================ATMOSPHERE==================================================='''
+from FilesWork import Read_Atmosphere_File
+# atm = Read_Atmosphere_File(Files.get_atm_file('gal'), 'gal')
+# atm.plot_tstar_rt('t_*','rt','t_eff', 'gal')
 '''=======================================================TABLES====================================================='''
 
 from MainClasses import Table
@@ -419,14 +415,14 @@ from MainClasses import PrintTable
 from MainClasses import HRD
 hrd = HRD('gal')
 hrd.set_obs_file = 'gal_wne'
-# hrd.plot_hrd('mdot', 'lm', True)
-# hrd.plot_hrd_treks('lm', True)
+# hrd.plot_hrd('t_eff', 'lm', True)
+# hrd.plot_hrd_treks('t_eff','lm')
 
 
-from MainClasses import GenericMethods
-sm = GenericMethods(get_files(sse_locaton + 'ga_z002/', ['10sm/y10/sp/'], ['4.00', '4.50', '5.00', '5.50'], 'sm.data'))
+from MainClasses import GenericMethods # 'ga_z0008/15sm/y10/', 'ga_z002/15sm/y10/', 'ga_z004/15sm/y10/',
+sm = GenericMethods(get_files(sse_locaton + 'ga_z002/', ['10sm/y10/', '11sm/y10/', '12sm/y10/','13sm/y10/','14sm/y10/','15sm/y10/'], ['4.50'], 'sm.data'))
 # sm.inflection_point('r','u',None)
-# sm.plot_multiple_inflect_point('r', 'rho', False, None, 12)
+# sm.plot_multiple_inflect_point('r', 'rho', True, None, 12)
 
 
 # comb = Combine()
@@ -471,19 +467,21 @@ mdot = Critical_Mdot('gal', 'Fe', 1.0, 'gal')
 
 from MainClasses import Plot_Critical_Mdot
 cr = Plot_Critical_Mdot('gal', 'Fe', 1.0)
+# cr.plot_natives('mdot', 'rs')
 # cr.plot_cr_mdot('lm',1.0,None,None,True)
 # cr.plot_cr_mdot_obs('lm',1.0,None,None,True)
-
+# cr.plot_cr_mdot_obs_trecks('lm',1.0,None,None,True)
+# cr.plot_cr_mdot_obs_trecks_back('lm', 'tau', 1.0,None,None,True)
 # --- --- ---
-
 from MainClasses import Plot_Sonic_HRD
 shrd = Plot_Sonic_HRD('gal', 'Fe', 1.0)
 
 
-shrd.plot_sonic_hrd(1.0, 'lm')
+# shrd.plot_sonic_hrd(1.0, 'lm')
 # shrd.plot_sonic_hrd_set('lm', [1.0], 1.0, 0.1)
 # shrd.plot_sonic_hrd_const_r('lm', 1., [1.0])
-# shrd.plot_ts_y('t_eff', 1.0, 'lm')
+
+# shrd.plot_ts_y('t_eff', 1.0, 'lm', 'tau')
 
 '''=================================================MULTIPLE=BUMP=METHODS============================================'''
 
@@ -674,14 +672,15 @@ from MainClasses import Plot_Tow_Sonic_HRDs
 
 
 
-folder = '/media/vnedora/HDD/sse/ga_z002/15sm/y10/sp/'
-mdot='5.30'
+folder = '/media/vnedora/HDD/sse/ga_z002/10sm/y10/sp55/b075/'
+mdot='3.50'
 
 from FilesWork import Read_Wind_file
 wind = Read_Wind_file.from_wind_dat_file(folder + '{}.wind'.format(mdot))
 
 from FilesWork import Read_SM_data_file
-smfl = Read_SM_data_file.from_sm_data_file(folder + '{}sm.data'.format(mdot))
+smfl = Read_SM_data_file(folder + '{}sm.data'.format(mdot))
+# smfl = Read_SM_data_file.from_sm_data_file(folder + '{}sm.data'.format(mdot))
 
 #plfl = Read_Plot_file.from_file(sse_locaton +'ga_z002/' + folder + '{}.plot1'.format(mdot), True)
 #print('PLOT: R_s: {}; Tau: {}'.format(plfl.r_n_rsun[-1], plfl.tauatR[-1]))

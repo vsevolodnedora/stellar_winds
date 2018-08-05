@@ -107,7 +107,7 @@ class GenericMethods():
             plt.legend()
             plt.show()
 
-    def plot_multiple_inflect_point(self, v_n_x, v_n_y, plot_inflect=True, clean=False, fsz=12):
+    def plot_multiple_inflect_point(self, v_n_x, v_n_y, plot_inflect_eq=True, clean=False, fsz=12):
 
         if len(self.sm_cls) == 0: raise IOError('No sm.data classes found')
 
@@ -125,7 +125,7 @@ class GenericMethods():
         # ax.tick_params('y', colors='k')
         # ax.tick_params('x', colors='k')
 
-        if plot_inflect:
+        if plot_inflect_eq:
             ax2 = ax.twinx()
             ax2.minorticks_on()
             # ax2.set_ylabel(None, color='gray', fontsize=fsz)
@@ -154,7 +154,7 @@ class GenericMethods():
 
 
 
-            if plot_inflect:
+            if plot_inflect_eq:
                 left, right = self.formula(cl.get_col('t'), cl.get_col('kappa'), cl.get_col('L/Ledd'))
 
                 xp, yp = Math.interpolated_intercept(x_coord, left, right)
@@ -163,14 +163,14 @@ class GenericMethods():
 
                 ind = Math.find_nearest_index(x_coord, xp[0][0])+100
 
-                ax2.plot(x_coord[:ind], left[:ind], '--', color='C' + str(Math.get_0_to_max([i], 9)[i]),
-                         label='{}:{} (L)'.format(Labels.lbls('mdot'), mdot_str))
-                ax2.plot(x_coord[:ind], right[:ind], '-.', color='C' + str(Math.get_0_to_max([i], 9)[i] + 1),
-                         label='{}:{} (R)'.format(Labels.lbls('mdot'), mdot_str))
+                #ax2.plot(x_coord[:ind], left[:ind], '--', color='C' + str(Math.get_0_to_max([i], 9)[i]),
+                #         label='{}:{} (L)'.format(Labels.lbls('mdot'), mdot_str))
+                #ax2.plot(x_coord[:ind], right[:ind], '-.', color='C' + str(Math.get_0_to_max([i], 9)[i] + 1),
+                #         label='{}:{} (R)'.format(Labels.lbls('mdot'), mdot_str))
 
                 ax.plot(xp[0][0], y2[Math.find_nearest_index(x_coord,xp[0][0])], 'X', color='black')
 
-                ax2.plot(xp, yp, 'X', color='black')
+                # ax2.plot(xp, yp, 'X', color='black')
             i = i + 1
 
 
@@ -178,7 +178,7 @@ class GenericMethods():
         if not clean:
             plt.legend(bbox_to_anchor=(0, 0), loc='lower left', fontsize=fsz, ncol=1)
 
-        if plot_inflect: plt.xlim(0, x_y_infl[1:,0].max())
+        if plot_inflect_eq: plt.xlim(0, x_y_infl[1:, 0].max())
         if v_n_y == 'Pg/P_total': ax.axhline(y=0.15, ls='dashed', color='gray')
 
         ax.grid()
@@ -206,11 +206,6 @@ class GenericMethods():
         plt.show()
 
 
-class SingleSmFileAnalyze:
-    def __init__(self):
-        pass
-
-
 class Combine:
     output_dir = '../data/output/'
     plot_dir = '../data/plots/'
@@ -218,6 +213,7 @@ class Combine:
     set_metal = ''
     set_sm_files = []
     set_sp_files = []
+    set_sm_files2 = []
 
     set_obs_file = ''
     set_plot_files = []
@@ -234,9 +230,14 @@ class Combine:
         for file in self.set_sm_files:
             self.mdl.append( Read_SM_data_file(file) )
 
+        self.mdl2 = []
+        for file in self.set_sm_files2:
+            self.mdl2.append( Read_SM_data_file(file) )
+
         self.spmdl=[]
         for file in self.set_sp_files:
             self.spmdl.append( Read_SP_data_file(file, self.output_dir, self.plot_dir) )
+
 
         # self.nums = Num_Models(smfls, plotfls)
         # self.obs = Read_Observables(self.set_obs_file, self.set_metal)
@@ -244,6 +245,139 @@ class Combine:
 
 
     # --- METHODS THAT DO NOT REQUIRE OPAL TABLES ---
+
+
+
+    def tst(self):
+
+        def beta_law(r, r0, v0, vinf, beta):
+            return (v0  + (vinf - v0) * ((1 - (r0 / r))**beta))
+            # return vinf*((1 - (r0 / r))**beta)
+
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+
+
+        # plt.title(tlt)
+
+        x_tot = []
+        y_tot = []
+        y_tot2 = []
+        y_tot3 = []
+
+        for i in range(len(self.set_sm_files)):
+
+            # inflection_point(self.mdl[i])
+
+            x = self.mdl[i].get_col('r')
+            y = self.mdl[i].get_col('u')  # simpler syntaxis
+            label1 = self.mdl[i].get_col('mdot')[-1]
+
+            # x = np.log(x)
+            # y = np.log(y)
+
+            # y = np.gradient(y, x)
+            #
+            # x = np.log(x)
+            # y = np.log(y)
+
+            # ax1.set_xlim(x[-100], x[-1])
+            # ax1.set_ylim(x[-100], x[-1])
+
+
+            lbl = '{}:{}'.format('Mdot', '%.2f' % label1)
+
+            # ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            # ax1.plot(x, y, 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            # ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            # ax1.plot(x[-1], y[-1], '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+
+            xinf = x[-1]+1.0
+            x_w = np.mgrid[x[-1]:xinf:100j]
+
+            y_w = []
+
+            for j in range(len(x_w)):
+                y_w = np.append(y_w, beta_law(x_w[j], x[-1], y[-1], 1800, 1.0))
+
+            # ax1.plot(x_w, y_w, '-', color='gray')
+            #
+            # ax1.annotate(str('%.1f' % self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')
+            # ax1.plot(x[-1], y[-1], '.', markersize='5', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+
+            # x, y = np.log10(x), np.log10(y)
+            # x_w, y_w = np.log10(x_w), np.log10(y_w)
+
+            x = x*Constants.solar_r / 10**5
+            x_w = x_w * Constants.solar_r / 10**5
+
+            y_grad = np.gradient(y, x)
+            y_w_grad = np.gradient(y_w, x_w)
+
+            # grad = y_grad - y_w_grad
+
+            # y_grad = np.log(y_grad)
+            # y_w_grad =  np.log(y_w_grad)
+
+            # ax1.annotate(str('%.1f' % self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')
+            # ax1.plot(x[-1], y_w_grad[-1], '.', markersize='5', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            # ax1.plot(x[-1], y_grad[-1], '.', markersize='5', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            # ax1.plot(x[-1], grad[-1], '.', markersize='5', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+
+            x_tot = np.append(x_tot, self.mdl[i].get_col('mdot')[-1])
+            y_tot = np.append(y_tot, y_grad[-1])
+            y_tot2 = np.append(y_tot2, y_w_grad[-1])
+            y_tot3 = np.append(y_tot3, (y_grad[-1]-y_w_grad[-1]))
+            # if sonic and v_n2 == 'u':
+            #     u_s = self.mdl[i].get_sonic_u()
+            #     ax1.plot(x, u_s, '-', color='black')
+            #
+            #     xc, yc = Math.interpolated_intercept(x, y, u_s)
+            #     # print('Sonic r: {} | Sonic u: {} | {}'.format( np.float(xc),  np.float(yc), len(xc)))
+            #     plt.plot(xc, yc, 'X', color='red')
+            #
+            # if v_n2 == 'kappa':
+            #     k_edd = 10 ** Physics.edd_opacity(self.mdl[i].get_col('xm')[-1],
+            #                                       self.mdl[i].get_col('l')[-1])
+            #     ax1.plot(ax1.get_xlim(), [k_edd, k_edd], color='black', label='Model: {}, k_edd: {}'.format(i, k_edd))
+            #
+            # if v_n2 == 'Pg/P_total':
+            #     plt.axhline(y=0.15, color='black')
+
+            # tp, up = get_m_r_envelope(self.mdl[i])
+            # if tp != None:
+            #     ax1.plot(tp, up, 'X', color='black')
+
+        x_tot, y_tot3 = Math.x_y_z_sort(x_tot, y_tot3)
+
+        # ax1.plot(x_tot, y_tot, '-',  color='red' )
+        ax1.plot(x_tot, y_tot3, '-',  color='black' )
+        ax1.plot(x_tot, y_tot3, 'x', color='black')
+
+        plt.axhline(y=0)
+
+        y_tot3, x_tot = Math.x_y_z_sort(y_tot3, x_tot)
+        xp = interpolate.InterpolatedUnivariateSpline(y_tot3, x_tot)(0.)
+        ax1.plot(xp,0, 'X', markersize='5', color='black')
+        print('Coord: {} '.format("%.5f"% xp))
+
+        ax1.set_xlabel(Labels.lbls('r'), fontsize=12)
+        ax1.set_ylabel(Labels.lbls('u'), fontsize=12)
+
+        ax1.grid(which='both')
+        ax1.grid(which='minor', alpha=0.2)
+        ax1.grid(which='major', alpha=0.2)
+
+        # ax1.set_xlim(0.78, 0.92)
+        # ax1.set_xlim(4.0, 6.2)
+        # if not clean:
+        ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        # plot_name = self.plot_dir + v_n1 + '_vs_' + v_n2 + '_profile.pdf'
+        # plt.savefig(plot_name)
+        plt.show()
+
+
     def xy_profile(self, v_n1, v_n2, var_for_label1, var_for_label2, sonic = True, clean = False, fsz=12):
 
         # def get_m_r_envelope(smcl, t_lim1=5.1, t_lim2=5.3):
@@ -397,10 +531,22 @@ class Combine:
 
             # inflection_point(self.mdl[i])
 
+
             x =      self.mdl[i].get_col(v_n1)
             y      = self.mdl[i].get_col(v_n2)          # simpler syntaxis
             label1 = self.mdl[i].get_col(var_for_label1)[-1]
             label2 = self.mdl[i].get_col(var_for_label2)[-1]
+
+            # x = np.log(x)
+            # y = np.log(y)
+
+            # y = np.gradient(y,x)
+
+            # x = np.log(x)
+            # y = np.log(y)
+
+            # ax1.set_xlim(x[-100], x[-1])
+            # ax1.set_ylim(x[-100], x[-1])
 
             if v_n2 == 'kappa':
                 y = 10**y
@@ -410,16 +556,24 @@ class Combine:
 
             lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
 
-            ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            #ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            #ax1.plot(x, y, 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
             # ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
-            ax1.plot(x[-1], y[-1], 'x',   color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            ax1.plot(x[-1], y[0], 'x',   color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            ax1.plot(x, y, '-', color='black')
+            ax1.annotate(str('%.1f' % self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data',
+                         horizontalalignment='left',
+                         verticalalignment='bottom'
+                         )
 
-            ax1.annotate(str('%.1f' % self.mdl[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data')
-
+            if not clean:
+                ax1.text(0.9, 0.1, 'blablabla', style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax1.transAxes)
 
             if sonic and v_n2 == 'u':
                 u_s = self.mdl[i].get_sonic_u()
-                ax1.plot(x, u_s, '-', color='black')
+                ax1.plot(x, u_s, '-', color='gray')
 
                 xc, yc = Math.interpolated_intercept(x,y, u_s)
                 # print('Sonic r: {} | Sonic u: {} | {}'.format( np.float(xc),  np.float(yc), len(xc)))
@@ -438,14 +592,81 @@ class Combine:
             # if tp != None:
             #     ax1.plot(tp, up, 'X', color='black')
 
+        for i in range(len(self.set_sm_files2)):
 
+            # inflection_point(self.mdl[i])
+
+
+            x =      self.mdl2[i].get_col(v_n1)
+            y      = self.mdl2[i].get_col(v_n2)          # simpler syntaxis
+            label1 = self.mdl2[i].get_col(var_for_label1)[-1]
+            label2 = self.mdl2[i].get_col(var_for_label2)[-1]
+
+            # x = np.log(x)
+            # y = np.log(y)
+
+            # y = np.gradient(y,x)
+
+            # x = np.log(x)
+            # y = np.log(y)
+
+            # ax1.set_xlim(x[-100], x[-1])
+            # ax1.set_ylim(x[-100], x[-1])
+
+            if v_n2 == 'kappa':
+                y = 10**y
+
+            print('\t __Core H: {} , core He: {} File: {}'.
+                  format(self.mdl[i].get_col('H')[0], self.mdl[i].get_col('He4')[0], self.set_sm_files[i]))
+
+            lbl = '{}:{} , {}:{}'.format(var_for_label1,'%.2f' % label1,var_for_label2,'%.2f' % label2)
+
+            #ax1.plot(x,  y,  '-',   color='C' + str(Math.get_0_to_max([i], 9)[i]), label=lbl)
+            #ax1.plot(x, y, 'x', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            #ax1.plot(x, y, '.', color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            #ax1.plot(x[-1], y[-1], 'x',   color='C' + str(Math.get_0_to_max([i], 9)[i]))
+            ax1.plot(x, y, '--', color='black')
+            ax1.annotate(str('%.1f' % self.mdl2[i].get_col('mdot')[-1]), xy=(x[-1], y[-1]), textcoords='data',
+                         horizontalalignment='left',
+                         verticalalignment='bottom'
+                         )
+
+            if not clean:
+                ax1.text(0.9, 0.1, 'blablabla', style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax1.transAxes)
+
+            if sonic and v_n2 == 'u':
+                u_s = self.mdl2[i].get_sonic_u()
+                ax1.plot(x, u_s, '-', color='gray')
+
+                xc, yc = Math.interpolated_intercept(x,y, u_s)
+                # print('Sonic r: {} | Sonic u: {} | {}'.format( np.float(xc),  np.float(yc), len(xc)))
+                plt.plot(xc, yc, 'X', color='red')
+
+            if v_n2 == 'kappa':
+                k_edd = 10**Physics.edd_opacity(self.mdl2[i].get_col('xm')[-1],
+                                            self.mdl2[i].get_col('l')[-1])
+                ax1.plot(ax1.get_xlim(), [k_edd, k_edd], color='black', label='Model: {}, k_edd: {}'.format(i, k_edd))
+
+            if v_n2 == 'Pg/P_total':
+                plt.axhline(y=0.15, color='black')
+
+
+            # tp, up = get_m_r_envelope(self.mdl[i])
+            # if tp != None:
+            #     ax1.plot(tp, up, 'X', color='black')
 
         ax1.set_xlabel(Labels.lbls(v_n1), fontsize=fsz)
         ax1.set_ylabel(Labels.lbls(v_n2), fontsize=fsz)
 
-        ax1.grid(which='both')
-        ax1.grid(which='minor', alpha=0.2)
-        ax1.grid(which='major', alpha=0.2)
+        ax1.tick_params(labelsize=fsz)
+
+        ax1.minorticks_on()
+
+        # ax1.grid(which='both')
+        # ax1.grid(which='minor', alpha=0.2)
+        # ax1.grid(which='major', alpha=0.2)
 
         # ax1.set_xlim(0.78, 0.92)
         # ax1.set_xlim(4.0, 6.2)
@@ -744,64 +965,7 @@ class Combine:
 
     def sp_xy_last_points(self, v_n1, v_n2, v_lbl1, num_pol_fit = 0):
 
-        def fit_plynomial(x, y, order):
-            '''
 
-            :param x:
-            :param y:
-            :param order: 1-4 are supported
-            :return:
-            '''
-            f = None
-            fit_x_coord = []
-
-            if order == 1:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x)'.format(
-                    "%.3f" % f.coefficients[1],
-                    "%.3f" % f.coefficients[0]
-                )
-                fit_x_coord = np.mgrid[(x.min()):(x.max()):100j]
-                plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-
-            if order == 2:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x) + ({}*x**2)'.format(
-                                                                    "%.3f" % f.coefficients[2],
-                                                                    "%.3f" % f.coefficients[1],
-                                                                    "%.3f" % f.coefficients[0]
-                                                                    )
-                fit_x_coord = np.mgrid[(x.min()):(x.max()):100j]
-                plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-            if order == 3:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3)'.format(
-                                                                    "%.3f" % f.coefficients[3],
-                                                                    "%.3f" % f.coefficients[2],
-                                                                    "%.3f" % f.coefficients[1],
-                                                                    "%.3f" % f.coefficients[0]
-                                                                    )
-                fit_x_coord = np.mgrid[(x.min()):(x.max()):100j]
-                plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-            if order == 4:
-                fit = np.polyfit(x, y, order)  # fit = set of coeddicients (highest first)
-                f = np.poly1d(fit)
-                lbl = '({}) + ({}*x) + ({}*x**2) + ({}*x**3) + ({}*x**4)'.format(
-                                                                     "%.3f" % f.coefficients[4],
-                                                                    "%.3f" % f.coefficients[3],
-                                                                    "%.3f" % f.coefficients[2],
-                                                                    "%.3f" % f.coefficients[1],
-                                                                    "%.3f" % f.coefficients[0]
-                                                                    )
-                fit_x_coord = np.mgrid[(x.min()):(x.max()):100j]
-                plt.plot(fit_x_coord, f(fit_x_coord), '--', color='black')
-
-            print(lbl)
-
-            return fit_x_coord, f(fit_x_coord)
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -829,12 +993,11 @@ class Combine:
 
             # "%.2f" % yc[i]
 
-        x_pol, y_pol = fit_plynomial(x, y, num_pol_fit)
-
-        plt.plot(x_pol, y_pol, '--', color='black')
+        # x_pol, y_pol = Math.fit_polynomial(x, y, num_pol_fit, 500)
+        # plt.plot(x_pol, y_pol, '--', color='black')
 
         if v_n1 == 'm' and v_n2 == 'l':
-            plt.plot(x, Physics.m_to_l(np.log10(x)), '-.', color='gray', label='Langer, 1987')
+            plt.plot(x, Physics.m_to_l_langer(np.log10(x)), '-.', color='gray', label='Langer, 1987')
 
 
         # plt.plot(x, y, '-', color='gray')
@@ -1985,24 +2148,26 @@ class Combine:
 
 
 class HRD(PlotObs):
-    def __init__(self, gal_or_lmc):
+    def __init__(self, gal_or_lmc, bump):
 
         self.set_obs_file = Files.get_obs_file(gal_or_lmc)
         self.set_atm_file = Files.get_atm_file(gal_or_lmc)
         self.set_plot_files = Files.get_plot_files(gal_or_lmc)
         self.set_metal = gal_or_lmc
 
-        PlotObs.__init__(self, gal_or_lmc, self.set_obs_file, self.set_atm_file)
+        PlotObs.__init__(self, gal_or_lmc,bump, self.set_obs_file, self.set_atm_file)
 
         self.set_label_size = 12
         self.set_inverse_x = True
 
-        self.set_clean            = False
-        self.set_use_gaia         = True
+        self.set_clean            = True
+        self.set_use_gaia         = False
         self.set_use_atm_file     = True
         self.set_load_yc_l_lm     = True
         self.set_load_yc_nan_lmlim= True
         self.set_check_lm_for_wne = True
+        self.set_check_affiliation= False
+
 
         self.set_do_plot_evol_err = True
         self.set_do_plot_obs_err =  True
@@ -2125,7 +2290,7 @@ class HRD(PlotObs):
 
         y_arrs = np.zeros(len(x_arr))
         for metal in metals:
-            y_arr = Fits.get_fit(v_n_x, v_n_y, x_arr, metal, self.set_clump_modified, self.set_use_gaia)
+            y_arr = Fits.get_gal_fit(v_n_x, v_n_y, x_arr, metal, self.set_clump_modified, self.set_use_gaia)
             ax.plot(x_arr, y_arr, get_linestyle(metal), color='black', alpha=self.set_patches_or_lines_alpha)
 
             y_arrs = np.vstack((y_arrs, y_arr))
@@ -2268,15 +2433,15 @@ class HRD(PlotObs):
 
         if obs:
             # self.plot_obs_l_l_comparison(ax)
-            self.plot_all_x_llm(ax, l_or_lm, v_n_x, 1.0, True, True)
+            self.plot_obs_all_x_llm(ax, l_or_lm, v_n_x, 1.0, True, True)
 
         # ax.set_title('HRD')
         ax.set_xlabel(Labels.lbls(v_n_x), fontsize=self.set_label_size)
         ax.set_ylabel(Labels.lbls(l_or_lm), fontsize=self.set_label_size)
 
 
-        x_min, x_max = ax.get_xlim()
-        y_min, y_max = ax.get_ylim()
+        # x_min, x_max = ax.get_xlim()
+        # y_min, y_max = ax.get_ylim()
 
 
         # self.plot_fits(ax, v_n_x, l_or_lm, np.array([x_min, x_max]), ['2gal_th', 'lmc_th'])
@@ -2287,6 +2452,9 @@ class HRD(PlotObs):
         ax.tick_params('y', labelsize=self.set_label_size)
         ax.tick_params('x', labelsize=self.set_label_size)
         plt.minorticks_on()
+
+        ax.set_ylabel(Labels.lbls(l_or_lm))
+        ax.set_xlabel(Labels.lbls(v_n_x))
 
         # plt.grid()
         # if not self.set_clean:
@@ -2413,12 +2581,22 @@ class PrintTable:
 
 class Table:
 
-    def __init__(self, smfiles):
+    def __init__(self, smfiles, spfile):
         self.smfiles = smfiles
-        self.mdl = []
-        for file in self.smfiles:
-            self.mdl.append(Read_SM_data_file.from_sm_data_file(file))
+        self.spfiles = spfile
 
+        self.set_use_only_spfls = False
+
+        self.mdl = []
+        for file in smfiles:
+            self.mdl.append(Read_SM_data_file(file))
+
+        self.spmdl = []
+        if len(spfile) > 0:
+            for file in spfile:
+                self.spmdl.append(Read_SP_data_file(file))
+            # if len(self.spmdl) != len(self.mdl):
+                # raise NameError('sm.files: {} != {} sp.files'.format( len(self.mdl), len(self.spmdl)))
 
     def latex_table(self, v_n_conds, precis):
         '''
@@ -2446,6 +2624,9 @@ class Table:
 
         '''
         if len(v_n_conds) != len(precis): raise NameError('len(v_ns) != len(precis)')
+        # if len(self.spmdl)!=0 and len(self.spmdl) != len(self.mdl): raise IOError('SM files: {} SP files: {}'
+        #                                                                           .format(len(self.mdl), len(self.spmdl)))
+        #
 
         size='{'
         head = ''
@@ -2467,11 +2648,28 @@ class Table:
         print('\\hline\\hline')
 
 
-        for i in range(len(self.smfiles)):
+        for i in range(len(self.mdl)):
+            mdot = self.mdl[i].get_col('mdot')[-1]
             # 1 & 6 & 87837 & 787 \\
             row = ''
             for j in range(len(v_n_conds)):
-                val = "%{}f".format(precis[j]) % self.mdl[i].get_cond_value(v_n_conds[j].split('-')[0], v_n_conds[j].split('-')[-1])
+                if v_n_conds[j].split('-')[-1] == '' and not self.set_use_only_spfls:
+                    val = "%{}f".format(precis[j]) % self.mdl[i].get_cond_value(v_n_conds[j].split('-')[0],
+                                                                                v_n_conds[j].split('-')[-1])
+
+                elif v_n_conds[j].split('-')[-1] == 'sp':
+                    val = "%{}f".format(precis[j]) % self.spmdl[i].get_sonic_cols(v_n_conds[j].split('-')[0], 'mdot={}'.format("%.2f"%mdot))
+
+                elif v_n_conds[j].split('-')[-1] == 'ph' and self.spmdl[i]!=None:
+                    val = "%{}f".format(precis[j]) % self.spmdl[i].get_sonic_cols(v_n_conds[j],
+                                                                                  'mdot={}'.format("%.2f" % mdot))
+
+                elif v_n_conds[j].split('-')[-1] == '0' or v_n_conds[j].split('-')[-1] == '1' and self.spmdl[i]!=None:
+                    val = "%{}f".format(precis[j]) % self.spmdl[i].get_sonic_cols(v_n_conds[j].split('-')[0],
+                                                                                  'mdot={}'.format("%.2f" % mdot))
+
+                else: raise NameError('name {} is not recognised'.format(v_n_conds[j]))
+
                 row = row + val
                 if j != len(v_n_conds) - 1: row = row + ' & '
             row = row + ' \\\\'  # = \\
@@ -2730,6 +2928,7 @@ class Critical_Mdot:
 
         if self.set_bump != 'Fe':
             raise NameError('This function is not available for bumps other than Fe.')
+
         t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(self.set_coeff), 't', '{}lm'.format(self.set_coeff),
                                                'rho', self.set_metal, 'Fe', self.set_output_dir)
         yc_lm_l  = Save_Load_tables.load_table('yc_lm_l',  'yc', 'lm', 'l', self.set_metal, '', self.set_output_dir)
@@ -3222,12 +3421,14 @@ class Plot_Critical_Mdot(PlotObs):
 
     def __init__(self, metal, bump, coef):
 
-        self.set_metal = metal
+        self.set_metal =  metal
+        obs_metal = metal
+
         self.set_coeff = coef
         self.set_bump = bump
 
-        PlotObs.__init__(self, self.set_metal,
-                         Files.get_obs_file(self.set_metal), Files.get_atm_file(self.set_metal))
+        PlotObs.__init__(self, obs_metal, self.set_bump,
+                         Files.get_obs_file(obs_metal), Files.get_atm_file(obs_metal))
 
         self.set_inverse_x = False
 
@@ -3246,7 +3447,9 @@ class Plot_Critical_Mdot(PlotObs):
 
         self.set_do_plot_obs_err    = True
         self.set_do_plot_evol_err   = True
-        self.set_do_plot_line_fit   = True
+        self.set_do_plot_line_fit   = False
+
+        self.set_fill_gray          = True
 
         self.set_label_sise = 12
 
@@ -3356,8 +3559,14 @@ class Plot_Critical_Mdot(PlotObs):
         plt.savefig('tst')
         plt.show()
 
-
-    def plot_cr_mdot(self, l_or_lm, yc_val, r_cr = None, ax = None, fill_gray=True):
+    def get_cr_mdot(self, l_or_lm, yc_val, r_cr = None):
+        '''
+        Returns mdot, llm (arrs)
+        :param l_or_lm:
+        :param yc_val:
+        :param r_cr:
+        :return:
+        '''
 
         if r_cr == None:
             name = '{}_{}{}_{}'.format('yc', self.set_coeff, l_or_lm, 'mdot_cr')
@@ -3379,6 +3588,24 @@ class Plot_Critical_Mdot(PlotObs):
         ind = Math.find_nearest_index(yc, yc_val)
         mdot = mdot2d[:, ind]
 
+        return mdot, llm
+
+
+
+    def plot_cr_mdot(self, l_or_lm, yc_val, r_cr = None, ax = None):
+        '''
+        RETURNS mdot, llm
+        :param l_or_lm:
+        :param yc_val:
+        :param r_cr:
+        :param ax:
+        :param fill_gray:
+        :return:
+        '''
+
+
+        mdot, llm = self.get_cr_mdot(l_or_lm, yc_val, r_cr)
+
         show_plot = False
         if ax == None: # if the plotting class is not given:
             fig = plt.figure()
@@ -3386,10 +3613,9 @@ class Plot_Critical_Mdot(PlotObs):
             ax = fig.add_subplot(1,1,1)
             show_plot = True
 
+        ax.plot(mdot, llm, '-', linewidth=5, color='black')
 
-
-        ax.plot(mdot, llm, '-', color='black')
-        if fill_gray: ax.fill_between(mdot, llm, color="lightgray")
+        if self.set_fill_gray: ax.fill_between(mdot, llm, color="lightgray")
 
         if r_cr != None and not self.set_clean:
             ax.text(0.1, 0.9, 'R:{}'.format(r_cr), style='italic',
@@ -3413,8 +3639,9 @@ class Plot_Critical_Mdot(PlotObs):
             plt.yticks(fontsize=self.set_label_sise)
             plt.savefig(plot_name)
             plt.show()
-        else:
-            return ax
+
+        return mdot, llm
+
 
     def plot_cr_mdot_obs(self, l_or_lm, yc_val, r_cr = None, ax = None, fill_gray=True, obs_err=True, evol_err=True):
 
@@ -3425,9 +3652,9 @@ class Plot_Critical_Mdot(PlotObs):
             ax = fig.add_subplot(1,1,1)
             show_plot = True
 
-        self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax, fill_gray)
+        self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax)
 
-        self.plot_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
+        self.plot_obs_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
 
 
         if show_plot:
@@ -3556,11 +3783,11 @@ class Plot_Critical_Mdot(PlotObs):
             ax = fig.add_subplot(1,1,1)
             show_plot = True
 
-        self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax, fill_gray)
+        self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax)
 
         self.plot_treks(ax, 'mdot', l_or_lm)
 
-        self.plot_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
+        self.plot_obs_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
 
 
         if show_plot:
@@ -3588,14 +3815,50 @@ class Plot_Critical_Mdot(PlotObs):
 
             # yc__ts_t_eff_tau_gal
 
-            yc_table = Save_Load_tables.load_3d_table(self.metal, name, 'yc',
+            yc_table = Save_Load_tables.load_3d_table(self.metal, name, 'beta',
                                                       x_v_n, '{}{}'.format(koef, y_v_n), z_v_n, Files.output_dir)
 
             yc_ind = Physics.ind_of_yc(yc_table[:, 0, 0], yc_val)
             table = yc_table[yc_ind, :, :]
 
-            PlotBackground.plot_color_background(ax, table, 'ts', 't_eff', z_v_n,
-                                                 self.metal)
+            PlotBackground.plot_color_background(ax, table, x_v_n, y_v_n, z_v_n,
+                                                 self.metal, self.bump)
+
+
+    def plot_fits(self, ax, obs_metal, v_n_x, v_n_y, x_arr, metals, bumps, hatch='///'):
+
+        def get_linestyle(metal):
+            if metal == 'gal':
+                return '--'
+
+            if metal == '2gal' or metal == '2lmc':
+                return '-.'
+
+            if metal == 'lmc':
+                return '-'
+
+            if metal == 'smc':
+                return ':'
+
+        if len(metals) != len(bumps): raise IOError('Metals != bumps')
+
+        y_arrs = np.zeros(len(x_arr))
+        for metal in metals:
+            if obs_metal == 'gal':
+                y_arr = Fits.get_gal_fit(v_n_x, v_n_y, x_arr, metal, self.set_clump_modified, self.set_use_gaia)
+            elif obs_metal == 'lmc':
+                y_arr = Fits.get_lmc_fit(v_n_x, v_n_y, x_arr, metal, self.bump)
+            else:
+                raise IOError('Obs_metal gal and lmc are only supproted so far')
+
+            ax.plot(x_arr, y_arr, get_linestyle(metal), color='black', alpha=self.set_patches_or_lines_alpha)
+
+            y_arrs = np.vstack((y_arrs, y_arr))
+
+        y_arrs = np.delete(y_arrs, 0, 0)
+
+        # ax.fill_between(x_arr, y_arrs[0, :], y_arrs[-1, :], hatch='/', alpha=0.0)
+        ax.fill_between(x_arr, y_arrs[0, :], y_arrs[-1, :], color='gray', alpha=0.2)
 
     def plot_cr_mdot_obs_trecks_back(self, l_or_lm, back_v_n, yc_val, r_cr = None, ax = None, fill_gray=True, obs_err=True, evol_err=True):
 
@@ -3608,17 +3871,24 @@ class Plot_Critical_Mdot(PlotObs):
             ax = fig.add_subplot(1,1,1)
             show_plot = True
 
-        self.plot_multiple_natives(ax, 'mdot', 'lm', ['lmc', 'gal', 'gal'], ['wd', 'wd', 'wd'], ['/', '/', 'b1_v2200/'])
+        # self.plot_multiple_natives(ax, 'mdot', 'lm', ['2gal', 'gal', 'gal'], ['wd', 'wd', 'wd'], ['/', '/', 'b1_v2200/'])
 
         self.plot_background(ax, 'mdot', l_or_lm, back_v_n, '', 1.0)
 
-        self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax, fill_gray)
+        mdot_arr, lm_arr = self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax)
+
+        mdot_grid = np.mgrid[ax.get_xlim()[0]:ax.get_xlim()[-1]:100j]
+        # self.plot_fits(ax, self.set_metal, 'mdot_cr', l_or_lm, mdot_grid, ['2lmc', 'smc'],
+        #                [self.set_bump, self.set_bump])
 
         self.plot_treks(ax, 'mdot', l_or_lm, False)
 
-        self.plot_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
+        self.plot_obs_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
 
         # self.plot_native_models(ax, 'mdot', l_or_lm, self.metal, 'wd')
+
+        print('\n CRITICAL MDOT FIT: ')
+        mdot_arr, lm_arr = Math.fit_polynomial(mdot_arr, lm_arr, 4, 500)
 
         if show_plot:
             # ax.text(0.05, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
@@ -3720,7 +3990,369 @@ class Plot_Critical_Mdot(PlotObs):
         plt.savefig(plot_name)
         plt.show()
 
+    def save_stars_affiliation(self, l_or_lm='lm', yc_val=1.0, r_cr=None):
 
+
+        ax = None
+
+        show_plot = False
+        if ax == None:  # if the plotting class is not given:
+            fig = plt.figure()
+            fig.subplots_adjust(hspace=0.2, wspace=0.3)
+            ax = fig.add_subplot(1, 1, 1)
+            show_plot = True
+
+
+
+        mdot_cr, lm_cr = self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax, True)
+
+        stars_n, mdot_star, lm_star = self.plot_obs_all_x_llm(ax, l_or_lm, 'mdot', yc_val,
+                                                              self.set_do_plot_obs_err, self.set_do_plot_evol_err)
+        res = []
+        res2 = []
+        # for i in range(len(lm_cr)):
+        #     star_ind = Math.find_nearest_index(lm_star, lm_cr[i])
+        #     print('star{}: lm:{} >< {} :cr | mdot: {} >< {} :cr '
+        #           .format(stars_n[star_ind], lm_star[star_ind], lm_cr[i], mdot_star[star_ind], mdot_cr[i]))
+        #     if mdot_star[star_ind] > mdot_cr[i]:
+        #         res = np.append(res, np.int(stars_n[star_ind]))
+
+        mdot_star_int = interpolate.interp1d(lm_cr, mdot_cr, kind='linear', bounds_error=True)(lm_star)
+
+        for i in range(len(stars_n)):
+            # print('star{}: lm:{} >< {} :cr | mdot: {} >< {} :cr '
+            #           .format(stars_n[star_ind], lm_star[star_ind], lm_cr[i], mdot_star[star_ind], mdot_cr[i]))
+            if mdot_star[i] >= mdot_star_int[i]:# and lm_star[i] >= lm_cr[i]:
+                res = np.append(res, np.int(stars_n[i]))
+            else:
+                res2 = np.append(res2, np.int(stars_n[i]))
+
+        # for i in range(len(stars_n)):
+
+
+
+        # for i in range(len(stars_n)):
+        #     lm_coord = Math.find_nearest_index(lm_cr, lm_star[i])
+        #     mdot_coord = Math.find_nearest_index(mdot_cr, mdot_star[i])
+        #
+        #     if lm_star[i] >= lm_coord and mdot_star[i] >= mdot_coord:
+        #         res = np.append(res, stars_n[i])
+
+        # sys.exit('ABOVE crit: {} \n BELOW crit {}'.format(np.unique(res), np.unique(res2)))
+
+        if show_plot:
+            ax.text(0.05, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+            ax.legend(bbox_to_anchor=(1, 0), loc='lower right', ncol=2, fontsize=self.set_label_sise)
+            plot_name = Files.plot_dir + 'cr_mdot_{}_{}_{}{}.pdf'.format(self.set_metal, self.set_bump, self.set_coeff,
+                                                                         l_or_lm)
+            ax.set_xlabel(Labels.lbls('mdot'), fontsize=self.set_label_sise)
+            ax.set_ylabel(Labels.lbls(l_or_lm), fontsize=self.set_label_sise)
+
+            self.plot_native_models(ax, 'mdot', l_or_lm, self.metal, 'wd')
+
+            plt.xticks(fontsize=self.set_label_sise)
+            plt.yticks(fontsize=self.set_label_sise)
+            # plt.grid()
+            plt.savefig(plot_name)
+            plt.show()
+        else:
+            return ax
+
+    def plot_mult_2d_betas(self, x_v_n, y_v_n, z_v_n, betas_to_plot, yc_val = 1.0, r_cr = None):
+
+        b_x_y_z = Save_Load_tables.load_3d_table(self.set_metal, 'Fe', 'beta_{}_{}_{}'
+                                                 .format(x_v_n, y_v_n, z_v_n), 'beta', x_v_n,
+                                                 y_v_n, z_v_n)
+
+        b_x_y_z2 = Save_Load_tables.load_3d_table(self.set_metal, 'HeII', 'beta_{}_{}_{}'
+                                                 .format(x_v_n, y_v_n, z_v_n), 'beta', x_v_n,
+                                                 y_v_n, z_v_n)
+        depth = len(b_x_y_z[0,1:,1:])
+        b_x_y_z = np.append( b_x_y_z , b_x_y_z2)
+        b_x_y_z = np.reshape(b_x_y_z, (3, depth + 1, depth + 1))
+        # b_x_y_z[0, :, :] = b_x_y_z2[0, :, :]
+
+        betas = b_x_y_z[:, 0, 0]
+        for i in range(len(betas_to_plot)):
+            if not betas_to_plot[i] in betas:
+                raise ValueError('Value betas_to_plot[{}] not in betas:\n\t {}'.format(betas_to_plot[i], betas))
+
+        # ------------------------
+
+        def plot_background(ax, table, metal, z_v_n):
+            # from PhysMath import Levels
+            levels = Levels.get_levels(z_v_n, metal, '')
+
+            contour_filled = ax.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+            # clb = plt.colorbar(contour_filled)
+            # clb.ax.set_title(Labels.lbls('mdot'))
+
+            contour = ax.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
+            # ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+            # ax.set_title('SONIC HR DIAGRAM')
+            return ax, contour_filled
+
+
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+        fig = plt.figure()
+        # fig.set_size_inches(18.5, 10.5)
+        fig.set_size_inches(3*4.79, 4.79)
+
+        ax1 = fig.add_subplot(1, 3, 1 ) # aspect='equal'
+        ax2 = fig.add_subplot(1, 3, 2, sharey=ax1, sharex=ax1)  # Share y-axes with subplot 1
+        ax3 = fig.add_subplot(1, 3, 3, sharey=ax1, sharex=ax1)
+
+        # Set y-ticks of subplot 2 invisible
+        plt.setp(ax2.get_yticklabels(), visible=False)
+        plt.setp(ax3.get_yticklabels(), visible=False)
+
+        i1 = Math.find_nearest_index(b_x_y_z[:, 0, 0], betas_to_plot[0])
+        i2 = Math.find_nearest_index(b_x_y_z[:, 0, 0], betas_to_plot[1])
+        i3 = Math.find_nearest_index(b_x_y_z[:, 0, 0], betas_to_plot[2])
+
+        # --- Plot BackGrounds
+        im1, cf1 = plot_background(ax1, b_x_y_z[i1,:,:], self.metal, z_v_n)
+        ax1.text(0.9, 0.1, r'$\beta: $'+'{}'.format(b_x_y_z[i1,0,0]), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax1.transAxes)
+        im2, cf2 = plot_background(ax2, b_x_y_z[i2,:,:], self.metal, z_v_n)
+        ax2.text(0.9, 0.1, r'$\beta: $'+'{}'.format(b_x_y_z[i2,0,0]), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax2.transAxes)
+        im3, cf3 = plot_background(ax3, b_x_y_z[i3,:,:], self.metal, z_v_n)
+        ax3.text(0.9, 0.1, r'$\beta: $'+'{}'.format(b_x_y_z[i3,0,0]), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax3.transAxes)
+
+        # --- Plot Obs
+        ax1_stars = self.plot_obs_all_x_llm(ax1, y_v_n, x_v_n, yc_val, True, False)
+        # ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2)
+
+        ax2_stars = self.plot_obs_all_x_llm(ax2, y_v_n, x_v_n, yc_val, True, False)
+        # ax2_stars.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2)
+
+        ax3_stars = self.plot_obs_all_x_llm(ax3, y_v_n, x_v_n, yc_val, True, True)
+        ax3.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=3)
+
+
+        # Define locations of colorbars for both subplot 1 and 2
+        divider1 = make_axes_locatable(ax1)
+        cax1 = divider1.append_axes("right", size="5%", pad=0.05)
+
+        divider2 = make_axes_locatable(ax2)
+        cax2 = divider2.append_axes("right", size="5%", pad=0.05)
+
+        divider3 = make_axes_locatable(ax3)
+        cax3 = divider3.append_axes("right", size="5%", pad=0.05)
+
+
+        mdot_arr, lm_arr = self.plot_cr_mdot(y_v_n, yc_val, r_cr, ax1)
+        mdot_arr, lm_arr = self.plot_cr_mdot(y_v_n, yc_val, r_cr, ax2)
+        mdot_arr, lm_arr = self.plot_cr_mdot(y_v_n, yc_val, r_cr, ax3)
+
+
+        # Create and remove the colorbar for the first subplot
+
+        cbar1 = fig.colorbar(cf1, cax=cax1)
+        # fig.delaxes(fig.axes[2])
+        cbar1.remove()
+        #
+        # # Create second colorbar
+        cbar2 = fig.colorbar(cf2, cax=cax2)
+        # fig.delaxes(fig.axes[2])
+        cbar2.remove()
+
+        cbar3 = fig.colorbar(cf3, cax=cax3)
+        cbar3.ax.set_title(Labels.lbls(z_v_n))
+        cbar3.ax.tick_params(labelsize=self.set_label_sise)
+
+        # --- --- WATER MARK -- -- --
+        # fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+
+        # Adjust the widths between the subplots
+        # plt.title('SONIC HR DIAGRAM', loc='center')
+
+        ax1.set_ylabel(Labels.lbls(y_v_n), fontsize=self.set_label_sise)
+
+        ax1.tick_params('y', labelsize=self.set_label_sise)
+        ax1.tick_params('x', labelsize=self.set_label_sise)
+        ax1.set_xlabel(Labels.lbls(x_v_n), fontsize=self.set_label_sise)
+
+        ax2.tick_params('y', labelsize=self.set_label_sise)
+        ax2.tick_params('x', labelsize=self.set_label_sise)
+        ax2.set_xlabel(Labels.lbls(x_v_n), fontsize=self.set_label_sise)
+
+        ax3.tick_params('y', labelsize=self.set_label_sise)
+        ax3.tick_params('x', labelsize=self.set_label_sise)
+        ax3.set_xlabel(Labels.lbls(x_v_n), fontsize=self.set_label_sise)
+
+        plt.minorticks_on()
+        ax1.minorticks_on()
+        ax2.minorticks_on()
+        ax3.minorticks_on()
+
+        # ax1.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2)
+        # plt.figlegend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2)
+        plt.subplots_adjust(wspace=-1.1)
+        plt.tight_layout()
+        # ax1.invert_xaxis()
+        # ax2.invert_xaxis()
+        plt.show()
+
+
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        # bg = PlotBackground2()
+        # bg.set_auto_limits = False
+        #
+        #
+        # b_x_y_z = Save_Load_tables.load_3d_table(self.metal, '', 'beta_{}_{}_{}'
+        #                                          .format(x_v_n, y_v_n, z_v_n), 'beta', x_v_n,
+        #                                          y_v_n, z_v_n)
+        # betas = b_x_y_z[:, 0, 0]
+        # for i in range(len(betas_to_plot)):
+        #     if not betas_to_plot[i] in betas:
+        #         raise ValueError('Value betas_to_plot[{}] not in betas:\n\t {}'.format(betas_to_plot[i], betas))
+        #
+        # def plot_all(ax, x_y_z, x_v_n, y_v_n, z_v_n, metal):
+        #
+        #     # if label != None:
+        #     #     print('TEXT')
+        #
+        #     # ax.text(table[0, 1:].min(), table[1:, 0].min(), s=label)
+        #     # bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10}
+        #     # plt.text(2, 0.65, r'$\cos(2 \pi t) \exp(-t)$')
+        #
+        #     # ax = fig.add_subplot(1, 1, 1)
+        #     # if self.set_auto_limits:
+        #     #     ax.set_xlim(table[0, 1:].min(), table[0, 1:].max())
+        #     #     ax.set_ylim(table[1:, 0].min(), table[1:, 0].max())
+        #     # ax.set_ylabel(Labels.lbls(v_n_y), fontsize=self.set_label_sise)
+        #     # ax.set_xlabel(Labels.lbls(v_n_x), fontsize=self.set_label_sise)
+        #
+        #     levels = Levels.get_levels(z_v_n, metal, '')
+        #
+        #     contour_filled = plt.contourf(x_y_z[0, 1:], x_y_z[1:, 0], x_y_z[1:, 1:], levels,
+        #                                   cmap=plt.get_cmap('RdYlBu_r'),
+        #                                   alpha=1.0)
+        #     # clb = plt.colorbar(contour_filled)
+        #     # clb.ax.tick_params(labelsize=self.set_label_sise)
+        #     # clb.ax.set_title(Labels.lbls(v_n_z), fontsize=self.set_label_sise)
+        #
+        #     # ax.colorbar(contour_filled, label=Labels.lbls(v_n_z))
+        #
+        #     # if self.set_show_contours:
+        #     #     contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
+        #     #
+        #     #     labs = ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=self.set_label_sise)
+        #     #     if self.set_rotate_labels != None:
+        #     #         for lab in labs:
+        #     #             lab.set_rotation(self.set_rotate_labels)  # ORIENTATION OF LABELS IN COUNTUR PLOTS
+        #     # ax.set_title('SONIC HR DIAGRAM')
+        #
+        #     # print('Yc:{}'.format(yc_val))
+        #     # if not self.set_clean and label != None and label != '':
+        #     #     ax.text(0.9, 0.1, label, style='italic',
+        #     #             bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+        #     #             verticalalignment='center', transform=ax.transAxes)
+        #
+        #     ax.tick_params('y', labelsize=self.set_label_sise)
+        #     ax.tick_params('x', labelsize=self.set_label_sise)
+        #
+        #     # plt.minorticks_on()
+        #
+        #     # plt.ylabel(l_or_lm)
+        #     # plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        #     # plt.savefig(name)
+        #     # plt.show()
+        #     return ax
+        #
+        #
+        #     # ax = bg.plot_color_background(ax, x_y_z, x_v_n, y_v_n, z_v_n, metal, '', None)
+        #
+        #     # return ax
+        #
+        # from mpl_toolkits.axes_grid1 import ImageGrid
+        #
+        # # Set up figure and image grid
+        # fig = plt.figure(figsize=(9.75, 3))
+        #
+        # grid = ImageGrid(fig, 111,  # as in plt.subplot(111)
+        #                  nrows_ncols=(1, len(betas)),
+        #                  axes_pad=0.15,
+        #                  share_all=True,
+        #                  cbar_location="right",
+        #                  cbar_mode="single",
+        #                  cbar_size="7%",
+        #                  cbar_pad=0.15,
+        #                  )
+        #
+        # # Add data to image grid
+        # i = 0
+        # for ax in grid:
+        #
+        #     x_y_z = b_x_y_z[i, :, :]
+        #     im = plot_all(ax, x_y_z, x_v_n, y_v_n, z_v_n, self.metal)
+        #     i = i + 1
+        #     # im = ax.imshow(np.random.random((10, 10)), vmin=0, vmax=1)
+        #
+        # # Colorbar
+        # ax.cax.colorbar(im)
+        # ax.cax.toggle_label(True)
+        #
+        # # plt.tight_layout()    # Works, but may still require rect paramater to keep colorbar labels visible
+        # plt.show()
+
+    def plot_cr_3d_betas(self, x_v_n, y_v_n, z_v_n, betas_to_plot, yc_val = 1.0, r_cr = None):
+
+        fsz = 12
+        alpha = 1.0
+
+
+        b_x_y_z = Save_Load_tables.load_3d_table(self.metal, '', 'beta_{}_{}_{}'
+                                                       .format(x_v_n, y_v_n, z_v_n), 'beta', x_v_n,
+                                                       y_v_n, z_v_n)
+        betas = b_x_y_z[:, 0, 0]
+
+        for i in range(len(betas_to_plot)):
+            if not betas_to_plot[i] in betas:
+                raise ValueError('Value betas_to_plot[{}] not in betas:\n\t {}'.format(betas_to_plot[i], betas))
+
+        mdot, llm = self.get_cr_mdot(y_v_n, yc_val, r_cr)
+
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure() # figsize=(10, 5) changes the overall size of the popping up window
+        ax = fig.gca(projection='3d')
+        # ax = fig.add_subplot(111, projection='3d')
+        pg = PlotBackground2()
+        # pg.plot_3d_curved_surf(ax, mdot, llm, betas)
+        pg.plot_3d_back2(ax, b_x_y_z, x_v_n, y_v_n, z_v_n, self.metal)
+        #self.plot_3d_obs_all_x_llm(ax, x_v_n, y_v_n, yc_val, b_x_y_z[:,0,0])# np.array([b_x_y_z[0,0,0]])
+
+
+        # ax.set_zlim(llm.min(), llm.max())
+        # ax.set_xlim(-3.5,-6.0)
+
+        plt.tight_layout(0.01, 0.01, 0.01) # <0.1 lets you to malke it tighter
+        plt.minorticks_on()
+        plt.show()
+
+
+
+        beta_vals = np.sort(betas_to_plot, axis=0)
+
+        b_n = len(betas_to_plot)
 
 
 class Plot_Multiple_Crit_Mdots(PlotObs):
@@ -3819,7 +4451,7 @@ class Plot_Multiple_Crit_Mdots(PlotObs):
                         bbox={'facecolor': 'C'+str(i+1), 'alpha': 0.5, 'pad': 5}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
 
-        self.plot_all_x_llm(ax, self.set_y_coord, 'mdot', self.set_yc[0], True, True)
+        self.plot_obs_all_x_llm(ax, self.set_y_coord, 'mdot', self.set_yc[0], True, True)
 
         # for i in range(len(self.obs_files)):
         #     l_or_lm = self.set_y_coord[i]
@@ -3916,42 +4548,51 @@ from FilesWork import PlotBackground2, Fits
 
 class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
-    def __init__(self, gal_or_lmc, bump, coeff):
+    def __init__(self, metal, bump, coeff):
 
         self.lim_t1, self.lim_t2 =   T_kappa_bump.t_for_bump(bump) # 5.25, 5.45 #
 
-        self.set_exrtrapolation = [0, 0, 0, 30] # <-, ->, v, ^
+        self.set_exrtrapolation = [0, 0, 0, 0] # <-, ->, v, ^
         self.set_show_extrap_borders = True
 
-        PlotObs.__init__(self, gal_or_lmc, Files.get_obs_file(gal_or_lmc), Files.get_atm_file(gal_or_lmc))
+        obs_metal = metal
+        PlotObs.__init__(self, obs_metal, bump, Files.get_obs_file(obs_metal), Files.get_atm_file(obs_metal))
         PlotBackground2.__init__(self)
 
-        self.set_metal  = gal_or_lmc
+        self.set_metal  = metal
         self.set_coeff  = coeff
         self.set_bump   = bump
 
         self.set_clump_used = 4
         self.set_clump_modified = 4
 
-        self.set_clean              = True
-        self.set_use_gaia           = True
+        self.set_clean              = False
+        self.set_use_gaia           = False
         self.set_use_atm_file       = True
         self.set_load_yc_l_lm       = True
         self.set_load_yc_nan_lmlim  = True
         self.set_check_lm_for_wne   = True
+        self.set_check_affiliation  = True
 
-        self.set_patches_or_lines   = 'lines'
-        self.set_patches_or_lines_alpha = 0.4
+        self.set_patches_or_lines   = 'lines' # lines2 are X shaped
+        self.set_patches_or_lines_alpha = 0.5
 
-        self.set_do_plot_obs_err    = False
-        self.set_do_plot_evol_err   = False
+        self.set_do_plot_obs_err    = True
+        self.set_do_plot_evol_err   = True
         self.set_do_plot_line_fit   = False
 
+        self.set_if_evol_err_out = 't1' # t1 for Fe bump; t2 for HeII bump (inverse)
+
+        self.set_ncol_legend=3
         self.set_label_sise=12
         self.set_rotate_labels=295
         self.set_alpha=1.0
         self.set_show_contours=False
 
+        self.set_list_metals_fit = ['2lmc', 'lmc']   # 'smc', ['lmc', 'gal', '2gal'] # ['lmc', 'gal', '2gal']
+        self.set_list_bumps_fit  =  [self.set_bump, self.set_bump]
+
+    # INTERNAL METHODS
     def plot_multiple_natives(self, ax, v_n_x, v_n_y, metals, cr_or_wds, adds):
 
         if len(metals)!=len(cr_or_wds) or len(metals)!=len(adds):
@@ -4037,20 +4678,32 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
         return x_coord, y_coord, labels
 
-
-    def plot_fits(self, ax, v_n_x, v_n_y, x_arr, metals, hatch='///'):
+    def plot_fits(self, ax, obs_metal, v_n_x, v_n_y, x_arr, metals, bumps, hatch='///'):
 
         def get_linestyle(metal):
             if metal == 'gal':
                 return '--'
-            if metal == '2gal':
+
+            if metal == '2gal' or metal == '2lmc':
                 return '-.'
+
             if metal == 'lmc':
                 return '-'
 
+            if metal == 'smc':
+                return ':'
+
+        if len(metals) != len(bumps): raise IOError('Metals != bumps')
+
         y_arrs = np.zeros(len(x_arr))
         for metal in metals:
-            y_arr = Fits.get_fit(v_n_x, v_n_y, x_arr, metal, self.set_clump_modified, self.set_use_gaia)
+            if obs_metal == 'gal':
+                y_arr = Fits.get_gal_fit(v_n_x, v_n_y, x_arr, metal, self.set_clump_modified, self.set_use_gaia)
+            elif obs_metal == 'lmc':
+                y_arr = Fits.get_lmc_fit(v_n_x, v_n_y, x_arr, metal, self.bump)
+            else:
+                raise IOError('Obs_metal gal and lmc are only supproted so far')
+
             ax.plot(x_arr, y_arr, get_linestyle(metal), color='black', alpha=self.set_patches_or_lines_alpha)
 
             y_arrs = np.vstack((y_arrs, y_arr))
@@ -4059,22 +4712,23 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
         ax.fill_between(x_arr, y_arrs[0, :], y_arrs[-1, :], hatch=hatch, alpha=self.set_patches_or_lines_alpha)
 
+    # EXTERNAL METHODS
+    def plot_sonic_hrd(self, yc_val, l_or_lm, ax=None):
 
-    def plot_sonic_hrd(self, yc_val, l_or_lm):
+        if ax==None:
+            do_plot = True
+            fig = plt.figure() # figsize=plt.figaspect(0.8)
+            ax = fig.add_subplot(111) # , projection='3d'
+        else:
+            do_plot = False
+
 
         yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump,
                                                        'yc_t_{}{}_mdot'.format(self.set_coeff, l_or_lm),
                                                        'yc', 't', str(self.set_coeff) + l_or_lm, 'mdot')
 
-
         yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
         t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
-
-
-        fig = plt.figure() # figsize=plt.figaspect(0.8)
-        ax = fig.add_subplot(111) # , projection='3d'
-
-
 
         # EXTRAPOLATION
         if sum(self.set_exrtrapolation) > 0:
@@ -4095,13 +4749,17 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
             _, t_llm_mdot = Math.extrapolate2(t_llm_mdot, left, right, down, up, 500, 4, True)
 
-        self.plot_multiple_natives(ax, 'ts', 'lm', ['2gal', 'gal', 'gal'], ['wd', 'wd', 'wd'], ['/', '/', 'b1_v2200/'])
+        # self.plot_multiple_natives(ax, 'ts', 'lm', ['2gal', 'gal', 'gal'], ['wd', 'wd', 'wd'], ['/', '/', 'b1_v2200/'])
+        # self.plot_multiple_natives(ax, 'ts', 'lm', ['gal'], ['wd'], ['/'])
 
-        self.plot_color_background(ax, t_llm_mdot, 'ts', l_or_lm, 'mdot', self.set_metal, 'Yc:{}'.format(yc_val))
+        self.plot_color_background(ax, t_llm_mdot, 'ts', l_or_lm, 'mdot', self.set_metal, self.set_bump, 'Yc:{}'.format(yc_val))
 
         self.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
 
-        self.plot_fits(ax, 'ts', l_or_lm, t_llm_mdot[0, 1:], ['lmc', 'gal', '2gal'])
+
+        self.plot_fits(ax, self.set_metal, 'ts', l_or_lm, t_llm_mdot[0, 1:],
+                       self.set_list_metals_fit,  # ['lmc', 'gal', '2gal']
+                       self.set_list_bumps_fit)
 
         if not self.set_clean:
             if self.set_coeff != 1.0:
@@ -4113,10 +4771,162 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
         if not self.set_clean:
             fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
 
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=3, fontsize=self.set_label_size)
-        plt.gca().invert_xaxis()
-        plt.show()
+        if do_plot:
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=self.set_ncol_legend, fontsize=self.set_label_size)
+            plt.gca().invert_xaxis()
+            plt.show()
 
+    def plot_sonic_hrd_const_r(self,  l_or_lm, rs, yc_val, ax=None):
+
+
+        if ax==None:
+            do_plot = True
+            fig = plt.figure() # figsize=plt.figaspect(0.8)
+            ax = fig.add_subplot(111) # , projection='3d'
+        else:
+            do_plot = False
+
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump,
+                                                       'yc_t_{}{}_mdot_rs_{}'.format(self.set_coeff, l_or_lm, rs),
+                                                       'yc', 't', str(self.set_coeff) + l_or_lm,
+                                                       'mdot_rs_{}'.format(rs))
+
+        yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
+        t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
+
+        # EXTRAPOLATION
+        if sum(self.set_exrtrapolation) > 0:
+            left = self.set_exrtrapolation[0]
+            right = self.set_exrtrapolation[1]
+            down = self.set_exrtrapolation[2]
+            up = self.set_exrtrapolation[3]
+
+            if self.set_show_extrap_borders:
+                # if left != 0:
+                #     ax.axvline(x=t_llm_mdot[0, 1:].min(), ls='dashed', lw=3, color='black')
+                # if right != 0:
+                #     ax.axvline(x=t_llm_mdot[0, 1:].max(), ls='dashed', lw=3, color='black')
+                if down != 0:
+                    ax.axhline(y=t_llm_mdot[1:, 0].min(), ls='dashed', lw=3, color='black')
+                if up != 0:
+                    ax.axhline(y=t_llm_mdot[1:, 0].max(), ls='dashed', lw=3, color='black')
+
+            _, t_llm_mdot = Math.extrapolate2(t_llm_mdot, left, right, down, up, 500, 4, True)
+
+
+        self.plot_color_background(ax, t_llm_mdot, 'ts', l_or_lm, 'mdot', self.set_metal,
+                                       'Yc:{} Rs:{}'.format(yc_val, rs))
+        self.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
+
+        if self.set_coeff != 1.0 and not self.set_clean:
+            ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
+                    bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                    verticalalignment='center', transform=ax.transAxes)
+
+        if do_plot:
+            plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=self.set_ncol_legend, fontsize=self.set_label_size)
+            plot_name = Files.plot_dir + 'sonic_HRD_const_rs.pdf'
+            plt.savefig(plot_name)
+            plt.gca().invert_xaxis()
+            plt.show()
+        else: return ax
+
+    def plot_ts_y(self, v_n_y, yc_val, l_or_lm, v_n_background=None, ax=None):
+
+        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump,
+                                                       'yc_t_{}{}_mdot'.format(self.set_coeff, l_or_lm),
+                                                       'yc', 't', str(self.set_coeff) + l_or_lm, 'mdot')
+
+        yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
+        t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
+        # lm_max = t_llm_mdot[1:, 0].max()
+        # t_min = t_llm_mdot[0, 1:].min()
+
+
+        if ax==None:
+            do_plot = True
+            fig = plt.figure() # figsize=plt.figaspect(0.8)
+            ax = fig.add_subplot(111) # , projection='3d'
+        else:
+            do_plot = False
+
+        if sum(self.set_exrtrapolation) > 0:
+            left = self.set_exrtrapolation[0]
+            right = self.set_exrtrapolation[1]
+            down = self.set_exrtrapolation[2]
+            up = self.set_exrtrapolation[3]
+
+            self.set_show_extrap_borders = False
+            if self.set_show_extrap_borders:
+                # if left != 0:
+                #     ax.axvline(x=t_llm_mdot[0, 1:].min(), ls='dashed', lw=3, color='black')
+                # if right != 0:
+                #     ax.axvline(x=t_llm_mdot[0, 1:].max(), ls='dashed', lw=3, color='black')
+                if down != 0:
+                    ax.axhline(y=t_llm_mdot[1:, 0].min(), ls='dashed', lw=3, color='black')
+                if up != 0:
+                    ax.axhline(y=t_llm_mdot[1:, 0].max(), ls='dashed', lw=3, color='black')
+
+            _, t_llm_mdot = Math.extrapolate2(t_llm_mdot, left, right, down, up, 500, 4, True)
+
+        #PlotBackground.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.set_metal,
+                                             #'Yc:{}'.format(yc_val), alpha, self.set_clean)
+
+        # self.plot_native_models(ax, 'ts', v_n_y, self.metal, 'wd')
+        # self.plot_native_models(ax, 'ts', v_n_y, '2gal', 'wd')
+
+
+
+        self.plot_all_obs_ts_y_mdot(ax, v_n_y, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
+
+        self.plot_fits(ax, self.set_metal, 'ts', v_n_y, t_llm_mdot[0, 1:], ['lmc', '2lmc', 'smc'], [self.set_bump, self.set_bump, self.set_bump])
+
+        x = np.mgrid[ax.get_xlim()[0]:ax.get_xlim()[-1]:100j]
+        y = x
+        y2 = np.mgrid[100:100:100j]
+        ax.plot(x, y, '-.', color='black')
+        ax.fill_between(x, y, y2, color='gray', alpha=0.2)
+
+        if v_n_background != None and v_n_background != '':
+
+            # yc__ts_t_eff_tau_gal
+
+            yc_table = Save_Load_tables.load_3d_table(self.metal,'ts_t_eff_{}'.format(v_n_background),
+                                                           'yc', 'ts', 't_eff', 'tau', Files.output_dir)
+
+            yc_ind = Physics.ind_of_yc(yc_table[:, 0, 0], yc_val)
+            table = yc_table[yc_ind, :, :]
+
+            PlotBackground.plot_color_background(ax, table, 'ts', 't_eff', v_n_background,
+                                                 self.metal)
+
+
+        # ax.axhline(y=lm_max, ls='dashed', lw=3, color='black')
+        # ax.axvline(x=t_min, ls='dashed', lw=3, color='black')
+
+        if not self.set_clean:
+            if self.set_coeff != 1.0:
+                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+
+        if not self.set_clean:
+            fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+
+        if do_plot:
+
+            ax.minorticks_on()
+            plt.xticks(fontsize=self.set_label_sise)
+            plt.yticks(fontsize=self.set_label_sise)
+            ax.set_xlabel(Labels.lbls('ts'), fontsize=self.set_label_size)
+            ax.set_ylabel(Labels.lbls(v_n_y), fontsize=self.set_label_size)
+            ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=self.set_ncol_legend, fontsize=self.set_label_sise)
+
+            plt.show()
+        else:
+            return ax
+
+    # FUCKING METHODS
     def plot_sonic_hrd_set(self, l_or_lm, yc_arr):
 
         yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump, 'yc_t_{}{}_mdot'
@@ -4161,9 +4971,7 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
         plt.savefig(plot_name)
         plt.gca().invert_xaxis()
         plt.show()
-
-    # def plot_sonic_hrd_const_r(self, l_or_lm, r, yc, yc1=None, yc2=None):
-    def plot_sonic_hrd_const_r(self, l_or_lm, rs, yc_arr):
+    def plot_sonic_hrd_const_r_set(self, l_or_lm, rs, yc_arr):
 
         yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump, 'yc_t_{}{}_mdot_rs_{}'.format(self.set_coeff, l_or_lm, rs),
                                                        'yc', 't', str(self.set_coeff) + l_or_lm, 'mdot_rs_{}'.format(rs))
@@ -4234,86 +5042,7 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
         plt.gca().invert_xaxis()
         plt.show()
 
-    def plot_ts_y(self, v_n_y, yc_val, l_or_lm, v_n_background=None):
 
-        yc_t_llm_mdot = Save_Load_tables.load_3d_table(self.set_metal, self.set_bump,
-                                                       'yc_t_{}{}_mdot'.format(self.set_coeff, l_or_lm),
-                                                       'yc', 't', str(self.set_coeff) + l_or_lm, 'mdot')
-
-        yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc_val)
-        t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
-        # lm_max = t_llm_mdot[1:, 0].max()
-        # t_min = t_llm_mdot[0, 1:].min()
-
-
-        fig = plt.figure() # figsize=plt.figaspect(0.8)
-        ax = fig.add_subplot(111)  # , projection='3d'
-
-        if sum(self.set_exrtrapolation) > 0:
-            left = self.set_exrtrapolation[0]
-            right = self.set_exrtrapolation[1]
-            down = self.set_exrtrapolation[2]
-            up = self.set_exrtrapolation[3]
-
-            self.set_show_extrap_borders = False
-            if self.set_show_extrap_borders:
-                # if left != 0:
-                #     ax.axvline(x=t_llm_mdot[0, 1:].min(), ls='dashed', lw=3, color='black')
-                # if right != 0:
-                #     ax.axvline(x=t_llm_mdot[0, 1:].max(), ls='dashed', lw=3, color='black')
-                if down != 0:
-                    ax.axhline(y=t_llm_mdot[1:, 0].min(), ls='dashed', lw=3, color='black')
-                if up != 0:
-                    ax.axhline(y=t_llm_mdot[1:, 0].max(), ls='dashed', lw=3, color='black')
-
-            _, t_llm_mdot = Math.extrapolate2(t_llm_mdot, left, right, down, up, 500, 4, True)
-
-        #PlotBackground.plot_color_background(ax, t_llm_mdot, 't', l_or_lm, 'mdot', self.set_metal,
-                                             #'Yc:{}'.format(yc_val), alpha, self.set_clean)
-
-        # self.plot_native_models(ax, 'ts', v_n_y, self.metal, 'wd')
-        # self.plot_native_models(ax, 'ts', v_n_y, '2gal', 'wd')
-
-        self.plot_all_obs_ts_y_mdot(ax, v_n_y, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
-
-        self.plot_fits(ax, 'ts', v_n_y, t_llm_mdot[0, 1:], ['lmc', 'gal', '2gal'])
-
-        if v_n_background != None and v_n_background != '':
-
-            # yc__ts_t_eff_tau_gal
-
-            yc_table = Save_Load_tables.load_3d_table(self.metal,'ts_t_eff_{}'.format(v_n_background),
-                                                           'yc', 'ts', 't_eff', 'tau', Files.output_dir)
-
-            yc_ind = Physics.ind_of_yc(yc_table[:, 0, 0], yc_val)
-            table = yc_table[yc_ind, :, :]
-
-            PlotBackground.plot_color_background(ax, table, 'ts', 't_eff', v_n_background,
-                                                 self.metal)
-
-
-        # ax.axhline(y=lm_max, ls='dashed', lw=3, color='black')
-        # ax.axvline(x=t_min, ls='dashed', lw=3, color='black')
-
-        ax.minorticks_on()
-        plt.xticks(fontsize=self.set_label_sise)
-        plt.yticks(fontsize=self.set_label_sise)
-        ax.set_xlabel(Labels.lbls('ts'), fontsize=self.set_label_size)
-        ax.set_ylabel(Labels.lbls(v_n_y), fontsize=self.set_label_size)
-        ax.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=3, fontsize=self.set_label_sise)
-
-        if not self.set_clean:
-            if self.set_coeff != 1.0:
-                ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
-                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
-                        verticalalignment='center', transform=ax.transAxes)
-
-        # --- --- WATER MARK --- --- ---
-        if not self.set_clean:
-            fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
-
-        # plt.gca().invert_xaxis()
-        plt.show()
 
     # def t_llm_cr_sp(self, t_k_rho, yc_val, opal_used):
     #     kap = t_k_rho[1:, 0]
@@ -4696,6 +5425,135 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
     #     plt.savefig(plot_name)
     #     plt.show()
 
+from FilesWork import Levels
+class Plot_Two_sHRDs():
+    def __init__(self, l_or_lms, metals, bumps, coefs, rss, yc_vals):
+
+        self.set_obs_metals = metals
+        self.set_back_metals = metals
+        self.set_back_bumps = bumps
+        self.set_back_coeffs = coefs
+        self.set_back_rss = rss
+        self.set_back_ycs = yc_vals
+        self.set_l_or_lms = l_or_lms
+
+        self.obs1 = PlotObs(self.set_obs_metals[0], self.set_back_bumps[0],
+                            Files.get_obs_file(self.set_obs_metals[0]), Files.get_atm_file(self.set_obs_metals[0]))
+        self.obs2 = PlotObs(self.set_obs_metals[1], self.set_back_bumps[1],
+                            Files.get_obs_file(self.set_obs_metals[1]), Files.get_atm_file(self.set_obs_metals[1]))
+
+        self.back = PlotBackground2()
+
+    def add_plot_background(self, ax, table, opal):
+
+        levels = Levels.get_levels('mdot', opal)
+
+        contour_filled = ax.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
+        # clb = plt.colorbar(contour_filled)
+        # clb.ax.set_title(Labels.lbls('mdot'))
+
+        contour = ax.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
+        # ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=12)
+        # ax.set_title('SONIC HR DIAGRAM')
+        return ax, contour_filled
+
+    def load_t_llm_mdot(self, l_or_lm, coeff, rs, opal, bump, yc):
+        lbl = []
+        z = Get_Z.z(opal)
+
+        if rs == None:
+
+            yc_t_llm_mdot = Save_Load_tables.load_3d_table(opal, bump, 'yc_t_{}{}_mdot'.format(coeff, l_or_lm),
+                                                           'yc', 't', str(coeff) + l_or_lm, 'mdot')
+
+            lbl.append('z:{}({}) K:{}'.format(z, bump, coeff))
+        else:
+
+            yc_t_llm_mdot = Save_Load_tables.load_3d_table(opal, bump,
+                                                           'yc_t_{}{}_mdot_rs_{}'.format(coeff, l_or_lm, rs),
+                                                           'yc', 't', str(coeff) + l_or_lm,
+                                                           'mdot_rs_{}'.format(rs))
+
+            lbl.append('z:{}({}) K:{} Rs:{}'.format(z, bump, coeff, rs))
+
+        yc_arr = yc_t_llm_mdot[:, 0, 0]
+
+        for i in range(len(yc_arr)):
+            if not yc in yc_arr:
+                raise ValueError('Value yc_vals[{}] not in yc:\n\t {}'.format(yc, yc_arr))
+
+        # selecting one table with required Yc
+        yc_ind = Physics.ind_of_yc(yc_t_llm_mdot[:, 0, 0], yc)
+        t_llm_mdot = yc_t_llm_mdot[yc_ind, :, :]
+
+        # Extrapolatin
+        t_llm_mdot = Math.extrapolate(t_llm_mdot, None, None, 10, 5, 500, 4)
+        return t_llm_mdot, lbl
+
+    def plot_two_shrd(self):
+
+        t_llm_mdot1, lbl1 = self.load_t_llm_mdot(self.set_l_or_lms[0], self.set_back_coeffs[0], self.set_back_rss[0],
+                                                 self.set_back_metals[0], self.set_back_bumps[0], self.set_back_ycs[0])
+
+        t_llm_mdot2, lbl2 = self.load_t_llm_mdot(self.set_l_or_lms[1], self.set_back_coeffs[1], self.set_back_rss[1],
+                                                 self.set_back_metals[1], self.set_back_bumps[1], self.set_back_ycs[1])
+
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+        fig = plt.figure()
+        # fig.set_size_inches(18.5, 10.5)
+        # fig.set_size_inches(10, 4.5)
+
+        ax1 = fig.add_subplot(1, 2, 1)  # aspect='equal'
+        ax2 = fig.add_subplot(1, 2, 2, sharey=ax1)  # Share y-axes with subplot 1
+
+        ax1.minorticks_on()
+        ax2.minorticks_on()
+
+        ax1.tick_params()
+
+        # Set y-ticks of subplot 2 invisible
+        plt.setp(ax2.get_yticklabels(), visible=False)
+
+        # Plot data
+        im1, cf1 = self.add_plot_background(ax1, t_llm_mdot1, self.set_back_metals[0])
+        im2, cf2 = self.add_plot_background(ax2, t_llm_mdot2, self.set_back_metals[1])
+
+        ax1_stars = self.obs1.plot_obs_t_llm_mdot_int(ax2, t_llm_mdot2, self.set_l_or_lms[0])
+        ax1_stars.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=2)
+
+        ax2_stars = self.obs2.plot_obs_t_llm_mdot_int(ax1, t_llm_mdot1, self.set_l_or_lms[0])
+        ax2_stars.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+
+        # Define locations of colorbars for both subplot 1 and 2
+        divider1 = make_axes_locatable(ax1)
+        cax1 = divider1.append_axes("right", size="5%", pad=0.05)
+
+        divider2 = make_axes_locatable(ax2)
+        cax2 = divider2.append_axes("right", size="5%", pad=0.05)
+
+        # Create and remove the colorbar for the first subplot
+
+        cbar1 = fig.colorbar(cf1, cax=cax1)
+        fig.delaxes(fig.axes[2])
+
+        # Create second colorbar
+        cbar2 = fig.colorbar(cf2, cax=cax2)
+        cbar2.ax.set_title(Labels.lbls('mdot'))
+
+        # --- --- WATER MARK -- -- --
+        fig.text(0.95, 0.05, 'PRELIMINARY', fontsize=50, color='gray', ha='right', va='bottom', alpha=0.5)
+
+        # Adjust the widths between the subplots
+        # plt.title('SONIC HR DIAGRAM', loc='center')
+        ax1.set_xlabel(Labels.lbls('t'))
+        ax1.set_ylabel(Labels.lbls('lm'))
+        plt.subplots_adjust(wspace=-0.0)
+        ax1.invert_xaxis()
+        ax2.invert_xaxis()
+        plt.show()
+
 class Plot_Tow_Sonic_HRDs:
 
     output_dir = '../data/output/'
@@ -4864,8 +5722,52 @@ class Plot_Tow_Sonic_HRDs:
         #                                                      'mdot_cr_r_{}'.format(r_cr), opal, bump)
 
 
+class GradAnalysis:
+
+    def __init__(self, metal, bump):
+        self.set_metal = metal
+        self.set_bump = bump
+
+    from PhysMath import Constants, Math
+    from FilesWork import PlotBackground2
 
 
+    def tst(self):
+
+        rs = 2.0
+        vs = 50
+
+        betas = np.mgrid[0.75:1.50:100j]
+        vinfs = np.mgrid[1600:2400:200j]
+
+        grads = np.zeros((len(betas), len(vinfs)))
+
+        radii = np.mgrid[rs:(rs + 1):100j]
+
+        for i in range(len(betas)):
+            for j in range(len(vinfs)):
+                vels = Physics.beta_law(radii, radii[0], vs, vinfs[j], betas[i])
+                grad = np.gradient(vels, radii * Constants.solar_r / 10 ** 5)
+
+                # grad = diff_beta_law(radii * Constants.solar_r / 10**5, radii[0] * Constants.solar_r / 10**5, vinfs[j], betas[i])
+                grads[i, j] = grad[0] * 10 ** 5
+
+        print(grads)
+
+        res = Math.combine(vinfs, betas, grads)
+
+        PlotBackground2.plot_color_table(res, 'v_inf', 'beta', 'grad_w', 'gal', 'Fe')
+
+    # tst()
+
+    def main_cycle(self):
+
+        # loading files
+        pass
+
+
+    def plot_master(self, v_n_x, v_n_y, v_n_col, beta_vals):
+        pass
 #================================================3D=====================================================================
 #
 #

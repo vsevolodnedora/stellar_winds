@@ -993,7 +993,7 @@ def modify_mdat_file(ref_mdat, v_n_string_array):
 
 '''====================================================__SETTINGS__=================================================='''
 # --- AVAILABLE MODES --- Chose when Initialize the Program ---
-allowed_modes=['list', 'listlist', 'prescr', 'steps', 'allsteps', 'all']
+allowed_modes=['list', 'prescr', 'steps', 'allsteps', 'allnormal', 'all', '']
 print('Choose a Mode out of: {}'.format(allowed_modes))
 
     # Get Mdot from losts below
@@ -1026,15 +1026,21 @@ all_mdot_values =[3.00, 3.10, 3.20, 3.30, 3.40, 3.50, 3.60, 3.70, 3.80, 3.90,
                   # ]
 
             #  ['10sm/', '11sm/']
-sm_dirs = ['12sm/', '13sm/', '14sm/', '15sm/', '16sm/', '17sm/', '18sm/',
-           '19sm/', '20sm/', '21sm/', '22sm/', '23sm/', '24sm/', '25sm/', '26sm/', '27sm/'] #, '28sm/', '29sm/', '30sm/']
+#sm_dirs = ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/', '17sm/', '18sm/', '19sm/']
+#sm_dirs =['20sm/', '21sm/', '22sm/', '23sm/', '24sm/', '25sm/', '26sm/', '27sm/', '28sm/', '29sm/', '30sm/']
 
-y_dirs = ['y10/sp/']
+# sm_dirs = ['10sm/', '11sm/', '12sm/','13sm/']
+sm_dirs =['15sm/', '16sm/', '17sm/', '18sm/', '19sm/']
+#sm_dirs =['20sm/', '21sm/', '22sm/', '23sm/', '24sm/', '25sm/', '26sm/', '27sm/', '28sm/', '29sm/', '30sm/']
+
+y_dirs = ['y10/sp55_d/prec/']
+#y_dirs = ['y6/sp55_d/prec/', 'y5/sp55_d/prec/']
+#y_dirs = ['y10/sp55_d/prec/b09_v2200/', 'y10/sp55_d/prec/b115_v2200/', 'y10/sp55_d/prec/b1_v2200/']
           # 'y9/', 'y8/', 'y7/', 'y6/', 'y5/', 'y4/', 'y3/', 'y2/', 'y1/']
 
 
 
-main_dir = '/media/vnedora/HDD/sse/ga_z0008_2/'#dir before the '10sm/y10/'
+main_dir = '/media/vnedora/HDD/sse/ga_z0008/'#dir before the '10sm/y10/'
 
 tmp_sign = '_'
 
@@ -1233,6 +1239,32 @@ if mode=='steps':
     compute_for_steps(in_file, mdot_array, ref_mdat, maxzal)
     print('DONE!')
 
+if mode =='allnormal':
+
+    for sm_folder in sm_dirs:
+        for y_folder in y_dirs:
+
+            if len(mdot_array) < 1:
+                raise NameError('len(mdot_array){} < 1'.format(len(mdot_array)))
+
+            file = in_file
+
+            print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DOING {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                  .format(sm_folder, y_folder))
+
+            os.chdir(main_dir+sm_folder+y_folder)
+
+            # in_file = 'f' + y_folder.split('/')[0]  # fy10.bin1
+
+            for i in range(len(mdot_array)):
+                mdot = mdot_array[i]
+                compute_one(mdot, file, ref_mdat, maxzal)
+
+            # compute_for_steps(in_file, mdot_array, ref_mdat, maxzal)
+
+            print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DONE  {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                  .format(sm_folder, y_folder))
+
 if mode=='allsteps':
 
     for sm_folder in sm_dirs:
@@ -1243,11 +1275,47 @@ if mode=='allsteps':
 
             os.chdir(main_dir+sm_folder+y_folder)
 
-            in_file = 'f' + y_folder.split('/')[0]  # fy10.bin1
+            # In case of fy10 to use UNCOMMENT THIS
+            # in_file = 'f' + y_folder.split('/')[0]  # fy10.bin1
 
+            # for i in range(len(mdot_array)):
+            #     mdot = mdot_array[i]
+            #     compute_one(mdot, file, ref_mdat, maxzal)
             compute_for_steps(in_file, mdot_array, ref_mdat, maxzal)
 
             print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DONE  {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+                  .format(sm_folder, y_folder))
+
+if mode=='manual':
+
+    for sm_folder in sm_dirs:
+        for y_folder in y_dirs:
+
+            in_file = '3.50'
+            int_steps = [0.04, 0.03, 0.02, 0.01, 0.00]
+            step = 0.05
+            maxzal = 30
+
+            os.chdir(main_dir + sm_folder + y_folder)
+
+            print('\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DOING {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
+                  .format(sm_folder, y_folder))
+
+            for int_step in int_steps:
+
+                mdot1 = 3.50 + int_step
+                mdot2 = 5.60 + int_step
+
+                mdot_array = np.arange(float(mdot1), float(mdot2), float(step))
+
+                print(
+                    '\n-------------------| DOING for mdot1: {} mdot2: {} |---------------------\n'
+                    .format(mdot1, mdot2)
+                        .format(sm_folder, y_folder))
+
+                compute_for_steps(in_file, mdot_array, ref_mdat, maxzal)
+
+            print('\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| DONE  {} {} |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n'
                   .format(sm_folder, y_folder))
 
 if mode=='all':

@@ -767,6 +767,23 @@ class Math:
         return arr1_cropped, arr2_cropped
 
     @staticmethod
+    def remove_nan_col_raw_from_table(table):
+        x = table[0,1:]
+        y = table[1:,0]
+        z = table[1:,1:]
+        table2 = np.zeros((len(table[0,:])))
+
+        for i in range(len(table[:,0])):
+            row = table[i,:]
+            if len(row) == len(row[~np.isnan(row)]):
+                # print(row)
+                table2 = np.vstack((table2, table[i,:]))
+
+        table2 = np.delete(table2, 0, 0)
+
+        return table2
+
+    @staticmethod
     def interpolate_value_table(table, xy_val):
 
         x = table[0, 1:]
@@ -802,6 +819,7 @@ class Math:
                 else:
                     new_x = np.append(new_x, x[i])
                     new_y = np.append(new_y, y[i])
+
             return new_x, new_y
 
         # x_grid = np.mgrid[x.min():x.max():depth * 1j]
@@ -809,8 +827,19 @@ class Math:
         y_c = []
         for i in range(len(y)):
             x_crop, z_crop = cropp_nan_in_y(x, z[i, :])
-            if x_val >= x_crop.min() and x_val <= x_crop.max():
-                z_y = np.vstack((z_y, interpolate.InterpolatedUnivariateSpline(x_crop, z_crop)(x_val)))
+            if x_val >= np.array(x_crop).min() and x_val <= np.array(x_crop).max():
+
+                if len(x_crop) > 3:
+                    z_y = np.vstack((z_y, interpolate.InterpolatedUnivariateSpline(x_crop, z_crop)(x_val)))
+                elif len(x_crop) > 1 and len(x_crop) <= 3:
+                    print('\t__Warning. Less than 3 points left, using 1dLinear interpolation')
+                    z_y = np.vstack((z_y, interpolate.interp1d(x_crop, z_crop, kind='linear')(x_val)))
+                elif len(x_crop) == 1:
+                    print('\t__Warning! Less Only 1 points left, using this point as a star coordinate. MISTAKE POSSIBLE')
+                    z_y = z_crop
+                else:
+                    raise ValueError('Error. No array left after cropping the NaNs. Something went wrong')
+
                 y_c = np.append(y_c, y[i])
 
         z_y = np.delete(z_y, 0, 0)
@@ -818,7 +847,19 @@ class Math:
         if len(z_y) == 1:
             return z_y
         else:
-            res = interpolate.InterpolatedUnivariateSpline(y_c,z_y)(y_val)
+
+            if len(y_c) >= 3:
+                res = interpolate.InterpolatedUnivariateSpline(y_c,z_y)(y_val)
+            elif len(y_c) > 1 and len(y_c) < 3:
+                print('\t__Warning. Less than 3 points left, using 1dLinear interpolation')
+                res = interpolate.interp1d(y_c,z_y, kind='linear')(y_val)
+            elif len(y_c) == 1:
+                print('\t__Warning! Less Only 1 points left, using this point as a star coordinate. MISTAKE POSSIBLE')
+                res = z_y
+            else:
+                res = np.nan
+                #raise ValueError('Error. No array left after cropping the NaNs. Something went wrong')
+
 
             return res
         #
@@ -1596,6 +1637,15 @@ class Physics:
             sys.exit('\t__Error. Wrong number of dimensions. Use 0,1,2. Given: {} | mdot_rho |'.format(dimensions))
     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
+    @staticmethod
+    def get_v_esc(m, r):
+        '''
+        Computes the escape velocity in km/s
+        :param m:
+        :param r:
+        :return:
+        '''
+        return np.sqrt((m / r) * (2 * Constants.grav_const * Constants.solar_m / Constants.solar_r)) / 100000
 
     @staticmethod
     def mean_free_path(rho, kap):
@@ -1965,6 +2015,34 @@ class Physics:
 
 
     # --- --- --- --- --- --- --- --- --- -- --- --- ----
+    @staticmethod
+    def beta_law(r, r0, v0, vinf, beta):
+        '''
+        Returns v(r) in km/s in r in km and v in km/s
+        :param r:
+        :param r0:
+        :param v0:
+        :param vinf:
+        :param beta:
+        :return:
+        '''
+        return (v0 + (vinf - v0) * ((1 - (r0 / r)) ** beta))
+
+    @staticmethod
+    def diff_beta_law(r, r0, vinf, beta):
+        '''
+        Returns dv/dr (from beta law)
+        :param r:
+        :param r0:
+        :param vinf:
+        :param beta:
+        :return:
+        '''
+        return (r0 * vinf * beta / (r ** 2)) * (1 - (r0 / r)) ** (beta - 1)
+
+    @staticmethod
+    def kap_eff(r, log_kap_s, beta, vinf, vesc_s, r_s):
+        return log_kap_s + np.log10( (1 + 2 * beta * ((vinf / vesc_s)**2) * ((1-(r_s / r)) ** (2 * beta - 1)) ) )
 
 # class Opt_Depth_Analythis():
 #

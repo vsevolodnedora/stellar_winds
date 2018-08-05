@@ -89,51 +89,143 @@ class Files:
 
     @staticmethod
     def get_atm_file(gal_or_lmc):
-        if gal_or_lmc == 'gal': return '../data/atm/gal_atm_models.data'
-        if gal_or_lmc == 'lmc': return '../data/atm/lmc_atm_models.data'
-        if gal_or_lmc == '2gal': raise NameError('No Atm. file for z=0.004 metallicity')
+        if gal_or_lmc == 'gal':  return '../data/atm/gal_atm_models.data'
+        if gal_or_lmc == 'lmc':  return '../data/atm/lmc_atm_models.data'
+        if gal_or_lmc == '2gal': raise NameError('No Atm. file for z=0.04 metallicity')
+        if gal_or_lmc == 'smc':  raise NameError('No Atm. file for z=0.004 metallicity')
         if gal_or_lmc not in ['gal', 'lmc']: raise NameError('Unknown metallicity : {}'.format(gal_or_lmc))
 
     @staticmethod
     def get_obs_file(gal_or_lmc):
-        if gal_or_lmc == 'gal': return '../data/obs/gal_wne.data'
-        if gal_or_lmc == 'lmc': return '../data/obs/lmc_wne.data'
-        if gal_or_lmc == '2gal': raise NameError('No Obs. file for z=0.004 metallicity')
+        if gal_or_lmc == 'gal':  return '../data/obs/gal_wne.data'
+        if gal_or_lmc == 'lmc':  return '../data/obs/lmc_wne.data'
+        if gal_or_lmc == '2gal': raise NameError('No Obs. file for z=0.04 metallicity')
+        if gal_or_lmc == 'smc':  raise NameError('No Obs. file for z=0.004 metallicity')
         if gal_or_lmc not in ['gal', 'lmc']: raise NameError('Unknown metallicity : {}'.format(gal_or_lmc))
 
     @staticmethod
-    def get_sp_files(gal_or_lmc, cr_or_wd, inner='/'):
+    def get_sp_files(gal_or_lmc, cr_or_wd, marks=list()):
+        '''
+        O, hi mark
+        :param gal_or_lmc:
+        :param cr_or_wd:
+        :param mark:
+        :return:
+        '''
 
-        folder = ''
+        def select_sp_files(files, mark):
 
-        if inner == '/':
-            if cr_or_wd == 'cr': folder = '../data/sp_cr_files' + inner
-            if cr_or_wd == 'wd': folder = '../data/sp_w_files' + inner
-        else:
-            if cr_or_wd == 'cr': folder = '../data/sp_cr_files' + '_' + inner
-            if cr_or_wd == 'wd': folder = '../data/sp_w_files' + '_' + inner
+            if mark != '' and mark != None:
+                res = []
+                for file in files:
+                    fname = file.split('/')[-1]
+                    if len(fname.split(mark)) > 1:
+                        res.append(file)
 
-        gal_cr_spfiles = Files.get_files(folder, [#'7z002/',  '8z002/',  '9z002/',
-                                '10z002/', '11z002/', '12z002/', '13z002/', '14z002/',
-                                 '15z002/', '16z002/', '17z002/', '18z002/', '19z002/', '20z002/', '21z002/', '22z002/',
-                                 '23z002/', '24z002/', '25z002/', '26z002/', '27z002/', '28z002/', '29z002/', '30z002/'
-                                 ], [], '.data')
+                if len(res):
+                    return res
+                else:
+                    raise NameError('No SP files selected out of {} with the required mark: {}'.format(len(files), mark))
+            else:
+                return files
 
-        if gal_or_lmc == 'gal': return gal_cr_spfiles
+        def get_sp_files_(gal_or_lmc, sm, y, marks, main_fold = '../data/SP/'):
+            main_fold = '../data/SP/'
 
-        lmc_cr_spfiles = Files.get_files(folder,
-                                 ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/', '15z0008/', '16z0008/',
-                                  '17z0008/', '18z0008/', '19z0008/', '20z0008/', '21z0008/', '22z0008/', '23z0008/',
-                                  '24z0008/', '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/','30z0008/',
-                                  ], [], '.data')
+            dirs = []
 
-        if gal_or_lmc == 'lmc': return lmc_cr_spfiles
+            if gal_or_lmc   == '2gal': z = ['004']
+            elif gal_or_lmc == 'gal':  z = ['002']
+            elif gal_or_lmc == '2lmc': z = ['001']
+            elif gal_or_lmc == 'lmc':  z = ['0008']
+            elif gal_or_lmc == 'smc':  z = ['0004']
+            else: raise NameError('gal_or_lmc: {} is not recognised.'.format(gal_or_lmc))
 
-        gal2_cr_spfiles = Files.get_files(folder,
-                                         ['10z004/', '11z004/', '12z004/', '13z004/', '14z004/', '15z004/', '16z004/'
-                                          ], [], '.data')
+            for z_val in z:
+                for sm_val in sm:
+                    for y_val in y:
+                        dirs.append('z{}/{}sm/y{}/'.format(z_val, sm_val, y_val))
 
-        if gal_or_lmc == '2gal': return gal2_cr_spfiles
+            files = Files.get_files(main_fold, dirs, [], '.data')
+
+            req_files = []
+
+            if len(marks) > 0:
+                for file in files:
+                    for mark in marks:
+                        if mark in file:
+                            req_files.append(file)
+                return req_files
+
+            else: return files
+
+        # HERE you can adjust what files are to be loaded by selecting [sm_array] and [y_core_array] and [marks_array]
+
+        if gal_or_lmc == '2gal':
+
+            if cr_or_wd == 'wd' or cr_or_wd == 'sp':
+                return get_sp_files_(gal_or_lmc,
+                                     [10, 11, 12, 13, 14, 15, 16], [10], marks, '../data/SP/')  # y
+
+            if cr_or_wd == 'cr' or cr_or_wd == 'ga':
+                return get_sp_files_(gal_or_lmc,
+                                     [10, 11, 12, 13, 14, 15, 16],  [10, 9, 8, 7, 6 ,5, 4, 3, 2, 1], [], '../data/GA/')  # y
+
+
+
+        if cr_or_wd == 'wd' or cr_or_wd == 'sp':
+            return get_sp_files_(gal_or_lmc,
+                                 [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], # sm
+                                 [10], marks, '../data/SP/') # y
+
+        if cr_or_wd == 'cr' or cr_or_wd == 'ga':
+            return get_sp_files_(gal_or_lmc,
+                                 [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],  # sm
+                                 [10, 9, 8, 7, 6, 5, 4, 3, 2, 1], [], '../data/GA/')  # y
+
+
+        #
+        # folder = ''
+        #
+        # if gal_or_lmc == 'gal': z = '002'
+        # else: z = '0.008'
+        #
+        #
+        # if cr_or_wd == 'cr':
+        #
+        # elif cr_or_wd == 'wd': folder = '../data/SP/z{}/'.format(z)
+        # else: raise NameError('cr_or_wd can ne only cr or wd, given: {}'.format(cr_or_wd))
+        #
+        #
+        #
+        #
+        #
+        #
+        #
+        # gal_cr_spfiles = Files.get_files(folder, [#'7z002/',  '8z002/',  '9z002/',
+        #                         '10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/', '17sm/', '18sm/',
+        #     '19sm/', '20sm/', '21sm/', '22sm/', '23sm/', '24sm/', '25sm/', '26sm/', '27sm/', '28sm/', '29sm/', '30sm/'
+        #                          ], [], '.data')
+        # if gal_or_lmc == 'gal': return select_sp_files(gal_cr_spfiles, mark)
+        #
+        # lmc_cr_spfiles = Files.get_files(folder,
+        #                          ['10z0008/', '11z0008/', '12z0008/', '13z0008/', '14z0008/', '15z0008/', '16z0008/',
+        #                           '17z0008/', '18z0008/', '19z0008/', '20z0008/', '21z0008/', '22z0008/', '23z0008/',
+        #                           '24z0008/', '25z0008/', '26z0008/', '27z0008/', '28z0008/', '29z0008/','30z0008/',
+        #                           ], [], '.data')
+        # if gal_or_lmc == 'lmc': return select_sp_files(lmc_cr_spfiles, mark)
+        #
+        # smc_cr_spfiles = Files.get_files(folder,
+        #                          ['10z0004/', '11z0004/', '12z0004/', '13z0004/', '14z0004/', '15z0004/', '16z0004/',
+        #                           '17z0004/', '18z0004/', '19z0004/', '20z0004/', '21z0004/', '22z0004/', '23z0004/',
+        #                           '24z0004/', '25z0004/', '26z0004/', '27z0004/', '28z0004/', '29z0004/','30z0004/',
+        #                           ], [], '.data')
+        # if gal_or_lmc == 'smc': return select_sp_files(smc_cr_spfiles, mark)
+        #
+        # gal2_cr_spfiles = Files.get_files(folder,
+        #                                  ['10z004/', '11z004/', '12z004/', '13z004/', '14z004/', '15z004/', '16z004/'
+        #                                   ], [], '.data')
+        # if gal_or_lmc == '2gal': return select_sp_files(gal2_cr_spfiles, mark)
 
 
         raise NameError('Only gal_or_lmc avaialbale for *cr* file set, given: metallicity: {}, cr_or_wd: {}'
@@ -157,11 +249,19 @@ class Files:
                                     '21sm/', '22sm/', '23sm/', '24sm/', '25sm/', '26sm/', '27sm/',
                                     '28sm/', '29sm/', '30sm/'], [], '.plot1')
 
+        if gal_or_lmc == 'smc':
+            return Files.get_files(Files.sse_locaton + 'ga_z0004/',
+                                   ['10sm/', '11sm/', '12sm/', '13sm/',
+                                    '14sm/', '15sm/', '16sm/', '17sm/', '18sm/', '19sm/', '20sm/',
+                                    '21sm/', '22sm/', '23sm/', '24sm/', '25sm/', '26sm/', '27sm/',
+                                    '28sm/', '29sm/', '30sm/'], [], '.plot1')
+
     @staticmethod
     def get_opal(gal_or_lmc):
         if gal_or_lmc == 'gal': return '../data/opal/table8.data'
         if gal_or_lmc == 'lmc': return '../data/opal/table_x.data'
         if gal_or_lmc == '2gal':return '../data/opal/table10.data'
+        if gal_or_lmc == 'smc': return '../data/opal/table6.data'
 
         raise NameError('Only gal_or_lmc avaialbale for OPAL files, given: {},'
                         .format(gal_or_lmc))
@@ -170,6 +270,8 @@ class Fits:
 
     def __init__(self):
         '''
+
+            # ----------------------- GALACTIC WNE -----------------------
 
             ts-lm
              (-1.617) + (1.119*x) z = 0.02
@@ -201,6 +303,52 @@ class Fits:
              (4.878) + (-0.117*x)     z = 0.02
              (6.040) + (-0.366*x_arr) z = 0.04 Expected
              (6.122) + (-0.378*x_arr) z = 0.008 Expected
+
+
+            # --------------------------- LMC WNE ----------------------------
+
+            sHRD
+             (0.469) + (0.747*x) z = 0.08 Fe bump (only Fe stars)
+             (1.608) + (0.560*x) z = 0.08 He bump (Fe stars cutted)
+
+            > z = 0.08
+                > sHRD
+                    - HeII | (1.607) + (0.560*x)
+                    - Fe   | (0.489) + (0.744*x)
+                TsTeff
+                    - HeII | (6.594) + (-0.360*x)
+                    - Fe   | (0.796) + (0.771*x)
+                critMdot
+                    (-31.789) + (-26.175*x) + (-7.200*x**2) + (-0.889*x**3) + (-0.041*x**4)
+
+            > z = 0.1   < ONLY OPAL, NO R=f(T,L/M) >
+                > sHRD
+                    - HeII | (2.545) + (0.363*x)
+                    - Fe   | (0.055) + (0.822*x)
+
+                > TsTeff
+                    - HeII | (6.952) + (-0.437*x)
+                    - Fe   | (3.908) + (0.179*x)
+
+                > critMdot
+                     (-29.576) + (-23.927*x) + (-6.411*x**2) + (-0.771*x**3) + (-0.035*x**4)
+
+            > z = 0.004
+
+                > sHRD
+                    - HeII | (1.457) + (0.594*x)
+                    - Fe   |    1 star
+
+                > TsTeff
+                    - HeII | (5.971) + (-0.231*x)
+                    - Fe   |    1 star
+
+                > critMdot
+                    (44.408) + (41.164*x) + (15.146*x**2) + (2.401*x**3) + (0.140*x**4)
+
+
+
+
         '''
         pass
 
@@ -339,16 +487,256 @@ class Fits:
             return (-3.453) + (1.482*x)
 
     @staticmethod
-    def get_fit(v_n_x, v_n_y, x_arr, metal, clump, gaia):
+    def get_gal_fit(v_n_x, v_n_y, x_arr, metal, clump, gaia):
+
+        # ------------------------------------------------
+
+        def get_teff_lm(x_arr, metal, clump, gaia):
+
+            if metal == 'gal_th' and clump == 4 and gaia == False:
+                return (6.322) + (-0.422 * x_arr)
+
+            if metal == '2gal_th' and clump == 4 and gaia == False:
+                return (6.254) + (-0.409 * x_arr)
+
+            if metal == 'lmc_th' and clump == 4 and gaia == False:
+                return (6.654) + (-0.490 * x_arr)
+
+            # clumping D=10
+            if metal == 'gal' and clump == 10 and gaia == False:
+                return (4.878) + (-0.117 * x_arr)
+
+            if metal == 'gal_th' and clump == 10 and gaia == False:
+                return (7.079) + (-0.583 * x_arr)
+
+            if metal == '2gal_th' and clump == 10 and gaia == False:
+                return (6.463) + (-0.453 * x_arr)
+
+            if metal == 'lmc_th' and clump == 10 and gaia == False:
+                return (10.543) + (-1.332 * x_arr)
+
+            # GAIA --------------------------------------------
+
+            # if metal == 'gal' and clump == 4 and gaia == True:
+            #     return (11.525) + (-1.525*x_arr)
+
+            if metal == 'gal_th' and clump == 4 and gaia == True:
+                return (11.525) + (-1.525 * x_arr)
+
+            if metal == '2gal_th' and clump == 4 and gaia == True:
+                return (6.740) + (-0.513 * x_arr)
+
+            if metal == 'lmc_th' and clump == 4 and gaia == True:
+                return (19.960) + (-3.323 * x_arr)
+
+            else:
+                raise NameError('Fit is abailable only for *gal* (no dependance on the analysis)')
+
+        def get_ts_teff(x, metal, clump, gaia):
+
+            if metal == 'gal' and clump == 4 and gaia == False:
+                return (18.847) + (-2.658 * x)
+
+            if metal == '2gal' and clump == 4 and gaia == False:
+                return (19.838) + (-2.829 * x)
+
+            if metal == 'lmc' and clump == 4 and gaia == False:
+                return (14.713) + (-1.902 * x)
+
+            # ------------ CLUMPING 10 ----------------
+
+            if metal == 'gal' and clump == 10 and gaia == False:
+                return (16.740) + (-2.271 * x)
+
+            if metal == '2gal' and clump == 10 and gaia == False:
+                return (18.503) + (-2.589 * x)
+
+            if metal == 'lmc' and clump == 10 and gaia == False:
+                return (8.467) + (-0.729 * x)
+
+            # ----------- GAIA ------------------------
+
+            if metal == 'gal' and clump == 4 and gaia == True:
+                return (11.471) + (-1.271 * x)
+
+            if metal == '2gal' and clump == 4 and gaia == True:
+                return (18.389) + (-2.559 * x)
+
+            if metal == 'lmc' and clump == 4 and gaia == True:
+                return (7.046) + (-0.446 * x)
+
+        def get_ts_lm(x, metal, clump, gaia):
+
+            if metal == 'gal' and clump == 4 and gaia == False:
+                return (-1.617) + (1.119 * x)
+
+            if metal == '2gal' and clump == 4 and gaia == False:
+                return (-1.859) + (1.157 * x)
+
+            if metal == 'lmc' and clump == 4 and gaia == False:
+                return (-0.556) + (0.932 * x)
+
+            # Changing clumping --------------------------------------
+            if metal == 'gal' and clump == 10 and gaia == False:
+                return (-2.688) + (1.325 * x)
+
+            if metal == '2gal' and clump == 10 and gaia == False:
+                return (-1.927) + (1.174 * x)
+
+            if metal == 'lmc' and clump == 10 and gaia == False:
+                return (-0.735) + (0.971 * x)
+
+            # GAIA ---------------------------------------------------
+
+            if metal == 'gal' and clump == 4 and gaia == True:
+                return (-5.966) + (1.938 * x)
+
+            if metal == '2gal' and clump == 4 and gaia == True:
+                return (-2.695) + (1.313 * x)
+
+            if metal == 'lmc' and clump == 4 and gaia == True:
+                return (-3.453) + (1.482 * x)
+
+        # ------------------------------------------------
 
         if v_n_x == 'ts' and v_n_y == 'lm':
-            return Fits.get_ts_lm(x_arr, metal, clump, gaia)
+            return get_ts_lm(x_arr, metal, clump, gaia)
 
         if v_n_x == 'ts' and v_n_y == 't_eff':
-            return Fits.get_ts_teff(x_arr, metal, clump, gaia)
+            return get_ts_teff(x_arr, metal, clump, gaia)
 
         if v_n_x == 't_eff' and v_n_y == 'lm':
-            return Fits.get_teff_lm(x_arr, metal, clump, gaia)
+            return get_teff_lm(x_arr, metal, clump, gaia)
+
+    @staticmethod
+    def get_lmc_fit(v_n_x, v_n_y, x_arr, metal, bump):
+
+        # ------------------------------------------------
+
+        def get_teff_lm(x, metal, clump, bump, gaia):
+
+            if bump == 'Fe':
+                if metal == 'lmc_th' and clump == 10 and gaia == False:
+                    pass
+
+                if metal == '2lmc_th' and clump == 10 and gaia == False:
+                    pass
+
+                if metal == 'smc_th' and clump == 10 and gaia == False:
+                    pass
+
+            if bump == 'HeII':
+                if metal == 'lmc_th' and clump == 10 and gaia == False:
+                    pass
+
+                if metal == '2lmc_th' and clump == 10 and gaia == False:
+                    pass
+
+                if metal == 'smc_th' and clump == 10 and gaia == False:
+                    pass
+
+
+        def get_ts_teff(x, metal, clump, bump, gaia):
+
+            if bump == 'Fe':
+                if metal == 'lmc' and clump == 10 and gaia == False:
+                    return (0.796) + (0.771*x)
+
+                if metal == '2lmc' and clump == 10 and gaia == False:
+                    return (3.908) + (0.179*x)
+
+                if metal == 'smc' and clump == 10 and gaia == False:
+                    return np.empty(len(x))
+
+            if bump == 'HeII':
+                if metal == 'lmc' and clump == 10 and gaia == False:
+                    return (6.594) + (-0.360*x)
+
+                if metal == '2lmc' and clump == 10 and gaia == False:
+                    return (6.952) + (-0.437*x)
+
+                if metal == 'smc' and clump == 10 and gaia == False:
+                    return (5.971) + (-0.231*x)
+
+
+        def get_ts_lm(x, metal, clump, bump, gaia):
+
+            if bump == 'Fe':
+                if metal == 'lmc' and clump == 10 and gaia == False:
+                    return (0.489) + (0.744*x)
+
+                if metal == '2lmc' and clump == 10 and gaia == False:
+                    return (0.055) + (0.822*x)
+
+                if metal == 'smc' and clump == 10 and gaia == False:
+                    return np.empty(len(x))
+
+            if bump == 'HeII':
+                if metal == 'lmc' and clump == 10 and gaia == False:
+                    return (1.607) + (0.560*x)
+
+                if metal == '2lmc' and clump == 10 and gaia == False:
+                    return (2.545) + (0.363*x)
+
+                if metal == 'smc' and clump == 10 and gaia == False:
+                    return (1.457) + (0.594*x)
+
+
+        def get_crit_mdot_lm(x, metal, bump):
+
+            if bump == 'Fe':
+                if metal == 'lmc':
+                    return (-31.789) + (-26.175*x) + (-7.200*x**2) + (-0.889*x**3) + (-0.041*x**4)
+                if metal == '2lmc':
+                    return (-29.576) + (-23.927*x) + (-6.411*x**2) + (-0.771*x**3) + (-0.035*x**4)
+                if metal == 'smc':
+                    return (44.408) + (41.164*x) + (15.146*x**2) + (2.401*x**3) + (0.140*x**4)
+        # ------------------------------------------------
+
+        gaia = False
+        clump = 10
+
+        if v_n_x == 'ts' and v_n_y == 'lm':
+            return get_ts_lm(x_arr, metal, clump, bump, gaia)
+
+        if v_n_x == 'ts' and v_n_y == 't_eff':
+            return get_ts_teff(x_arr, metal, clump, bump, gaia)
+
+        if v_n_x == 't_eff' and v_n_y == 'lm':
+            return get_teff_lm(x_arr, metal, clump, bump, gaia)
+
+        if v_n_x == 'mdot_cr' and v_n_y == 'lm':
+            return get_crit_mdot_lm(x_arr, metal, bump)
+
+
+class Affiliation:
+    '''
+    returns
+    '''
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_list(metal, bump):
+        '''
+        Returns True in star is in [  7.  17.  24.  26.  65.  88.  94. 131. 132.] list
+        for 'lmc' metal and 'Fe' bum
+        :param star_n:
+        :return:
+        '''
+
+        lmc2_fe_list = [7,  15,  17,  24,  26,  37,  41,  56,  65,  88,  94, 131, 132]
+        lmc2_he_list = [1,   2,   3,  5,  23,  46,  48,  51,  57,  75,  86, 124, 128, 134]
+        lmc_fe_list = [7,  17,  24,  26,  65,  88,  94, 131, 132]
+        lmc_he_list = [1,   2,   3,   5,  15,  23,  37,  41,  46,  48,  51,  56,  57,  75, 86, 124, 128, 134]
+
+        if metal == 'lmc' and bump == 'Fe':
+            return lmc_fe_list # lmc_fe_list
+        elif metal == 'lmc' and bump == 'HeII':
+            return lmc_he_list # lmc_he_list
+
+        else:
+            raise ValueError('No affiliation list for metal: {} bumb: {}'.format(metal, bump))
 
 
 class Levels:
@@ -357,7 +745,21 @@ class Levels:
         pass
 
     @staticmethod
-    def get_levels(v_n, opal_used):
+    def get_levels(v_n, opal_used, bump):
+
+        if bump == 'gen' and opal_used == 'lmc':
+
+            if v_n == 'grad_c' or v_n == 'grad_w' or v_n == 'grad_w_p' or v_n == 'grad_c_p':
+                return [10, 50, 100, 200, 400, 800, 1000, 2000, 3000, 4000, 5000]
+
+            if v_n == 'a_p' or v_n == 'a':
+                return [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+
+            if v_n == 'vinf':
+                # return [1.,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0]
+                return [1.4, 1.8, 2.2, 2.6, 3.0]
+
+
         if opal_used.split('/')[-1] == 'gal':
 
             if v_n == 'r':
@@ -420,14 +822,18 @@ class Levels:
             if v_n == 'm':
                 return [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 
-        if opal_used.split('/')[-1] == 'lmc':
+        if opal_used.split('/')[-1] == 'lmc' or opal_used.split('/')[-1] == 'smc':
+
+            # if bump == 'HeII':
+            #     if v_n == 'mdot':
+            #         return [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5]
 
             if v_n == 'r':
                 return [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1]
             if v_n == 'm':
                 levels = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
             if v_n == 'mdot':
-                return [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5, -3.25, -3.]
+                return [-6.0, -5.75, -5.5, -5.25, -5., -4.75, -4.5, -4.25, -4, -3.75, -3.5] # , -4.25, -4, -3.75, -3.5
                 # levels = [-6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4, -5.3, -5.2, -5.1, -5., -4.9, -4.8, -4.7, -4.6, -4.5]
             if v_n == 'l':
                 return [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4]
@@ -449,8 +855,15 @@ class Levels:
                 return [4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1]
 
             if v_n == 'tau':
-                return [0, 1 ,2, 4, 8, 16, 32]
+                return [2, 4, 8, 16, 32]
                 # return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
+
+            if bump == 'HeII':
+                if v_n == 'a_p' or v_n == 'a':
+                    return [0.02, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.0]
+
+                if v_n == 'grad_c' or v_n == 'grad_w' or v_n == 'grad_w_p' or v_n == 'grad_c_p':
+                    return [1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000]
 
         if v_n == 'r':
             return [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0,4.0]
@@ -481,6 +894,20 @@ class Levels:
 
         if v_n == 'log_tau':
             return [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
+
+        if v_n == 'grad_c' or v_n == 'grad_w' or v_n == 'grad_w_p' or v_n == 'grad_c_p':
+            return [10, 50, 100, 200, 400, 600, 800, 1000, 1200]
+
+        if v_n == 'L/Ledd':
+            return [0.8,0.9,0.95,0.98, 0.99, 1.00, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07]
+
+        if v_n == 'vinf':
+            # return [1.,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0]
+            return [1.4, 1.8, 2.2, 2.6, 3.0]
+            #return [1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000]
+
+        if v_n == 'a_p' or v_n == 'a':
+            return [0.02, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30]
 
         raise NameError('Levels are not found for <{}> Opal:{}'.format(v_n, opal_used))
 
@@ -597,6 +1024,19 @@ class Labels:
         if v_n == 'log_tau':
             return r'$\log(\tau)$'
 
+        if v_n == 'vinf' or v_n == 'v_inf':
+            return r'$v_{\inf}\cdot 10^3$ (km/s)'
+
+        if v_n == 'a' or v_n == 'a_p':
+            return  r'$a$ (km/s$^2$)'
+
+        if v_n == 'beta' or v_n == 'b':
+            return r'$\beta$'
+
+
+        if v_n == 'grad_c' or v_n == 'grad_c_p':
+            return r'$\nabla u \cdot 10^5$ $(c^{-1})$'
+
 class Get_Z:
     def __init__(self):
         pass
@@ -609,6 +1049,8 @@ class Get_Z:
             return 0.008
         if metal.split('/')[-1] == '2gal':
             return 0.04
+        if metal.split('/')[-1] == 'smc':
+            return 0.004
         raise NameError('Metallicity is not recognised: (given: {})'.format(metal))
 
 class T_kappa_bump:
@@ -625,7 +1067,7 @@ class T_kappa_bump:
         :return:
         '''
 
-        t_fe_bump1  = 5.21 # 5.18
+        t_fe_bump1  = 5.19# 5.21 # 5.18
         t_fe_bump2  = 5.45
 
         t_he2_bump1 = 4.65
@@ -924,6 +1366,7 @@ class OPAL_work:
 
         lbl = 'z:{}'.format(Get_Z.z(self.set_metal))
         if self.set_plots_clean: lbl = None
+
         PlotBackground.plot_color_table(t_k_rho__, 't', 'k', 'rho', self.set_metal, lbl)
 
         Save_Load_tables.save_table(t_k_rho, self.set_metal, self.bump, 't_k_rho', 't', 'k', 'rho', self.out_dir)
@@ -1040,7 +1483,7 @@ class OPAL_work:
 
         t_rho_k = Save_Load_tables.load_table('t_rho_k','t','rho','k', metal, bump, self.out_dir)
 
-        PlotBackground.plot_color_background(ax, t_rho_k, 't', 'rho', 'k', metal, 'z:{}'.format(Get_Z.z(metal)))
+        PlotBackground.plot_color_background(ax, t_rho_k, 't', 'rho', 'k', metal, 'z:{}'.format(Get_Z.z(metal)), 1.0, True, 12, 0)
 
 
         if show_plot:
@@ -1073,6 +1516,8 @@ class Read_SP_data_file:
         self.plot_dir = plot_dir
 
         self.names, self.table = self.read_genergic_table(sp_data_file) # now it suppose to read the table
+
+        print('')
 
         # self.list_of_v_n = ['l', 'm', 't', 'mdot', 'tau', 'r', 'Yc', 'k']
 
@@ -1134,22 +1579,29 @@ class Read_SP_data_file:
     def v_n_to_v_n(self, v_n):
         if v_n == 'm': return 'xm-1'
         if v_n == 'l': return 'l-1'
-        if v_n == 'yc' or v_n == 'Yc': return 'He4-0'
+        if v_n == 'He' or v_n == 'Yc' or v_n == 'He4-0': return 'He4-0'
         if v_n == 'ys': return 'He4-1'
-        if v_n == 'mdot': return 'mdot-1'
+        if v_n == 'mdot' or v_n == 'mdot-1': return 'mdot-1'
+        if v_n == 'u' or v_n == 'us': return 'u-sp'
         if v_n == 'r' or v_n == 'rs': return 'r-sp'
         if v_n == 't' or v_n=='ts': return 't-sp'
         if v_n == 'r_env': return 'r-env'
         if v_n == 'm_env': return 'm-env'
         if v_n == 'k' or v_n == 'kappa': return 'kappa-sp'
-        if v_n == 'gamma' or v_n == 'L/Ledd': return 'L/Ledd-sp'
+        if v_n == 'L/Ledd-sp' or v_n == 'L/Ledd': return 'L/Ledd-sp'
         if v_n == 'rho': return 'rho-sp'
-        if v_n == 'tau': return 'tau-sp'
-        if v_n == 'r_eff': return 'r-ph'
-        if v_n == 't_eff': return 't-ph'
+        if v_n == 'tau' or v_n=='tau-sp': return 'tau-sp'
+        if v_n == 'r_eff' or v_n == 'r-ph': return 'r-ph'
+        if v_n == 't_eff'or v_n == 't-ph':  return 't-ph'
         if v_n == 'hp' or v_n == 'HP': return 'HP-sp' # log(Hp)
         if v_n == 'tpar': return 'tpar-'
         if v_n == 'mfp': return 'mfp-sp' # log(mfp)
+
+        if v_n == 'grad_c': return 'grad_c-sp'
+        if v_n == 'grad_w': return 'grad_w-sp'
+
+        if v_n == 'grad_c_p' or v_n == 'grad_c_p-sp': return 'grad_c_p-sp'
+        if v_n == 'grad_w_p': return 'grad_w_p-sp'
 
         # if v_n == 'lm': return 'lm'
         raise NameError('Translation for v_n({}) not provided'.format(v_n))
@@ -1187,9 +1639,18 @@ class Read_SP_data_file:
 
     def get_uncond_col(self, v_n):
 
-        if v_n.split('_')[0] == 'log':
-            v_n = v_n.split('_')[-1]
-            return np.log10(self.table[1:, self.names.index(self.v_n_to_v_n(v_n))])
+        if len(v_n.split('_')) >0:
+            if v_n.split('_')[0] == 'log':
+                v_n = v_n.split('_')[-1]
+                return np.log10(self.table[1:, self.names.index(self.v_n_to_v_n(v_n))])
+
+        if v_n == 'a_p' or v_n == 'a_p-sp':
+            us = self.table[1:, self.names.index(self.v_n_to_v_n('us'))]
+            grad_c_p = self.table[1:, self.names.index(self.v_n_to_v_n('grad_c_p'))] / 10**5 # as given grads are higher
+
+            return us * grad_c_p
+
+
 
         if v_n == 'lm':
             l = self.table[1:, self.names.index(self.v_n_to_v_n('l'))]
@@ -1198,17 +1659,35 @@ class Read_SP_data_file:
         else:
             return self.table[1:, self.names.index(self.v_n_to_v_n(v_n))]
 
-    def get_sonic_cols(self, v_n, cond=None):
+    def get_sonic_cols(self, v_n, cond=None, precision=2):
         '''
         Cond in a form of 'ts=5.0'
+        return part of the col with that condtion
         :param v_n:
         :param cond:
         :return:
         '''
+        if cond == None:
+            return self.get_uncond_col(v_n)
 
-        if cond != None:
+        elif '=' in cond:
             v_n_cond = cond.split('=')[0]
             cond_val = np.float(cond.split('=')[-1])
+
+            cond_col = self.get_uncond_col(v_n_cond)
+            col = self.get_uncond_col(v_n)
+            cropped_col = []
+            for i in range(len(cond_col)):
+                if np.round(cond_col[i], precision) == np.round(cond_val, precision):
+                    cropped_col = np.append(cropped_col, col[i])
+
+            if len(cropped_col) == 0: raise ValueError('Condition {} led to zero values appended'.format(cond))
+
+            return cropped_col
+
+        elif '>' in cond:
+            v_n_cond = cond.split('>')[0]
+            cond_val = np.float(cond.split('>')[-1])
 
             cond_col = self.get_uncond_col(v_n_cond)
             col      = self.get_uncond_col(v_n)
@@ -1218,6 +1697,23 @@ class Read_SP_data_file:
                     cropped_col = np.append(cropped_col, col[i])
 
             if len(cropped_col) == 0: raise ValueError('Condition {} led to zero values appended'.format(cond))
+
+            return cropped_col
+
+        elif '<' in cond:
+            v_n_cond = cond.split('<')[0]
+            cond_val = np.float(cond.split('<')[-1])
+
+            cond_col = self.get_uncond_col(v_n_cond)
+            col      = self.get_uncond_col(v_n)
+            cropped_col = []
+            for i in range(len(cond_col)):
+                if cond_col[i] < cond_val:
+                    cropped_col = np.append(cropped_col, col[i])
+
+            # if len(cropped_col) == 0:
+            #     raise ValueError('Condition {} led to zero values appended\n'
+            #                      'M: {} Yc: {}'.format(cond, self.get_crit_value('m'), self.get_crit_value('Yc')))
 
             return cropped_col
 
@@ -1324,22 +1820,36 @@ class Read_SP_data_file:
 
 class SP_file_work:
 
-    def __init__(self, yc_precision, gal_or_lmc, cr_or_wd, out_dir, plot_dir):
-        self.sp_files = Files.get_sp_files(gal_or_lmc, cr_or_wd)
-        self.out_dir = out_dir
-        self.plot_dir = plot_dir
+    def __init__(self, yc_precision, gal_or_lmc, bump, cr_or_wd, marks=list()):
+        self.sp_files = Files.get_sp_files(gal_or_lmc, cr_or_wd, marks)
+        self.out_dir = Files.output_dir
+        self.plot_dir = Files.plot_dir
         self.metal = gal_or_lmc
         self.yc_prec = yc_precision
-        self.set_clean_plots=False
-        self.set_extrapol_pars = []
-        self.set_init_fit_method='IntUni'
-        self.set_int_or_pol = 'int'
-        self.set_invert_x_ax = False
+        self.bump = bump
+        self.cr_or_wd = cr_or_wd
+
+
+        self.set_clean_plots        = False
+        self.set_extrapol_pars      = []
+        self.set_init_fit_method    ='IntUni'
+
+        self.set_xy_int_method      = 'IntUni'
+        self.set_xz_int_method      = 'IntUni'
+        self.set_yz_int_method      = 'IntUni'
+        self.set_load_cond          = 'ts>5.0'
+
+
+        self.set_int_or_pol         = 'int'
+        self.set_invert_x_ax        = False
+        self.set_do_tech_plots      = False
+        self.set_check_x_y_z_arrs   = False
 
         self.spmdl = []
         for file in self.sp_files:
             self.spmdl.append(Read_SP_data_file(file, self.out_dir, self.plot_dir))
 
+        if len(self.spmdl) < 2: raise IOError('No SP files found: Metal: {} Cr/Wd: {}'.format(gal_or_lmc, cr_or_wd))
 
         pass
 
@@ -1430,6 +1940,8 @@ class SP_file_work:
 
     def save_y_yc_z_relation(self, y_v_n, z_v_n, plot=False, depth=100, yc_prec=0.1):
 
+        if self.cr_or_wd == 'wd': raise IOError('You do not have SP wind files for all the Yc don*t you?:)')
+
         yc, cls = self.separate_sp_by_crit_val('Yc', yc_prec)
 
         def interp(x, y, x_grid):
@@ -1481,7 +1993,9 @@ class SP_file_work:
             ax2.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
 
             '''--------------------------------INTERPOLATION ONLY--------------------------------------'''
-            y_int, z_int = interp(y_z_shaped[:, 0], y_z_shaped[:, 1], y_grid)
+            z_int = Math.interpolate_arr(y_z_shaped[:, 0], y_z_shaped[:, 1], y_grid, self.set_init_fit_method)
+            y_int = y_grid
+            # y_int, z_int = interp(y_z_shaped[:, 0], y_z_shaped[:, 1], y_grid)
             z2d_int = np.vstack((z2d_int, z_int))
             ax1.plot(y_int, z_int, '--', color=color)
             ax1.plot(y_z_shaped[:, 0], y_z_shaped[:, 1], '.', color=color, label='yc:{}'.format("%.2f" % yc[i]))
@@ -1977,12 +2491,14 @@ class SP_file_work:
 
     # def save_yc_m_l
     @staticmethod
-    def x_y_z(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit=True):
+    def x_y_z(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit=True, int_method='IntUni', check_nans=False):
         '''
         cls = set of classes of sp. files with the same Yc.
         :param cls:
         :return:
         '''
+
+        # x_grid, y_grid = np.round(x_grid, 3), np.round(y_grid, 3)
 
         y_zg = np.zeros(len(x_grid) + 1)  # +1 for y-value (l,lm,m,Yc)
 
@@ -1994,15 +2510,29 @@ class SP_file_work:
             if append_crit:
                 x = np.append(x, cl.get_crit_value(x_v_n))
                 z = np.append(z, cl.get_crit_value(z_v_n))
+
+            if len(x) != len(x[~np.isnan(x)]): raise ValueError('NaN in sonic/criticals')
+            if len(z) != len(z[~np.isnan(z)]): raise ValueError('NaN in sonic/criticals')
+            if np.isnan(y): raise ValueError('NaN in sonic/criticals')
+
+            x, z = np.array(x, dtype=np.float), np.array(z, dtype=np.float)
+
             xi, zi = Math.x_y_z_sort(x, z)
 
-            z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+
+            #z_grid = interpolate.InterpolatedUnivariateSpline(xi, zi)(x_grid)
+
+            # if x_grid.min() < xi.min(): raise ValueError('x_grid.min(){} < xi.min(){}'.format(xi.min() , x_grid.min()))
+            # if x_grid.max() > xi.max(): raise ValueError('x_grid.max(){} > xi.max(){}'.format(xi.max() , x_grid.max()))
+
+            z_grid = Math.interpolate_arr(xi, zi, x_grid, 'Uni')
+
             # z_grid = interpolate.interp1d(xi, zi, kind='cubic', bounds_error=False)(x_grid)
 
             y_zg = np.vstack((y_zg, np.insert(z_grid, 0, y, 0)))
 
-            # plt.plot(xi, zi, '.', color='red')  # FOR interplation analysis (how good is the fit)
-            # plt.plot(x_grid, z_grid, '-', color='red')
+            plt.plot(xi, zi, '.', color='black')  # FOR interplation analysis (how good is the fit)
+            plt.plot(x_grid, z_grid, '-', color='grady')
 
         y_zg = np.delete(y_zg, 0, 0)
         y = y_zg[:, 0]
@@ -2010,16 +2540,23 @@ class SP_file_work:
 
         z_grid2 = np.zeros(len(y_grid))
         for i in range(len(x_grid)):  # INTERPOLATING EVERY COLUMN to achive 'depth' number of points
-            z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:, i])(y_grid)))
+            #z_grid2 = np.vstack((z_grid2, interpolate.InterpolatedUnivariateSpline(y, zi[:, i])(y_grid)))
             # z_grid2 = np.vstack((z_grid2, interpolate.interp1d(y, zi[:, i], kind='cubic', bounds_error=False)(y_grid)))
+            # y_, zi_ = Math.x_y_z_sort(y, zi[:, i])
+            row = Math.interpolate_arr(y, zi[:, i], y_grid, int_method)
+            z_grid2 = np.vstack((z_grid2, row))
         z_grid2 = np.delete(z_grid2, 0, 0)
 
         x_y_z_final = Math.combine(x_grid, y_grid, z_grid2.T)
 
-        return x_y_z_final
 
-    @staticmethod
-    def x_y_z2d(cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit = True, interp_method = 'IntUni', z_fill=False):
+        if check_nans:
+            x_y_z_final_ = Math.remove_nan_col_raw_from_table(x_y_z_final)
+        else:
+            x_y_z_final_ = x_y_z_final
+        return x_y_z_final_
+
+    def x_y_z2d(self, cls, x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit = True, z_fill=False):
         '''
         cls = set of classes of sp. files with the same Yc.
         :param cls:
@@ -2028,39 +2565,57 @@ class SP_file_work:
 
         # --- --- --- GET COLS INTERPOLATE TILL COMMON END --- --- ---
 
-        cond = 'ts=5.0'
+
 
         z_cols_int_x = np.zeros(len(x_grid))
         z_cols_int_y = np.zeros(len(y_grid))
 
+        def fill_out_of_data_with_nans(arr, new_arr):
+            for i in range(len(new_arr)):
+                if new_arr[i] > arr.max() or new_arr[i] < arr.min():
+                    new_arr[i] = np.nan
+            return new_arr
         for cl in cls:
 
-            x_col = cl.get_sonic_cols(x_v_n, cond)
+            x_col = cl.get_sonic_cols(x_v_n, self.set_load_cond)
             if append_crit: x_col = np.append(x_col, cl.get_crit_value(x_v_n))
-            z_col = cl.get_sonic_cols(z_v_n, cond)
+            z_col = cl.get_sonic_cols(z_v_n, self.set_load_cond)
             if append_crit: z_col = np.append(z_col, cl.get_crit_value(z_v_n))
             if z_fill:
                 z_col.fill(cl.get_crit_value(z_v_n))
 
-            y_col = cl.get_sonic_cols(y_v_n, cond)
-            if append_crit: y_col = np.append(y_col, cl.get_crit_value(y_v_n))
+            if len(x_col) > 0:
 
-            plt.plot(x_col, y_col, '.', color='red')
+                y_col = cl.get_sonic_cols(y_v_n, self.set_load_cond)
+                if append_crit: y_col = np.append(y_col, cl.get_crit_value(y_v_n))
 
-            x_col, z_col = Math.x_y_z_sort(x_col, z_col) # in case crit is not the last
-            z_col_gr_down = Math.interpolate_arr(x_col, z_col, x_grid, interp_method)
-            z_cols_int_x = np.vstack((z_cols_int_x, z_col_gr_down))
+                if self.set_do_tech_plots: plt.plot(x_col, y_col, '.', color='red')
 
+                if self.set_do_tech_plots: plt.plot(x_col, z_col, '.', color='blue')
 
-            x_col, y_col = Math.x_y_z_sort(x_col, y_col)  # in case crit is not the last
-            z_col_gr_down = Math.interpolate_arr(x_col, y_col, x_grid, interp_method)
-            z_cols_int_y = np.vstack((z_cols_int_y, z_col_gr_down))
+                # --- XZ ---
+                x_col, z_col = Math.x_y_z_sort(x_col, z_col) # in case crit is not the last
+                z_col_gr_down = Math.interpolate_arr(x_col, z_col, x_grid, self.set_xz_int_method)
+                if 'poly' in self.set_xz_int_method: z_col_gr_down = fill_out_of_data_with_nans(z_col, z_col_gr_down)
+                z_cols_int_x = np.vstack((z_cols_int_x, z_col_gr_down))
 
-            plt.plot(x_grid, z_col_gr_down, '-', color='red')
-            # plt.plot(x_col, y_col, '.', color='blue')
+                if self.set_do_tech_plots: plt.plot(x_grid, z_col_gr_down, '-', color='blue')
 
-            plt.annotate('m:{}'.format("%.1f"%cl.get_crit_value('m')), xy=(y_col[-1], z_col[-1]), textcoords = 'data')
-            plt.annotate('m:{}'.format("%.1f" % cl.get_crit_value('m')), xy=(y_col[0], z_col[0]), textcoords='data')
+                # --- XY ---
+                x_col, y_col = Math.x_y_z_sort(x_col, y_col)  # in case crit is not the last
+                z_col_gr_down = Math.interpolate_arr(x_col, y_col, x_grid, self.set_xy_int_method)
+                if 'poly' in self.set_xy_int_method: z_col_gr_down = fill_out_of_data_with_nans(y_col, z_col_gr_down)
+                z_cols_int_y = np.vstack((z_cols_int_y, z_col_gr_down))
+
+                if self.set_do_tech_plots: plt.plot(x_grid, z_col_gr_down, '-', color='red')
+
+                # plt.plot(x_col, y_col, '.', color='blue')
+
+                if self.set_do_tech_plots:
+                    plt.annotate('m:{}'.format("%.1f"%cl.get_crit_value('m')), xy=(y_col[-1], z_col[-1]), textcoords = 'data')
+                    plt.annotate('m:{}'.format("%.1f" % cl.get_crit_value('m')), xy=(y_col[0], z_col[0]), textcoords='data')
+
+            # plt.show()
 
         z_cols_int_x = np.delete(z_cols_int_x, 0, 0)
         z_cols_int_y = np.delete(z_cols_int_y, 0, 0)
@@ -2073,9 +2628,12 @@ class SP_file_work:
 
             y_col, z_col = Math.x_y_z_sort(z_cols_int_y[:, i], z_cols_int_x[:, i])
 
-            z_row_gr = Math.interpolate_arr(y_col, z_col, y_grid, interp_method)
+            z_row_gr = Math.interpolate_arr(y_col, z_col, y_grid, self.set_yz_int_method)
 
             z_rows_int = np.vstack((z_rows_int, z_row_gr))
+
+            if self.set_do_tech_plots:
+                plt.plot(y_grid, z_row_gr, '-', color='orange')
 
         z_rows_int = np.delete(z_rows_int, 0, 0)
 
@@ -2198,13 +2756,11 @@ class SP_file_work:
         else:
             raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
 
-
         x1, x2, y1, y2 = self.x_y_limits(cls[yc_index], x_v_n, y_v_n, min_or_max, append_crit)
         x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
         y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
 
-
-        x_y_z = self.x_y_z2d(cls[yc_index],x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit, self.set_init_fit_method)
+        x_y_z = self.x_y_z2d(cls[yc_index],x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
 
         if self.set_extrapol_pars != [0, 0, 0, 0]:
             left  = self.set_extrapol_pars[0]
@@ -2225,39 +2781,590 @@ class SP_file_work:
             if y_v_n == 't': y_v_n = 'ts'
 
 
-            PlotBackground.plot_color_background(ax, x_y_z, x_v_n, y_v_n, z_v_n, self.metal, lbl, 1.0, False, 12, 0)
+            PlotBackground.plot_color_background(ax, x_y_z, x_v_n, y_v_n, z_v_n, self.metal, self.bump, lbl, 1.0, False, 12, 0)
             if self.set_invert_x_ax:
                 ax.invert_xaxis()
             plt.show()
 
         return x_y_z
 
-    def save_x_y_z(self, x_v_n, y_v_n, z_v_n, depth, min_or_max = 'min', append_crit = True, interp_method = 'IntUni'):
+    def plot_2_x_y_z_for_yc(self, x_v_n, y_v_n, z_v_n, yc_val, depth, min_or_max = 'min', append_crit = True, plot=True):
+
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+        if yc_val in yc:
+            yc_index = Math.find_nearest_index(yc, yc_val)
+        else:
+            raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
+
+        x1, x2, y1, y2 = self.x_y_limits(cls[yc_index], x_v_n, y_v_n, min_or_max, append_crit)
+        x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
+        y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
+
+        self.bump          = 'Fe'
+        self.set_load_cond = 'ts>5.1'
+        x_y_z1 = self.x_y_z2d(cls[yc_index],x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
+
+        self.bump          = 'HeII'
+        self.set_load_cond = 'ts<5.0'
+        x_y_z2 = self.x_y_z2d(cls[yc_index], x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit)
+
+        from MainClasses import Plot_Critical_Mdot
+        cr = Plot_Critical_Mdot('lmc', 'Fe', 1.0)
+        cr.set_fill_gray = False
+
+        def cut_table_by_curve(table, x_arr, y_arr):
+
+            for i in range(len(table[1:, 0])):
+                for j in range(len(y_arr)):
+                    ind = Math.find_nearest_index(table[i,1:], y_arr[j])
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
+        mdot, llm = cr.plot_cr_mdot(y_v_n, yc_val, None, ax)
+
+        plbg = PlotBackground2()
+        plbg.set_rotate_labels = 0
+        plbg.set_contour_fmt = 0.2
+        # plbg.set_label_sise=18
+
+        plbg.set_show_colorbar = False
+        plbg.plot_color_background(ax, x_y_z2, x_v_n, y_v_n, z_v_n, self.metal, 'gen')
+
+        arr = np.zeros(len(llm))
+        arr.fill(llm.max())
+
+        ax.fill_between(mdot, llm, arr, color="lightgray")
+
+        plbg.set_show_colorbar = True
+        plbg.plot_color_background(ax, x_y_z1, x_v_n, y_v_n, z_v_n, self.metal, 'gen')
+
+
+        plt.show()
+
+
+        # if self.set_extrapol_pars != [0, 0, 0, 0]:
+        #     left  = self.set_extrapol_pars[0]
+        #     right = self.set_extrapol_pars[1]
+        #     down  = self.set_extrapol_pars[2]
+        #     up    = self.set_extrapol_pars[3]
+        #     _, x_y_z = Math.extrapolate2(x_y_z, left, right, down, up, 100, 4, True) # Extrapolation
+        #
+        # if plot:
+        #
+        #     if not self.set_clean_plots: lbl = 'Yc:{}'.format(yc_val)
+        #     else: lbl = None
+        #
+        #     fig = plt.figure()
+        #     ax = fig.add_subplot(111)
+        #
+        #     if x_v_n == 't': x_v_n = 'ts'
+        #     if y_v_n == 't': y_v_n = 'ts'
+        #
+        #
+        #     PlotBackground.plot_color_background(ax, x_y_z, x_v_n, y_v_n, z_v_n, self.metal, self.bump, lbl, 1.0, False, 12, 0)
+        #     if self.set_invert_x_ax:
+        #         ax.invert_xaxis()
+        #     plt.show()
+
+        # return x_y_z
+
+
+    # --- --- --- BETA LAW & GRADIENTS WORK --- --- ---
+
+    def interp_vinf(self, r_arr, rs, us, vinf_grid, b, grad):
+
+        grads_ = []
+
+        # getting gradients for every vinf from the vinf_grad
+        for vinf in vinf_grid:
+            vels = Physics.beta_law(r_arr, rs, us, 1000*vinf, b)
+            grad_ = np.gradient(vels, r_arr * Constants.solar_r / 10 ** 5)[0] * 10 ** 5
+            grads_ = np.append(grads_, grad_)
+
+        # interpolating the vinf for the given gradiend 'grad'
+        vinf_ = interpolate.interp1d(grads_, vinf_grid, kind='linear', bounds_error=False)(grad)
+
+
+
+        if np.isnan(vinf_):
+            # print('\t\tWarning. Grad:{} not found in a grad:[{} {}]'
+            #       .format("%.2f" % grad, "%.2f" % grads_.min(), "%.2f" % grads_.max()))
+
+            # plt.plot(vinf_grid, grads_, '.', color='black')
+            # plt.axhline(y=grad)
+            # plt.show()
+
+            return np.nan
+        else:
+            return vinf_
+
+    def get_2d_vinfs(self, beta, x_y_r, x_y_u, x_y_grad, vinf_grid):
+
+        len_x = len(x_y_r[0, 1:])
+        len_y = len(x_y_r[1:, 0])
+
+        v_infs = np.zeros((len_y, len_x))
+
+        for i in range(len_x):
+            print('\t Computing v_inf row #{} (out of {})'.format(i, len_x))
+            for j in range(len_y):
+
+                rs = x_y_r[j, i]
+                us = x_y_u[j, i]
+                grad = x_y_grad[j, i]
+
+                # print('\t Computing v_inf for rs:{}, us:{}, grad:{} '.format(rs, us, grad))
+                if not np.isnan(rs) and not np.isnan(us) and not np.isnan(grad):
+                    r_arr = np.array([rs, rs + 0.01, rs + 0.02])
+
+                    vinf = self.interp_vinf(r_arr, rs, us, vinf_grid, beta, grad)
+
+                    # tmp = tst()
+
+                    v_infs[j, i] = vinf
+                else:
+                    v_infs[j, i] = np.nan
+
+        res = Math.combine(x_y_r[0, 1:], x_y_r[1:, 0], v_infs)
+
+        return res
+
+    def save_beta_x_y_vinf(self, x_v_n, y_v_n, v_n_grad, betas, depth, min_or_max = 'min', append_crit = True):
+
+        yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
+
+        if len(yc) > 1 and yc[0] != 1. :
+            raise IOError('This method so far is applicable only for Yc=1. SP files contain: {}'.format(yc))
+
+        # betas = [0.80,0.85,0.90,0.95,1.00,1.05,1.10,1.15,1.20] # 0.80,0.85,0.90,0.95,1.00,1.05,1.10,1.15,1.20
+
+        # betas = [1.0]
+
+        depth_vinf = 20
+
+        vinf_grid = np.mgrid[1.4:3.0:depth_vinf * 1j] # vinf = x*1000
 
         x_y_z3d = []
 
-        for yc_val in yc:
+        cl = cls[0]
 
-            if yc_val in yc:
-                yc_index = Math.find_nearest_index(yc, yc_val)
-            else:
-                raise ValueError('Value Yc:{} is not is available set {}'.format(yc_val, yc))
+        for beta in betas:
 
-            x1, x2, y1, y2 = self.x_y_limits(cls[yc_index], x_v_n, y_v_n, min_or_max, append_crit)
+            print('\n <<<< Computing beta = {} >>>>>>'.format(beta))
+
+            x1, x2, y1, y2 = self.x_y_limits(cl, x_v_n, y_v_n, min_or_max, append_crit)
             x_grid = np.mgrid[x1.min():x2.max():depth * 1j]
             y_grid = np.mgrid[y1.min():y2.max():depth * 1j]
 
-            x_y_z = self.x_y_z2d(cls[yc_index], x_v_n, y_v_n, z_v_n, x_grid, y_grid, append_crit, interp_method)
-            x_y_z[0, 0] = yc_val
-            x_y_z3d = np.append(x_y_z3d, x_y_z)
+            x_y_r    = self.x_y_z2d(cl, x_v_n, y_v_n, 'r', x_grid, y_grid, append_crit)
+            x_y_u    = self.x_y_z2d(cl, x_v_n, y_v_n, 'u', x_grid, y_grid, append_crit)
+            x_y_grad = self.x_y_z2d(cl, x_v_n, y_v_n, v_n_grad, x_grid, y_grid, append_crit)
 
-        res = np.reshape(x_y_z3d, (len(yc), depth+1, depth+1))
 
-        Save_Load_tables.save_3d_table(res, self.metal, '{}_{}_{}'.format(x_v_n, y_v_n, z_v_n), 'yc', x_v_n, y_v_n, z_v_n,
+
+            if not np.array_equal(x_y_r[0, 1:], x_y_u[0, 1:]) or not np.array_equal(x_y_r[0, 1:], x_y_grad[0, 1:]):
+                raise ValueError('X arrays are not the same')
+            if not np.array_equal(x_y_r[1:, 0], x_y_u[1:, 0]) or not np.array_equal(x_y_r[1:, 0], x_y_grad[1:, 0]):
+                raise ValueError('Y arrays are not the same')
+
+            x_y_vinfs = self.get_2d_vinfs(beta, x_y_r[1:, 1:], x_y_u[1:,1:], x_y_grad[1:,1:], vinf_grid)
+
+            x_y_vinfs_final = Math.combine(x_y_r[0, 1:], x_y_r[1:, 0], x_y_vinfs)
+
+            x_y_vinfs_final[0, 0] = beta
+
+            PlotBackground2.plot_color_table(x_y_vinfs_final, x_v_n, y_v_n, 'vinf', self.metal, self.bump, 'b: {}'.format(beta))
+
+            x_y_z3d = np.append(x_y_z3d, x_y_vinfs_final)
+
+        res = np.reshape(x_y_z3d, (len(betas), depth+1, depth+1))
+
+        Save_Load_tables.save_3d_table(res, self.metal, self.bump,'{}_{}_{}_{}'.format('beta', x_v_n, y_v_n, 'vinf'), 'beta', x_v_n, y_v_n, 'vinf',
                                        Files.output_dir)
 
+
+
+    def wind(self):
+
+        # --- --- SP Boundary conditions --- ---
+        mdot = -4.50
+        rs   = 1.349
+        ts   = 5.3692
+        us   = 37.96
+        kap_s= -0.25708
+        rho_s=-7.826
+        mas  = 20
+        # --- --- WIND properies
+        vinf = 1800
+        beta = 1.0
+        rinf = 1000
+        # --- --- Functions ---
+
+        def plotting(x, y, v_n_x, v_n_y):
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
+            ax.plot(x, y, '-', color='black')
+
+            ax.set_xlabel(Labels.lbls(v_n_x))
+            ax.set_ylabel(Labels.lbls(v_n_y))
+
+            if v_n_y == 'tau' : ax.axhline(y=2/3, linestyle='dashed', color='gray')
+
+            ax.minorticks_on()
+            plt.show()
+
+        def rho_cont_eq(r, u, rs, us, rho_s):
+            return np.log10((us * (10 ** rho_s) * rs**2) / (np.multiply(u, r**2)))
+
+        def integ_tau(r_gr, rho, kap):
+
+            r_gr = r_gr[::-1] * Constants.solar_r
+            rho  = rho[::-1]
+            kap  = kap[::-1]
+
+            kaprho = np.multiply(kap, rho)
+            tau = np.zeros(1)
+
+            for i in range(1, len(r_gr)):
+                tau_cur = (kap[-1]*rho[i]) * (r_gr[i - 1] - r_gr[i])
+                # tau_cur = (kaprho[i] + 0.5 * (kaprho[i-1] - kaprho[i])) * (r_gr[i-1] - r_gr[i])
+                tau = np.append(tau, tau[i-1] + tau_cur)
+
+            tau = np.delete(tau, 0, 0)
+            return tau[::-1]
+
+            # tau = np.zeros(1)
+            # for i in range(len(r_gr)):
+            #     tau_cur = rho[i] * kap[0] * r_gr[i] * Constants.solar_r
+            #     tau = np.append(tau, tau[i-1] + tau_cur)
+            #
+            # tau = np.delete(tau, 0, 0)
+            # return tau[::-1]
+
+
+            # tau = np.zeros(1)
+            # diff_r = np.diff(r_gr)
+            #
+            # kap = np.multiply( kap[:-1], np.abs(np.diff(kap)) )[::-1]
+            # rho = np.multiply( rho[:-1], np.abs(np.diff(rho)) )[::-1]
+            # diff_r=np.abs(diff_r[::-1])
+            #
+            # for i in range(1, len(diff_r)):
+            #     # print(i)
+            #     tau_cur = kap[i]*rho[i]*diff_r[i]*Constants.solar_r
+            #     tau = np.append(tau, tau[i-1] + tau_cur)
+            #
+            # return np.log10(tau[::-1])
+
+        # --- --- MAIN --- ---
+        r_gr = np.mgrid[rs:rinf:1000j]
+
+        u_w = Physics.beta_law(r_gr, rs, us, vinf, beta)
+        # plotting(r_gr, u_w, 'r', 'u')
+
+        rho_w = rho_cont_eq(r_gr, u_w, rs, us, rho_s)
+        # plotting(r_gr, rho_w, 'r', 'rho')
+
+        vesc = Physics.get_v_esc(mas, rs)
+        k_eff= Physics.kap_eff(r_gr, kap_s, beta, vinf, vesc, rs)
+        # plotting(r_gr, k_eff, 'r', 'k')
+        k_eff = 10**k_eff
+        rho_w = 10**rho_w
+
+        tau = integ_tau(r_gr, rho_w, k_eff)
+        plotting(r_gr[:-1], tau, 'r', 'tau')
+
+
     # --- --- ---
+
+    def plot_beta_x_y_vinf(self,x_v_n, y_v_n, z_v_n, betas_to_plot):
+
+        b_x_y_z = Save_Load_tables.load_3d_table(self.metal, '', 'beta_{}_{}_{}'
+                                                       .format(x_v_n, y_v_n, z_v_n), 'beta', x_v_n,
+                                                       y_v_n, z_v_n)
+        betas = b_x_y_z[:, 0, 0]
+
+        for i in range(len(betas_to_plot)):
+            if not betas_to_plot[i] in betas:
+                raise ValueError('Value betas_to_plot[{}] not in betas:\n\t {}'.format(betas_to_plot[i], betas))
+
+        beta_vals = np.sort(betas_to_plot, axis=0)
+
+        b_n = len(betas_to_plot)
+
+        fig = plt.figure()
+        fig.subplots_adjust(hspace=0.2, wspace=0.3)
+
+        for i in range(1, b_n + 1):
+            print(i)
+            b_val = betas_to_plot[i - 1]
+
+            ind = Math.find_nearest_index(beta_vals, b_val)
+            x_y_z = b_x_y_z[ind, :, :]
+            # x_y_z = Math.extrapolate(x_y_z, 10, None, None, 25, 500,
+            #                               'unispline')  # 2 is better to linear part
+
+            if b_n % 2 == 0:
+                ax = fig.add_subplot(2, b_n / 2, i)
+            else:
+                ax = fig.add_subplot(1, b_n, i)
+
+            # fig = plt.figure(figsize=plt.figaspect(0.8))
+            # ax = fig.add_subplot(111)  # , projection='3d'
+            PlotBackground.plot_color_background(ax, x_y_z, x_v_n, y_v_n, z_v_n, self.metal,
+                                                 'b: {}'.format(beta_vals))
+            # self.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, y_v_n, self.lim_t1, self.lim_t2, True)
+
+            # if self.set_coeff != 1.0:
+            #     ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
+            #             bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+            #             verticalalignment='center', transform=ax.transAxes)
+
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = Files.plot_dir + 'sonic_HRD.pdf'
+        plt.savefig(plot_name)
+        # plt.gca().invert_xaxis()
+        plt.show()
+
+
+
+    @staticmethod
+    def mosaic(vol, fig=None, title=None, size=[10, 10], vmin=None, vmax=None,
+               return_mosaic=False, cbar=True, return_cbar=False, **kwargs):
+        """
+        Display a 3-d volume of data as a 2-d mosaic
+
+        Parameters
+        ----------
+        vol: 3-d array
+           The data
+
+        fig: matplotlib figure, optional
+            If this should appear in an already existing figure instance
+
+        title: str, optional
+            Title for the plot
+
+        size: [width, height], optional
+
+        vmin/vmax: upper and lower clip-limits on the color-map
+
+        **kwargs: additional arguments to matplotlib.pyplot.matshow
+           For example, the colormap to use, etc.
+
+        Returns
+        -------
+        fig: The figure handle
+
+        """
+        if vmin is None:
+            vmin = np.nanmin(vol)
+        if vmax is None:
+            vmax = np.nanmax(vol)
+
+        sq = int(np.ceil(np.sqrt(len(vol))))
+
+        # Take the first one, so that you can assess what shape the rest should be:
+        im = np.hstack(vol[0:sq])
+        height = im.shape[0]
+        width = im.shape[1]
+
+        # If this is a 4D thing and it has 3 as the last dimension
+        if len(im.shape) > 2:
+            if im.shape[2] == 3 or im.shape[2] == 4:
+                mode = 'rgb'
+            else:
+                e_s = "This array has too many dimensions for this"
+                raise ValueError(e_s)
+        else:
+            mode = 'standard'
+
+        for i in range(1, sq):
+            this_im = np.hstack(vol[(len(vol) / sq) * i:(len(vol) / sq) * (i + 1)])
+            wid_margin = width - this_im.shape[1]
+            if wid_margin:
+                if mode == 'standard':
+                    this_im = np.hstack([this_im,
+                                         np.nan * np.ones((height, wid_margin))])
+                else:
+                    this_im = np.hstack([this_im,
+                                         np.nan * np.ones((im.shape[2],
+                                                           height,
+                                                           wid_margin))])
+            im = np.concatenate([im, this_im], 0)
+
+        if fig is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, aspect='equal')
+        else:
+            # This assumes that the figure was originally created with this
+            # function:
+            ax = fig.axes[0]
+
+        if mode == 'standard':
+            imax = ax.matshow(im.T, vmin=vmin, vmax=vmax, **kwargs)
+        else:
+            imax = plt.imshow(np.rot90(im), interpolation='nearest')
+            cbar = False
+        ax.get_axes().get_xaxis().set_visible(False)
+        ax.get_axes().get_yaxis().set_visible(False)
+        returns = [fig]
+        if cbar:
+            # The colorbar will refer to the last thing plotted in this figure
+            cbar = fig.colorbar(imax, ticks=[np.nanmin([0, vmin]),
+                                             vmax - (vmax - vmin) / 2,
+                                             np.nanmin([vmax, np.nanmax(im)])],
+                                format='%1.2f')
+            if return_cbar:
+                returns.append(cbar)
+
+        if title is not None:
+            ax.set_title(title)
+        if size is not None:
+            fig.set_size_inches(size)
+
+        if return_mosaic:
+            returns.append(im)
+
+        # If you are just returning the fig handle, unpack it:
+        if len(returns) == 1:
+            returns = returns[0]
+
+        return returns
+
+
+
+
+    def plot_beta_x_y_vinf_3d(self,x_v_n, y_v_n, z_v_n, betas_to_plot):
+
+        fsz = 12
+        alpha = 1.0
+
+
+        b_x_y_z = Save_Load_tables.load_3d_table(self.metal, '', 'beta_{}_{}_{}'
+                                                       .format(x_v_n, y_v_n, z_v_n), 'beta', x_v_n,
+                                                       y_v_n, z_v_n)
+        betas = b_x_y_z[:, 0, 0]
+
+        for i in range(len(betas_to_plot)):
+            if not betas_to_plot[i] in betas:
+                raise ValueError('Value betas_to_plot[{}] not in betas:\n\t {}'.format(betas_to_plot[i], betas))
+
+        fig = plt.figure() # figsize=(10, 5) changes the overall size of the popping up window
+        ax = fig.gca(projection='3d')
+        pg = PlotBackground2()
+        # pg.plot_3d_curved_surf(x_arr, y_arr)
+        pg.plot_3d_back(ax, b_x_y_z, x_v_n, y_v_n, z_v_n, self.metal,0,50)
+        plt.tight_layout(0.05, 0.05, 0.05) # <0.1 lets you to malke it tighter
+        plt.show()
+
+
+
+        beta_vals = np.sort(betas_to_plot, axis=0)
+
+        b_n = len(betas_to_plot)
+
+        # self.mosaic(b_x_y_z)
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(projection='3d')
+
+        # ax.set_xlim(x_y_z[0, 1:].min(), x_y_z[0, 1:].max())
+        # ax.set_ylim(x_y_z[1:, 0].min(), x_y_z[1:, 0].max())
+
+
+
+        from mpl_toolkits.mplot3d import Axes3D
+        # import numpy as np
+        # import matplotlib.pyplot as plt
+
+        # fig = plt.figure()
+        # ax = fig.gca(projection='3d')
+        #
+        # PlotBackground2.plot_3d_back(b_x_y_z, ax)
+
+
+
+
+
+        for i in range(1, b_n + 1):
+            print(i)
+            b_val = betas_to_plot[i - 1]
+
+            ind = Math.find_nearest_index(beta_vals, b_val)
+            x_y_z = b_x_y_z[ind, :, :]
+            # x_y_z = Math.extrapolate(x_y_z, 10, None, None, 25, 500,
+            #                               'unispline')  # 2 is better to linear part
+            # if label != None:
+            #     print('TEXT')
+
+            # ax.text(table[0, 1:].min(), table[1:, 0].min(), s=label)
+            # bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10}
+            # plt.text(2, 0.65, r'$\cos(2 \pi t) \exp(-t)$')
+
+            # ax = fig.add_subplot(1, 1, 1)
+
+            ax.set_xlim(x_y_z[0, 1:].min(), x_y_z[0, 1:].max())
+            ax.set_ylim(x_y_z[1:, 0].min(), x_y_z[1:, 0].max())
+            ax.set_ylabel(Labels.lbls(x_y_z), fontsize=fsz)
+            ax.set_xlabel(Labels.lbls(x_y_z), fontsize=fsz)
+
+            levels = Levels.get_levels(z_v_n, self.metal, '')
+
+            # 'RdYlBu_r'
+
+            contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels,
+                                          cmap=plt.get_cmap('RdYlBu_r'), alpha=alpha)
+            clb = plt.colorbar(contour_filled)
+            clb.ax.set_title(Labels.lbls(v_n_z), fontsize=fsz)
+
+            # ax.colorbar(contour_filled, label=Labels.lbls(v_n_z))
+
+            contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
+
+            if v_n_x == 'mdot' and v_n_y == 'lm' and v_n_z == 'tau':
+                labs = ax.clabel(contour, colors='k', fmt='%2.0f', fontsize=fsz, manual=True)
+            else:
+                labs = ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=fsz)
+
+            if rotation != None:
+                for lab in labs:
+                    lab.set_rotation(rotation)  # ORIENTATION OF LABELS IN COUNTUR PLOTS
+            # ax.set_title('SONIC HR DIAGRAM')
+
+            # print('Yc:{}'.format(yc_val))
+            if not clean and label != None and label != '':
+                ax.text(0.9, 0.1, label, style='italic',
+                        bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+                        verticalalignment='center', transform=ax.transAxes)
+
+            ax.tick_params('y', labelsize=fsz)
+            ax.tick_params('x', labelsize=fsz)
+            # if b_n % 2 == 0:
+            #     ax = fig.add_subplot(2, b_n / 2, i)
+            # else:
+            #     ax = fig.add_subplot(1, b_n, i)
+
+            # fig = plt.figure(figsize=plt.figaspect(0.8))
+            # ax = fig.add_subplot(111)  # , projection='3d'
+            PlotBackground.plot_color_background(ax, x_y_z, x_v_n, y_v_n, z_v_n, self.metal,
+                                                 'b: {}'.format(beta_vals))
+            # self.plot_obs_t_llm_mdot_int(ax, t_llm_mdot, y_v_n, self.lim_t1, self.lim_t2, True)
+
+            # if self.set_coeff != 1.0:
+            #     ax.text(0.5, 0.9, 'K:{}'.format(self.set_coeff), style='italic',
+            #             bbox={'facecolor': 'yellow', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
+            #             verticalalignment='center', transform=ax.transAxes)
+
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', ncol=1)
+        plot_name = Files.plot_dir + 'sonic_HRD.pdf'
+        plt.savefig(plot_name)
+        # plt.gca().invert_xaxis()
+        plt.show()
+
+    # --- --- --- --- --- --- ---
 
 
     def plot_x_y_z(self, x_v_n, y_v_n, z_v_n, yc_arr, depth, min_or_max = 'min', append_crit = True):
@@ -2345,11 +3452,25 @@ class SP_file_work:
 
             return t_lm_rho_crop
 
-    def get_t_llm_mdot_for_yc(self, cls, t_lm_rho, yc_val, y_v_n, min_max = 'min', opal_used = None, append_crit = True):
+    def get_t_llm_mdot_for_yc(self, cls, t_lm_rho, yc_val, y_v_n, min_max = 'min', opal_used=None, bump=None, append_crit = True):
 
-        t_llm_rho = self.get_t_llm_rho_crop_for_yc(cls, t_lm_rho, yc_val, y_v_n, min_max, opal_used, append_crit)
+        t_llm_rho_ = self.get_t_llm_rho_crop_for_yc(cls, t_lm_rho, yc_val, y_v_n, min_max, opal_used, append_crit)
 
-        t_llm_r = self.x_y_z(cls, 't', y_v_n, 'r', t_llm_rho[0, 1:], t_llm_rho[1:, 0], append_crit)
+        t_llm_r_ = self.x_y_z(cls, 't', y_v_n, 'r', t_llm_rho_[0, 1:], t_llm_rho_[1:, 0],
+                             append_crit, self.set_init_fit_method, self.set_check_x_y_z_arrs)
+
+        # in case the nans are removed from t_llm_r, the t_llm_rho has to be cropped.
+        # if len( )
+
+
+        # t_llm_rho = Math.crop_2d_table2(t_llm_rho, t_llm_r[0,1],t_llm_r[0,-1], t_llm_r[1,0],t_llm_r[-1,0])
+        t_llm_r, t_llm_rho = Math.common_y(t_llm_r_, t_llm_rho_)
+
+
+        # t_llm_r = self.x_y_z2d(cls, 't', y_v_n, 'r', t_llm_rho[0, 1:], t_llm_rho[1:, 0], append_crit, self.set_init_fit_method)
+
+        if self.set_do_tech_plots:
+            PlotBackground2.plot_color_table(t_llm_r, 't', 'lm', 'r', self.metal, bump)
 
         rho2d= t_llm_rho[1:, 1:]
         r2d  = t_llm_r[1:, 1:]
@@ -2522,16 +3643,24 @@ class SP_file_work:
         yc, cls = self.separate_sp_by_crit_val('Yc', self.yc_prec)
         t_lm_rho = Save_Load_tables.load_table('t_{}lm_rho'.format(coeff), 't', '{}lm'.format(coeff), 'rho', self.metal, bump)
 
+        print('\n <<< INITIALISATION *save_t_llm_mdot* >>>>\n')
+
+        print('\t__Note: Limits from t_lm_rho: t[{}, {}], lm[{}, {}]'
+              .format(t_lm_rho[0,1], t_lm_rho[0,-1], t_lm_rho[1,0], t_lm_rho[-1, 0]))
 
         # yc_t_llm_mdot = np.array([[[k*j*i for k in np.arange(0, 5, 1)] for j in np.arange(0, 5, 1)] for i in np.arange(0, 5, 1)])
         yc_t_llm_mdot = []
         for i in range(len(yc)):
             print('\n<--- --- --- ({}) Yc:{} K:{} --- --- --->\n'.format(bump, yc[i], coeff))
-            tmp1 = self.get_t_llm_mdot_for_yc(cls[i], t_lm_rho, yc[i], l_or_lm, min_max, self.metal, append_crit)
+            tmp1 = self.get_t_llm_mdot_for_yc(cls[i], t_lm_rho, yc[i], l_or_lm, min_max, self.metal, bump, append_crit)
             tmp2 = self.get_square(tmp1, depth_square)
             tmp2[0, 0] = yc[i] # appending the yc value as a [0, 0] in the array.
             # print(tmp2.shape)
             yc_t_llm_mdot = np.append(yc_t_llm_mdot, tmp2)
+
+            if self.set_do_tech_plots:
+                PlotBackground2.plot_color_table(t_lm_rho, 't', 'lm', 'rho', self.metal, bump)
+                PlotBackground2.plot_color_table(tmp1, 't', 'lm', 'mdot', self.metal, bump)
 
         yc_t_llm_mdot = np.reshape(yc_t_llm_mdot, (len(yc), depth_square+1, depth_square+1))
         print('\t__Saving the ({}) yc_t_{}{}_mdot table for. Shape:{}'.format(bump, coeff, l_or_lm, yc_t_llm_mdot.shape))
@@ -2568,6 +3697,7 @@ class SP_file_work:
         Save_Load_tables.save_3d_table(yc_t_llm_mdot_rs_const, self.metal, bump, 'yc_t_{}{}_mdot_rs_{}'.format(coeff, l_or_lm, rs), 'yc', 't',
                                        str(coeff) + l_or_lm, 'mdot_rs_{}'.format(rs), self.out_dir)
 
+    # ------------------------------------------------
 
     # -------------------------------------------------
     def test(self, yc_val = 1.0):
@@ -4660,6 +5790,9 @@ class Read_SM_data_file:
         if v_n == 'Pg/P_total':
             return self.Pg_/self.P_total_
 
+        if v_n == 'Pg/Pr':
+            return self.Pg_/self.Pr_
+
         if v_n == 'Pr/P_total':
             return self.Pr_/self.P_total_
 
@@ -4746,6 +5879,37 @@ class Read_SM_data_file:
         :param condition:
         :return:
         '''
+
+        def xy(x, y):
+            res = []
+            for i in range(1,len(x)):
+                res = np.append(res, (y[i]-y[i-1])/(x[i]-y[i-1]))
+
+            return res
+
+        if v_n == 'grad_u':
+            depth_r = 0.0000001
+
+            ind = self.ind_from_condition(condition)
+            u = self.get_col('u')
+            r = self.get_col('r')
+            diff_u = np.diff(u)
+            diff_r = np.diff(r)
+
+            # grid_r = np.linspace( r[0], r[-1], np.int((r[-1]-r[0])/depth) )
+            # grid_r = np.mgrid[r[0] : r[-1] : np.int((r[-1]-r[0])/depth_r)*1j]
+            # grid_u = interpolate.interp1d(r,u,kind='linear')(grid_r)
+
+
+
+            # grad_u = xy(r,u)
+            grad_u = np.gradient(u,r)
+            # plt.plot(r, grad_u, '-', color='black')
+            # plt.plot(r, u, '-', color='blue')
+            # plt.plot(r[:-1], grad_u, '-', color='black')
+            # plt.plot(r[:-1], u[:-1], '-', color='blue')
+            # plt.show()
+            return  grad_u[-1] # (u[-1]-u[-2])/(r[-1]-r[-2])#
 
         if v_n == 'teff'and condition == '':
             ind = self.ind_from_condition(condition)
@@ -5266,6 +6430,8 @@ class Read_Observables:
 
         self.set_load_yc_l_lm       = True
         self.set_load_yc_nan_lmlim  = True
+
+        self.set_if_evol_err_out = 't1' # what boundary to return if the ts error is out of boundary
         # --------------------------------------------------------------------------------------------------------------
 
         self.file_name = observ_name
@@ -5290,8 +6456,8 @@ class Read_Observables:
         self.table.remove(self.table[0])  # removing the var_names line from the array. (only actual values left)
 
         # -----------------DISTRIBUTING READ COLUMNS-------------
-
-        self.num_v_n = ['N', 't_*', 'lRt', 'm', 'l', 'mdot', 'v_inf', 'eta',  'lgaia', 'llgaia', 'ulgaia']
+        #  'lgaia', 'llgaia', 'ulgaia'
+        self.num_v_n = ['N', 't_*', 'lRt', 'm', 'l', 'mdot', 'v_inf', 'eta']
 
         # list of used v_n's; can be extended upon need ! 'N' should be first
         self.cls = 'class'  # special variable
@@ -5637,7 +6803,9 @@ class Read_Observables:
 
             print('\t__ Error. No (Error) solutions found star: {}, mdot: {}, mdot array:({}, {})'
                   .format(star_n, mdot, mdot_arr[i, :].min(), mdot_arr[i, :].max()))
-            return lim_t1
+
+            if self.set_if_evol_err_out == 't1': return lim_t1
+            else: return  lim_t2
 
             # raise ValueError('No Error solutions found star: {}, mdot: {}, mdot array:({}, {})'
                              # .format(star_n, mdot, mdot_arr[i, :].min(), mdot_arr[i, :].max()))
@@ -5906,24 +7074,27 @@ class Read_Observables:
 
 class PlotObs(Read_Observables):
 
-    def __init__(self, metal, obs_f_name, atm_f_name=None):
+    def __init__(self, metal, bump, obs_f_name, atm_f_name=None):
 
         Read_Observables.__init__(self, obs_f_name, metal)
 
         self.set_clump_used = 4
         self.set_clump_modified = 4
 
-        self.metal = metal
-        self.set_use_gaia=False
-        self.set_clean=False
+        self.metal        = metal
+        self.bump         = bump # for affiliation
+        self.set_use_gaia = False
+        self.set_clean    = False
 
-        self.set_label_size=12
+        self.set_label_size = 12
+
+        self.set_check_affiliation = False
 
         self.set_load_yc_l_lm      = True
         self.set_load_yc_nan_lmlim = True
-        self.set_use_atm_file      =True
-        self.set_atm_file     = atm_f_name
-        self.set_check_lm_for_wne  =True
+        self.set_use_atm_file      = True
+        self.set_atm_file          = atm_f_name
+        self.set_check_lm_for_wne  = True
 
         self.set_patches_or_lines = 'patches'
 
@@ -5932,6 +7103,8 @@ class PlotObs(Read_Observables):
         self.set_do_plot_obs_err  = True
         self.set_do_plot_evol_err = True
         self.set_do_plot_line_fit = True
+
+        self.set_if_evol_err_out = 't1'
 
     # ----------------------------------------------------------------------------
 
@@ -6017,6 +7190,34 @@ class PlotObs(Read_Observables):
             ax.annotate('{}'.format(int(star_n)), xy=(x_coord, llm_obs),
                         textcoords='data')  # plot numbers of stars
 
+    def plot_3d_stars(self, ax, star_n, l_or_lm, v_n_x, yc_val, z_coord):
+
+        x_coord = self.get_num_par(v_n_x, star_n)
+        llm_obs = self.get_llm(l_or_lm, star_n, yc_val)
+
+        # ax.plot(x_coord, z_coord, llm_obs)
+
+        ax.scatter(x_coord, z_coord, llm_obs, marker=self.get_clss_marker(star_n), # markersize='9',
+                color=self.get_class_color(star_n)) #  ls='', mec='black'  # plot color dots)))
+
+    def plot_star_lines(self, ax, star_n, l_or_lm, v_n_x, yc_val, y_slices, separator):
+
+        xs = []
+        ys = []
+        zs = []
+
+        for s in range(len(y_slices)):
+
+            x_coord = self.get_num_par(v_n_x, star_n)
+            llm_obs = self.get_llm(l_or_lm, star_n, yc_val)
+            z_coord = s * separator
+
+            xs = np.append(xs, x_coord)
+            ys = np.append(ys, llm_obs)
+            zs = np.append(zs, z_coord)
+
+        ax.plot(xs, zs, ys, '-', color=self.get_class_color(star_n))
+
     def plot_evol_err(self, ax, star_n, l_or_lm, v_n_x, yc_assumed, color='black'):
         if l_or_lm == 'lm':
             llm1, llm2 = self.get_star_lm_err(star_n, yc_assumed)
@@ -6028,7 +7229,9 @@ class PlotObs(Read_Observables):
             ax.plot([x_coord, x_coord], [llm1, llm2], '-', color=color)
             ax.plot([x_coord, x_coord], [llm1, llm2], '.', color=color)
 
-    def plot_all_x_llm(self, ax, l_or_lm, v_n_x, yc_val, obs_err=True, evol_err=True):
+
+    # def plot_one_for_all_x_llm(self, ax, star_n, l_or_lm, v_n_x, yc_val, obs_err=True, evol_err=True):
+    def plot_obs_all_x_llm(self, ax, l_or_lm, v_n_x, yc_val, return_ax=False, collect_legend=True):
 
         classes = []
         classes.append('dum')
@@ -6037,24 +7240,35 @@ class PlotObs(Read_Observables):
 
         # from Phys_Math_Labels import Opt_Depth_Analythis
         # use_gaia = False
+
+        # def plot_one_star()
+
+        # self.set_check_affiliation
+
         for star_n in self.stars_n:
+
             i = -1
             x_coord = np.append(x_coord, self.get_num_par(v_n_x, star_n))
             llm_obs = np.append(llm_obs, self.get_llm(l_or_lm, star_n, yc_val))
             # llm_obs = np.append(llm_obs, obs_cls.get_num_par(l_or_lm, star_n, yc_val, use_gaia))
 
-            if obs_err: self.plot_obs_err(ax, star_n, l_or_lm, v_n_x, yc_val)
+            if self.set_do_plot_obs_err: self.plot_obs_err(ax, star_n, l_or_lm, v_n_x, yc_val)
 
-            if evol_err: self.plot_evol_err(ax, star_n, l_or_lm, v_n_x, yc_val)
+            if self.set_do_plot_evol_err: self.plot_evol_err(ax, star_n, l_or_lm, v_n_x, yc_val, self.get_class_color(star_n))
 
             self.plot_stars(ax, star_n, l_or_lm, v_n_x, yc_val)
 
             if self.get_star_class(star_n) not in classes:
-                plt.plot(x_coord[i], llm_obs[i], marker=self.get_clss_marker(star_n), markersize='9',
-                         color=self.get_class_color(star_n), ls='', mec='black',
-                         label='{}'.format(self.get_star_class(star_n)))  # plot color dots)))
-                classes.append(self.get_star_class(star_n))
-
+                if collect_legend:
+                    plt.plot(x_coord[i], llm_obs[i], marker=self.get_clss_marker(star_n), markersize='9',
+                             color=self.get_class_color(star_n), ls='', mec='black',
+                             label='{}'.format(self.get_star_class(star_n)))  # plot color dots)))
+                    classes.append(self.get_star_class(star_n))
+                else:
+                    plt.plot(x_coord[i], llm_obs[i], marker=self.get_clss_marker(star_n), markersize='9',
+                             color=self.get_class_color(star_n), ls='', mec='black',
+                            )  # plot color dots)))
+                    classes.append(self.get_star_class(star_n))
 
 
         print('\t__PLOT: total stars: {}'.format(len(self.stars_n)))
@@ -6074,16 +7288,16 @@ class PlotObs(Read_Observables):
         # x_coord__, y_coord__ = Math.fit_polynomial(x_coord, llm_obs, 1, 100, mdot_grid)
         # ax.plot(x_coord__, y_coord__, '-.', color='blue')
 
-        min_mdot, max_mdot = self.get_min_max('mdot')
-        min_llm, max_llm = self.get_min_max_llm(l_or_lm, yc_val)
+        # min_mdot, max_mdot = self.get_min_max('mdot')
+        # min_llm, max_llm = self.get_min_max_llm(l_or_lm, yc_val)
 
         # ax.set_xlim(min_mdot - 0.2, max_mdot + 0.2)
         # ax.set_ylim(min_llm - 0.05, max_llm + 0.05)
 
-        ax.set_ylabel(Labels.lbls(l_or_lm))
-        ax.set_xlabel(Labels.lbls('mdot'))
-        ax.grid(which='major', alpha=0.2)
-        ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
+        # ax.set_ylabel(Labels.lbls(l_or_lm))
+        # ax.set_xlabel(Labels.lbls('mdot'))
+        # ax.grid(which='major', alpha=0.2)
+        # ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=1)
 
         print('Yc:{}'.format(yc_val))
 
@@ -6096,7 +7310,53 @@ class PlotObs(Read_Observables):
                         bbox={'facecolor': 'blue', 'alpha': 0.5, 'pad': 10}, horizontalalignment='center',
                         verticalalignment='center', transform=ax.transAxes)
 
-        return ax
+
+        if len(self.stars_n) != len(x_coord): raise ValueError('not all stars plotted WHY?')
+        if return_ax: return ax
+        return self.stars_n, x_coord, llm_obs
+
+    def plot_3d_obs_all_x_llm(self, ax, v_n_x, l_or_lm, yc_val, y_slices, separator=100):
+
+        classes = []
+        classes.append('dum')
+        x_coord = []
+        llm_obs = []
+
+        # from Phys_Math_Labels import Opt_Depth_Analythis
+        # use_gaia = False
+
+        # def plot_one_star()
+
+        # self.set_check_affiliation
+
+        for s in range(len(y_slices)):
+
+            if len(y_slices) == 1:
+                z_coord = 1 * separator
+            else:
+                z_coord = s * separator
+
+            for star_n in self.stars_n:
+
+                i = -1
+                x_coord = np.append(x_coord, self.get_num_par(v_n_x, star_n))
+                llm_obs = np.append(llm_obs, self.get_llm(l_or_lm, star_n, yc_val))
+                # llm_obs = np.append(llm_obs, obs_cls.get_num_par(l_or_lm, star_n, yc_val, use_gaia))
+
+
+                self.plot_3d_stars(ax, star_n, l_or_lm, v_n_x, yc_val, z_coord)
+
+                # self.plot_star_lines(ax, star_n, l_or_lm, v_n_x, yc_val, y_slices, separator)
+
+                if self.get_star_class(star_n) not in classes:
+                    ax.scatter(x_coord[i], z_coord, llm_obs[i], marker=self.get_clss_marker(star_n), #markersize='9',
+                             color=self.get_class_color(star_n),
+                               # ls='', mec='black',
+                             label='{}'.format(self.get_star_class(star_n)))  # plot color dots)))
+                    classes.append(self.get_star_class(star_n))
+
+
+
 
     def plot_obs_err_ts_y(self, ax, star_n, star_x_coord, star_y_coord, yc_val, v_n_y, t_llm_mdot, lim_t1=None, lim_t2=None):
 
@@ -6156,7 +7416,13 @@ class PlotObs(Read_Observables):
         classes.append('dum')
         x = []
         y = []
-        for star_n in self.stars_n:
+
+        if self.set_check_affiliation:
+            list_of_stars = Affiliation.get_list(self.metal, self.bump)
+        else:
+            list_of_stars = self.stars_n
+
+        for star_n in list_of_stars:
             xyz = self.get_xyz_from_yz(yc_val, star_n, l_or_lm, 'mdot',
                                           t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lim_t1, lim_t2)
 
@@ -6378,7 +7644,15 @@ class PlotObs(Read_Observables):
         classes.append('dum')
         x = []
         y = []
-        for star_n in self.stars_n:
+
+        # self.set_check_affiliation
+        if self.set_check_affiliation:
+            list_of_stars = Affiliation.get_list(self.metal, self.bump)
+        else:
+            list_of_stars = self.stars_n
+
+
+        for star_n in list_of_stars:
             xyz = self.get_xyz_from_yz(yc_val, star_n, l_or_lm, 'mdot',
                                           t_llm_mdot[0, 1:], t_llm_mdot[1:, 0], t_llm_mdot[1:, 1:], lim_t1, lim_t2)
 
@@ -6390,33 +7664,38 @@ class PlotObs(Read_Observables):
 
                 for i in range(len(xyz[0, :])):
 
-                    ax.plot(xyz[0, i], xyz[1, i], marker=self.get_clss_marker(star_n), markersize='9',
-                            color=self.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
-                    if not self.set_clean:
-                        ax.annotate(int(star_n), xy=(xyz[0, i], xyz[1, i]),
-                                    textcoords='data', fontsize=self.set_label_size)  # plot numbers of stars
-
-                    if self.get_star_class(star_n) not in classes:
-                        ax.plot(xyz[0, i], xyz[1, i], marker=self.get_clss_marker(star_n), markersize='9',
-                                color=self.get_class_color(star_n), mec='black', ls='',
-                                label='{}'.format(self.get_star_class(star_n)))  # plot color dots)))
-                        classes.append(self.get_star_class(star_n))
-
                     # -------------------------OBSERVABLE ERRORS FOR L and Mdot ----------------------------------------
 
                     if self.set_do_plot_obs_err:
                         lm_err1, lm_err2 = self.get_star_lm_obs_err(star_n, yc_val)
-                        ts1_b, ts2_b, ts1_t, ts2_t = self.get_star_ts_obs_err(star_n, t_llm_mdot, yc_val, lim_t1, lim_t2)
+                        ts1_b, ts2_b, ts1_t, ts2_t = self.get_star_ts_obs_err(star_n, t_llm_mdot, yc_val, lim_t1,
+                                                                              lim_t2)
                         ts_coord = [ts1_b, ts2_b, ts2_t, ts1_t]
                         lm_coord = [lm_err1, lm_err1, lm_err2, lm_err2]
-                        ax.add_patch(patches.Polygon(xy=list(zip(ts_coord, lm_coord)), fill=True, alpha=.7,
-                                                     color=self.get_class_color(star_n)))
+
+                        if self.set_patches_or_lines == 'patches':
+                            ax.add_patch(patches.Polygon(xy=list(zip(ts_coord, lm_coord)), fill=True,
+                                                         alpha=self.set_patches_or_lines_alpha,
+                                                         color=self.get_class_color(star_n)))
+
+                        if self.set_patches_or_lines == 'lines':
+                            ax.plot([ts1_b, ts2_t], [xyz[1, i], xyz[1, i]], '-', color='gray',
+                                    alpha=self.set_patches_or_lines_alpha)
+                            ax.plot([xyz[0, i], xyz[0, i]], [lm_err1, lm_err2], '-', color='gray',
+                                    alpha=self.set_patches_or_lines_alpha)
+
+                        if self.set_patches_or_lines == 'lines2':
+                            ax.plot([ts1_b, ts2_t], [lm_err1, lm_err2], '-', color='gray',
+                                    alpha=self.set_patches_or_lines_alpha)
+                            ax.plot([ts2_b, ts1_t], [lm_err1, lm_err2], '-', color='gray',
+                                    alpha=self.set_patches_or_lines_alpha)
 
                     if self.set_do_plot_evol_err:
                         if l_or_lm == 'lm':
                             lm1, lm2 = self.get_star_lm_err(star_n, yc_val)
                             ts1, ts2 = self.get_star_ts_err(star_n, t_llm_mdot, yc_val, lim_t1, lim_t2)
-                            ax.plot([ts1, ts2], [lm1, lm2], '-', color='white')
+                            ax.plot([ts1, ts2], [lm1, lm2], '-', color='black')
+                            ax.plot([ts1], [lm1], '.', color='black')
                         # color=obs_cls.get_class_color(star_n))
 
                         # ax.plot([xyz[0, i], xyz[0, i]], [lm1, lm2], '-',
@@ -6435,6 +7714,21 @@ class PlotObs(Read_Observables):
 
                         # ax.errorbar(xyz[0, i], xyz[1, i], yerr=[[lm1], [lm2]], fmt='--.', color = obs_cls.get_class_color(star_n))
                         # ax.errorbar(xyz[0, i], xyz[1, i], xerr=[[ts1], [ts2]], fmt='--.', color=obs_cls.get_class_color(star_n))
+
+                    # -------------------------OBSERVABLE STARS --------------------------------------------------------
+
+                    ax.plot(xyz[0, i], xyz[1, i], marker=self.get_clss_marker(star_n), markersize='9',
+                            color=self.get_class_color(star_n), ls='', mec='black')  # plot color dots)))
+                    if not self.set_clean:
+                        ax.annotate(int(star_n), xy=(xyz[0, i], xyz[1, i]),
+                                    textcoords='data', fontsize=self.set_label_size)  # plot numbers of stars
+
+                    if self.get_star_class(star_n) not in classes:
+                        ax.plot(xyz[0, i], xyz[1, i], marker=self.get_clss_marker(star_n), markersize='9',
+                                color=self.get_class_color(star_n), mec='black', ls='',
+                                label='{}'.format(self.get_star_class(star_n)))  # plot color dots)))
+                        classes.append(self.get_star_class(star_n))
+
 
 
 
@@ -6560,9 +7854,13 @@ class PlotBackground2:
         self.set_clean = False
         self.set_rotate_labels=295
         self.set_show_contours=True
+        self.set_contour_fmt = 2.2
+        self.set_show_colorbar= True
+
+        self.set_auto_limits = True
 
     @staticmethod
-    def plot_color_table(table, v_n_x, v_n_y, v_n_z, opal_used, label=None, fsz=12):
+    def plot_color_table(table, v_n_x, v_n_y, v_n_z, opal_used, bump, label=None, fsz=12,count_angle=0):
 
         plt.figure()
         ax = plt.subplot(111)
@@ -6583,18 +7881,22 @@ class PlotBackground2:
         ax.set_ylabel(Labels.lbls(v_n_y), fontsize=fsz)
         ax.set_xlabel(Labels.lbls(v_n_x), fontsize=fsz)
 
-        levels = Levels.get_levels(v_n_z, opal_used)
+        levels = Levels.get_levels(v_n_z, opal_used, bump)
 
         contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'),
-                                      alpha=1.0)
+                                      alpha=1.0, fontsize=fsz)
+
+
         clb = plt.colorbar(contour_filled)  # orientation='horizontal', :)
         clb.ax.set_title(Labels.lbls(v_n_z), fontsize=fsz)
+        clb.ax.tick_params(labelsize=fsz)
+
 
         # ax.colorbar(contour_filled, label=Labels.lbls(v_n_z))
         contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
         labs = ax.clabel(contour, colors='k', fmt='%2.2f', inline=True, fontsize=fsz)
         for lab in labs:
-            lab.set_rotation(295)  # 295
+            lab.set_rotation(count_angle)  # 295
         # contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
         # clb = plt.colorbar(contour_filled)
         # clb.ax.set_title(Labels.lbls(v_n_z), fontsize=fsz)
@@ -6604,7 +7906,7 @@ class PlotBackground2:
 
         ax.minorticks_on()
 
-        ax.invert_xaxis()
+        # ax.invert_xaxis()
 
         plt.xticks(fontsize=fsz)
         plt.yticks(fontsize=fsz)
@@ -6615,7 +7917,7 @@ class PlotBackground2:
         plt.show()
 
 
-    def plot_color_background(self, ax, table, v_n_x, v_n_y, v_n_z, opal_used, label=None):
+    def plot_color_background(self, ax, table, v_n_x, v_n_y, v_n_z, opal_used, bump, label=None):
 
         # if label != None:
         #     print('TEXT')
@@ -6625,26 +7927,27 @@ class PlotBackground2:
         # plt.text(2, 0.65, r'$\cos(2 \pi t) \exp(-t)$')
 
         # ax = fig.add_subplot(1, 1, 1)
-
-        ax.set_xlim(table[0, 1:].min(), table[0, 1:].max())
-        ax.set_ylim(table[1:, 0].min(), table[1:, 0].max())
+        if self.set_auto_limits:
+            ax.set_xlim(table[0, 1:].min(), table[0, 1:].max())
+            ax.set_ylim(table[1:, 0].min(), table[1:, 0].max())
         ax.set_ylabel(Labels.lbls(v_n_y), fontsize=self.set_label_sise)
         ax.set_xlabel(Labels.lbls(v_n_x), fontsize=self.set_label_sise)
 
-        levels = Levels.get_levels(v_n_z, opal_used)
+        levels = Levels.get_levels(v_n_z, opal_used, bump)
 
         contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'),
                                       alpha=self.set_alpha)
-        clb = plt.colorbar(contour_filled)
-        clb.ax.tick_params(labelsize=self.set_label_sise)
-        clb.ax.set_title(Labels.lbls(v_n_z), fontsize=self.set_label_sise)
+        if self.set_show_colorbar:
+            clb = plt.colorbar(contour_filled)
+            clb.ax.tick_params(labelsize=self.set_label_sise)
+            clb.ax.set_title(Labels.lbls(v_n_z), fontsize=self.set_label_sise)
 
         # ax.colorbar(contour_filled, label=Labels.lbls(v_n_z))
 
         if self.set_show_contours:
             contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
 
-            labs = ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=self.set_label_sise)
+            labs = ax.clabel(contour, colors='k', fmt='%{}f'.format(self.set_contour_fmt), fontsize=self.set_label_sise)
             if self.set_rotate_labels != None:
                 for lab in labs:
                     lab.set_rotation(self.set_rotate_labels)  # ORIENTATION OF LABELS IN COUNTUR PLOTS
@@ -6658,8 +7961,6 @@ class PlotBackground2:
 
         ax.tick_params('y', labelsize=self.set_label_sise)
         ax.tick_params('x', labelsize=self.set_label_sise)
-
-
         plt.minorticks_on()
 
         # plt.ylabel(l_or_lm)
@@ -6667,6 +7968,175 @@ class PlotBackground2:
         # plt.savefig(name)
         # plt.show()
         return ax
+
+    def plot_3d_curved_surf(self,ax, x_arr, z_arr, y_levels, elevation=100):
+
+        def construct_2d_arrs(x_arr, z_arr, y_level):
+
+            x2d = np.zeros(len(x_arr))
+            for i in range(len(z_arr)):
+                x2d = np.vstack((x2d, x_arr))
+            x2d = np.delete(x2d, 0, 0)
+
+            z2d = np.zeros(len(z_arr))
+            for i in range(len(x_arr)):
+                z2d = np.vstack((z2d, z_arr))
+            z2d = np.delete(z2d, 0, 0).T
+
+            y2d = np.zeros((len(x_arr), len(z_arr)))
+            y2d.fill(y_level)
+
+
+            return x2d, y2d, z2d
+
+        # for i in range(len(y_levels)):
+        #     x2, y2, z2 = construct_2d_arrs(x_arr, z_arr, y_levels[i])
+        #
+        #     ax.contourf(x2, z2, y2, zdir='y', levels=i * elevation + np.array(levels),
+        #                 cmap=cmap, alpha=self.set_alpha)
+
+        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+        from matplotlib.collections import PolyCollection
+        from matplotlib import colors as mcolors
+
+        z2d = np.zeros((len(x_arr), len(z_arr)))
+
+        def cc(arg):
+            '''
+            Shorthand to convert 'named' colors to rgba format at 60% opacity.
+            '''
+            return mcolors.to_rgba(arg, alpha=0.6)
+
+        def polygon_under_graph(xlist, ylist):
+            '''
+            Construct the vertex list which defines the polygon filling the space under
+            the (xlist, ylist) line graph.  Assumes the xs are in ascending order.
+            '''
+            return [(xlist[0], 4.0)] + list(zip(xlist, ylist)) + [(xlist[-1], 4.)]
+
+        verts = []
+        slice_positions = []
+        for i in range(len(y_levels)):
+            verts.append(polygon_under_graph(x_arr, z_arr))
+            slice_positions = np.append(slice_positions, i * elevation)
+
+        poly = PolyCollection(verts, facecolors=[cc('gray')])
+        ax.add_collection3d(poly, zs=slice_positions, zdir='y')
+
+
+        # z_arr = []
+        # for i in range(len(z_levels)):
+        #     # z2d = np.zeros((len(x_arr), len(y_arr)))
+        #     z2d.fill(elevation*i)
+        #     z_arr = np.append(z_arr, z2d)
+        #
+        #     ax.plot(x_arr, y_arr, [elevation*i], color='black')
+        #
+        #     poly3dCollection = Poly3DCollection(v)
+
+    def plot_3d_back(self, ax, d3table, x_v_n, y_v_n, color_v_n, metal, slize_for_counturs=0, elevation=100):
+
+        from mpl_toolkits.mplot3d import Axes3D
+        from matplotlib import cm
+        cmap = plt.get_cmap('Blues') #
+
+        ax.set_xlabel(Labels.lbls(x_v_n), fontsize=self.set_label_sise)
+        ax.set_ylabel(Labels.lbls(y_v_n), fontsize=self.set_label_sise)
+        ax.w_zaxis.line.set_lw(0.)
+        ax.set_zticks([])
+        # ax.set_zlabel(Labels.lbls(z_v_n), fontsize=fsz)
+
+        levels = Levels.get_levels(color_v_n, metal, '')
+
+        x_arr = d3table[0, 0, 1:]
+        y_arr = d3table[0, 1:, 0]
+
+        # ax.set_zlim(x_y_z[0, 1:].min(), x_y_z[0, 1:].max())
+        # ax.set_ylim(x_y_z[1:, 0].min(), x_y_z[1:, 0].max())
+
+        # Plot Ground Slice and Set Countours
+        if slize_for_counturs < len(d3table[:, 0, 0]):
+            z2d_for_levels = d3table[slize_for_counturs, 1:, 1:]
+        else:
+            raise IOError('Error. slize_for_counturs({}) > max. n of slices if 3D array: {}'
+                          .format(slize_for_counturs, len(d3table[:, 0, 0])))
+
+        contour_filled = ax.contourf(x_arr, y_arr, z2d_for_levels, zdir='z', levels=np.array(levels),
+                                     cmap=cmap, alpha=self.set_alpha)
+        clb = plt.colorbar(contour_filled)
+        clb.ax.set_title(Labels.lbls(color_v_n), fontsize=self.set_label_sise)
+
+        # Plot Other slices
+        for i in range(1, len(d3table[:, 0, 0])):
+            d2arr = d3table[i, 1:, 1:]
+            ax.contourf(x_arr, y_arr, i*elevation + d2arr, zdir='z', levels= i*elevation + np.array(levels),
+                        cmap=cmap, alpha=self.set_alpha)
+
+        ax.set_zlim3d( 0, (len(d3table[:, 0, 0])-1)*elevation )
+
+    def plot_3d_back2(self, ax, d3table, x_v_n, z_v_n, color_v_n, metal, slize_for_counturs=0, elevation=100):
+
+        def construct_2d_arrs(x_arr, y_arr, z2d_arr):
+
+            x2d = np.zeros(len(z2d_arr[0, :]))
+            for i in range(len(z2d_arr[:, 0])):
+                x2d = np.vstack((x2d, x_arr))
+            x2d = np.delete(x2d, 0, 0)
+
+            y2d = np.zeros(len(z2d_arr[:, 0]))
+            for i in range(len(z2d_arr[0, :])):
+                y2d = np.vstack((y2d, y_arr))
+            y2d = np.delete(y2d, 0, 0).T
+
+            return x2d, y2d, z2d_arr
+
+
+        from mpl_toolkits.mplot3d import Axes3D
+        from matplotlib import cm
+        cmap = plt.get_cmap('RdYlBu_r') #
+
+        ax.tick_params('y', labelsize=self.set_label_sise)
+        ax.tick_params('x', labelsize=self.set_label_sise)
+        ax.tick_params('z', labelsize=self.set_label_sise)
+
+
+        ax.set_xlabel(Labels.lbls(x_v_n), fontsize=self.set_label_sise)
+        # ax.set_ylabel(Labels.lbls(y_v_n), fontsize=self.set_label_sise)
+        ax.set_zlabel(Labels.lbls(z_v_n), fontsize=self.set_label_sise)
+        ax.w_yaxis.line.set_lw(0.)
+        ax.set_yticks([])
+        # ax.set_zlabel(Labels.lbls(z_v_n), fontsize=fsz)
+
+        levels = Levels.get_levels(color_v_n, metal, '')
+
+        x_arr = d3table[0, 0, 1:]
+        y_arr = d3table[0, 1:, 0]
+
+        # ax.set_zlim(x_y_z[0, 1:].min(), x_y_z[0, 1:].max())
+        # ax.set_ylim(x_y_z[1:, 0].min(), x_y_z[1:, 0].max())
+
+        # Plot Ground Slice and Set Countours
+        if slize_for_counturs < len(d3table[:, 0, 0]):
+            z2d_for_levels = d3table[slize_for_counturs, 1:, 1:]
+        else:
+            raise IOError('Error. slize_for_counturs({}) > max. n of slices if 3D array: {}'
+                          .format(slize_for_counturs, len(d3table[:, 0, 0])))
+
+        x2d, y2d, z2d = construct_2d_arrs(x_arr, y_arr, z2d_for_levels)
+
+        contour_filled = ax.contourf(x2d, z2d, y2d, zdir='y', levels=np.array(levels),
+                                     cmap=cmap, alpha=self.set_alpha)
+        clb = plt.colorbar(contour_filled)
+        clb.ax.set_title(Labels.lbls(color_v_n), fontsize=self.set_label_sise)
+        clb.ax.tick_params(labelsize=self.set_label_sise)
+
+        # Plot Other slices
+        for i in range(1, len(d3table[:, 0, 0])):
+            d2arr = d3table[i, 1:, 1:]
+            x2d, y2d, z2d = construct_2d_arrs(x_arr, y_arr, d2arr)
+            ax.contourf(x2d, i*elevation + z2d, y2d, zdir='y', levels= i*elevation + np.array(levels),
+                        cmap=cmap, alpha=self.set_alpha)
+
 
     # @staticmethod
     # def plot_obs_x_llm(ax, obs_cls, l_or_lm, v_n_x, yc_val, use_gaia = False, clean=False, check_star_lm_wne=False):
@@ -7061,6 +8531,8 @@ class PlotBackground2:
         Table_Analyze.plot_k_vs_t = True
         return ax
 
+
+
 class PlotBackground:
 
 
@@ -7068,7 +8540,7 @@ class PlotBackground:
         pass
 
     @staticmethod
-    def plot_color_table(table, v_n_x, v_n_y, v_n_z, opal_used, label = None, fsz=12):
+    def plot_color_table(table, v_n_x, v_n_y, v_n_z, opal_used, label = None, fsz=12, lagel_angle=0):
 
         plt.figure()
         ax = plt.subplot(111)
@@ -7097,12 +8569,13 @@ class PlotBackground:
                                       alpha=1.0)
         clb = plt.colorbar(contour_filled) # orientation='horizontal', :)
         clb.ax.set_title(Labels.lbls(v_n_z), fontsize=fsz)
+        clb.ax.tick_params(labelsize=fsz)
 
         # ax.colorbar(contour_filled, label=Labels.lbls(v_n_z))
         contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
         labs = ax.clabel(contour, colors='k', fmt='%2.2f', inline=True, fontsize=fsz)
         for lab in labs:
-            lab.set_rotation(295)#295
+            lab.set_rotation(lagel_angle)#295
         # contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'))
         # clb = plt.colorbar(contour_filled)
         # clb.ax.set_title(Labels.lbls(v_n_z), fontsize=fsz)
@@ -7123,7 +8596,7 @@ class PlotBackground:
         plt.show()
 
     @staticmethod
-    def plot_color_background(ax, table, v_n_x, v_n_y, v_n_z, opal_used, label = None, alpha = 0.8, clean=False, fsz=12, rotation=0):
+    def plot_color_background(ax, table, v_n_x, v_n_y, v_n_z, opal_used, bump, label = None, alpha = 0.8, clean=False, fsz=12, rotation=0):
 
 
 
@@ -7141,18 +8614,27 @@ class PlotBackground:
         ax.set_ylabel(Labels.lbls(v_n_y), fontsize=fsz)
         ax.set_xlabel(Labels.lbls(v_n_x), fontsize=fsz)
 
-        levels = Levels.get_levels(v_n_z, opal_used)
+        levels = Levels.get_levels(v_n_z, opal_used, bump)
 
         # 'RdYlBu_r'
-        contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'), alpha=alpha)
-        clb = plt.colorbar(contour_filled)
-        clb.ax.set_title(Labels.lbls(v_n_z), fontsize=fsz)
+
+        if v_n_x == 'mdot' and v_n_y == 'lm' and v_n_z == 'tau':
+            pass
+        else:
+            contour_filled = plt.contourf(table[0, 1:], table[1:, 0], table[1:, 1:], levels, cmap=plt.get_cmap('RdYlBu_r'), alpha=alpha)
+            clb = plt.colorbar(contour_filled)
+            clb.ax.set_title(Labels.lbls(v_n_z), fontsize=fsz)
+            clb.ax.tick_params(labelsize=fsz)
 
         # ax.colorbar(contour_filled, label=Labels.lbls(v_n_z))
 
         contour = plt.contour(table[0, 1:], table[1:, 0], table[1:, 1:], levels, colors='k')
 
-        labs=ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=fsz)
+        if v_n_x == 'mdot' and v_n_y == 'lm' and v_n_z == 'tau':
+            labs=ax.clabel(contour, colors='k', fmt='%2.0f', fontsize=fsz, manual=True)
+        else:
+            labs = ax.clabel(contour, colors='k', fmt='%2.2f', fontsize=fsz)
+
         if rotation != None:
             for lab in labs:
                 lab.set_rotation(rotation)       # ORIENTATION OF LABELS IN COUNTUR PLOTS

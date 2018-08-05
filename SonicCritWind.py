@@ -815,9 +815,12 @@ class SonicPointAlgorithm:
             plt.plot(cl.get_col('r'), cl.get_col('u'), '.', color='black')
             plt.plot(cl.get_col('r'), cl.get_col('u'), '-', color='gray')
             plt.plot(cl.get_col('r'), cl.get_sonic_u(), '-', color='blue')
+            plt.xlabel(Labels.lbls('r'))
+            plt.ylabel(Labels.lbls('u'))
+            plt.title('Multiple Sonic point found: mdot: {} M: {}'.format("%.2f"%cl.get_col('mdot')[-1], "%.1f"% cl.get_col('xm')[-1]))
             plt.show()
-            raise ValueError('Multiple Sonic Point Found. (if it is OK, turn of the *check_for_mult_sp* Mdot: {}'
-                             .format(cl.get_col('mdot')[-1]))
+            raise ValueError('Multiple Sonic Point Found. (if it is OK, turn of the *check_for_mult_sp* Mdot: {} M: {}'
+                             .format("%.2f"%cl.get_col('mdot')[-1], "%.1f"% cl.get_col('xm')[-1]))
 
         if rs_p.any():              # if the sonic point has to be found by interpolating
             rs_p = rs_p[0][0]
@@ -1619,17 +1622,34 @@ class NativeMassLoss(PlotProfiles):
 
         PlotProfiles.__init__(self, sm_cls, wnd_cls)
 
+        self.set_int_method_core = 'IntUni'
+        self.set_int_method_wind = 'Uni'
 
+        self.frac_of_us_to_int = 1.0
+
+        self.set_fit_poly_to_grads = ''
+
+        self.set_use_first_wind_for_core_sp=False
+        self.set_find_exact_sonic_point = True
+        self.set_do_fix_first_wind_point = True
         self.set_use_poly_fit_core=True
         self.sm_cls = sm_cls
         self.wnd_cls = wnd_cls
         self.set_u_min = 0.5
 
+        self.set_depth = 2000
+        self.set_use_gp_core = -1
 
     @staticmethod
-    def grid(x, y, method='IntUni', depth=1000):
-        x_grid = np.mgrid[x.min():x.max():depth * 1j]
-        y_grid = np.mgrid[y.min():y.max():depth * 1j]
+    def grid(x, y, x_max = None, y_max=None, method='IntUni', depth=1000):
+
+        if x_max == None and y_max == None:
+            x_grid = np.mgrid[x.min():x.max():depth * 1j]
+            # y_grid = np.mgrid[y.min():y.max():depth * 1j]
+        else:
+            x_grid = np.mgrid[x.min():x_max:depth * 1j]
+            # y_grid = np.mgrid[y.min():y_max:depth * 1j]
+
 
         # y_grid = interpolate.interp1d(x, y, kind='nearest')(x_grid)
         y_grid = Math.interpolate_arr(x, y, x_grid, method)
@@ -1637,23 +1657,35 @@ class NativeMassLoss(PlotProfiles):
         return x_grid, y_grid
 
     @staticmethod
-    def get_rising_xy(x, y):
+    def get_rising_xy(x, y, z = np.empty(0,)):
 
         x = x[::-1]
         y = y[::-1]
+        if len(z)>0: z = z[::-1]
 
         yn = y[0]
         x_res = []
         y_res = []
+        z_res = []
         diff = np.diff(y)
         for i in range(len(diff)):
-            if diff[i] > 0:
+            if diff[i] > 0 and i > 2: # added i > 2 as vel. prof. might have decresing part right before the SP...
                 break
             else:
                 x_res = np.append(x_res, x[i])
                 y_res = np.append(y_res, y[i])
+                if z.any():
+                    z_res = np.append(z_res, z[i])
 
-        return np.array(x_res[::-1]), np.array(y_res[::-1])
+        if len(x_res) < 2:
+            print('Error! Select Rising Failed x:[{}, {}] y:[{}, {}] -> x[]'.format(x[0], x[-1], y[0], y[-1]))
+            plt.plot(x, y, '.', color='black')
+            plt.title('Rising FAILED')
+            plt.show()
+
+
+        if len(z) > 0: return np.array(x_res[::-1]), np.array(y_res[::-1]), np.array(z_res[::-1])
+        else: return np.array(x_res[::-1]), np.array(y_res[::-1])
 
     def get_inner_boundary(self):
         '''
@@ -1674,54 +1706,222 @@ class NativeMassLoss(PlotProfiles):
 
         return bourders.min()
 
-    def get_int_r_u_core(self, cl, method='Uni', depth=1000, select_rising=True):
-        u_core = cl.get_col('u')
-        ind = Math.find_nearest_index(u_core, self.set_u_min)
+    def get_int_r_u_core(self, cl, wcl=None, method='Uni', depth=1000, select_rising=True):
+
+        u_core_ = cl.get_col('u')
+        ind = Math.find_nearest_index(u_core_, self.set_u_min)
 
         # mdot = cl.get_col('mdot')[-1]
 
         u_core = cl.get_col('u')[ind:]
+        us = cl.get_sonic_u()[ind:]
         r_core = cl.get_col('r')[ind:]
 
+        mdot_str = "%.2f"%cl.get_col('mdot')[-1]
+        m_str = "%.0f"%cl.get_col('xm')[-1]
+        ts_str = "%.2f"%cl.get_col('t')[-1]
 
-        if select_rising: r_core, u_core = self.get_rising_xy(r_core, u_core)
+        if select_rising:
+            r_core, u_core, us = self.get_rising_xy(r_core, u_core, us)
 
         if len(r_core) < 5 or len(u_core) < 5:
-            raise ValueError('No core profiles: len(r_core): {} Mdot:{}'.format(len(r_core), cl.get_col('mdot')[-1]))
+            raise ValueError('No core profiles: len(r_core): {} Mdot:{} \n'
+                             'See: inital u_core:[{}, {}], when u_cut:{}'
+                             .format(len(r_core), "%.2f"%cl.get_col('mdot')[-1], "%.2f"% u_core_[0], "%.2f"%u_core_[-1],
+                                     self.set_u_min))
 
-        if self.set_use_poly_fit_core:
-            r_core, u_core = self.grid(r_core, u_core, method, depth)
 
-        return r_core, u_core
 
-    def get_r_u_wind(self, wndcl, method='', depth=0):
+        # IN CASE of the profile going above the sonic velocity
+        if self.set_find_exact_sonic_point:
+            rp, up = Math.interpolated_intercept(r_core, u_core, us)
+            if len(rp)>1:
+                raise ValueError('Estimation of exact SP in NATIVE MDOT core profiles faile. >1 sol. : [{}, {}]'.format(rp, up))
+            if len(rp)<1:
+                plt.plot(r_core, u_core, '.', color='black')
+                plt.plot(r_core, us, '-', color='gray')
+                plt.xlabel(Labels.lbls('r'))
+                plt.ylabel(Labels.lbls('u'))
+                plt.title('No Intersection Found (SP) Mdot: {} M: {}'.format(mdot_str, m_str))
+                plt.show()
+                raise ValueError('Error. No intersection (SP) found. Mdot: {} M: {}'.format(mdot_str, m_str))
+            rp, up = np.float(rp[0][0]), np.float(up[0][0])
+        else:
+            rp, up = None, None
+
+        if self.set_use_first_wind_for_core_sp:
+            rp, up = wcl.get_col('r')[0], wcl.get_col('u')[0]
+
+
+        if self.set_use_poly_fit_core and self.set_int_method_core != '' and self.set_int_method_core != None:
+
+            if self.frac_of_us_to_int != None and self.frac_of_us_to_int != 1:
+                print('\t__Applying cut to the core profile for interpolation (u/us: {})'
+                      .format(self.frac_of_us_to_int))
+                if self.frac_of_us_to_int < 0 or self.frac_of_us_to_int > 1.:
+                    raise IOError(
+                        'Incorrect value of *frac_of_us_to_int*. Use: [0:1]. Given: {}'.format(self.frac_of_us_to_int))
+
+                u_cut = u_core[-1] * self.frac_of_us_to_int
+                if u_cut < u_core[0]:
+                    u_cut = u_core[0]
+                    print('Warning. Setting u_cut to u_min available in the wind\n'
+                          'Given *frac_of_us_to_int: {}* led to u_cut:{} < {}:u_core[0]\n'
+                                     'Mdot: {} M: {}: Ts: {} u:[{} {}] (before selecting the frac_of_us_to_int) '
+                                     'After: [{} {}]'
+                                     .format(self.frac_of_us_to_int, u_cut, u_core[0], mdot_str, m_str, ts_str,
+                                             "%.2f" % u_core[0], "%.2f" % u_core[-1],
+                                             "%.2f" % u_cut, "%.2f" % u_core_[-1]))
+
+
+                ind = Math.find_nearest_index(u_core, u_cut)
+                u_core_, r_core_ = u_core[ind:], r_core[ind:]
+                if len(u_core_) < 10: raise ValueError('With *frac_of_us_to_int {}*, there <10 points left in the core\n'
+                                                       'Mdot: {} M: {}: Ts: {} u_rising:[{} {}] (before cropping to %) '
+                                                       'After: [{} {}]'
+                                                       .format(self.frac_of_us_to_int, mdot_str, m_str,ts_str,
+                                                               "%.2f"%u_core[0], "%.2f"%u_core[-1],
+                                                               "%.2f" % u_core_[0], "%.2f" % u_core_[-1]))
+
+                r_core, u_core = self.grid(r_core_, u_core_, rp, up, method, depth)
+
+            else:
+                r_core, u_core = self.grid(r_core, u_core, rp, up, method, depth)
+
+        if len(r_core) < 3 or len(u_core) < 3:
+            raise ValueError('Core arrs < 3 elements r:({}) u:({}) [Mdot: {}]'.format(len(r_core), len(u_core), cl.get_col('mdot')[-1]))
+
+        return np.array(r_core), np.array(u_core)
+
+    def get_r_u_wind(self, wndcl, smcls, method='', depth=0):
 
         r_wind, u_wind = wndcl.get_col('r'), wndcl.get_col('u')
         ind = self.get_upper_wind_bound_index(wndcl)
 
         r_wind, u_wind = r_wind[:ind], u_wind[:ind]
 
+        if r_wind[0] == 0. and u_wind[0] == 0 and self.set_do_fix_first_wind_point:
+            r_wind[0] = smcls.get_col('r')[-1]
+            u_wind[0] = smcls.get_col('u')[-1]
+
+
         if self.set_use_poly_fit_core:
-            if method!='' and depth!=0: r_wind, u_wind = self.grid(r_wind, u_wind, method, depth)
+            if method!='' and depth!=0: r_wind, u_wind = self.grid(r_wind, u_wind, None, None, method, depth)
 
         return r_wind, u_wind
 
-    def get_mdot(self, mdot_arr, delta_grad):
+    def get_mdot(self, mdot_arr, core_grads, wind_grads):
+
+        def get_monotonically_rising(x, y):
+
+            res_x = []
+            res_y = []
+
+            res_y = np.append(res_y, y[0])
+            res_x = np.append(res_x, x[0])
+
+            for i in range(1, len(y)-1):
+                if y[i] > y[i-1]:
+                    res_x = np.append(res_x, x[i])
+                    res_y = np.append(res_y, y[i])
+                else:
+                    break
+
+            if len(res_x) > 1: return res_x, res_y
+            else: raise ValueError('No rising part found')
+
+        delta_grad = np.subtract(core_grads, wind_grads)
+
+        if self.set_fit_poly_to_grads!=None and self.set_fit_poly_to_grads!='':
+
+            mdot_arr_s, delta_grad_s = Math.x_y_z_sort(mdot_arr, delta_grad)
+
+            mdot_arr_c, delta_grad_c = get_monotonically_rising(mdot_arr_s[::-1], delta_grad_s[::-1])
+
+            mdot_arr, delta_grad = Math.fit_polynomial(mdot_arr_c, delta_grad_c, self.set_fit_poly_to_grads, 500)
+
+            if self.set_do_plot_native_tech:
+                self.plot_additional('mdot', 'delta_grad_u', mdot_arr, delta_grad, '--', 'gray')
+
 
         mdot, delta = Math.interpolated_intercept(mdot_arr, np.zeros(len(delta_grad)), delta_grad)
 
         if len(mdot) > 2:
-            plt.plot(mdot_arr, delta_grad, '.', color='black')
-            plt.plot( mdot, delta, 'X', color='red')
-            plt.axhline(y=0, ls='dashed', color='gray')
-            plt.show()
-            print('ERROR! More than two solutions found (while 1 is actually needed :( )')
+        #     plt.plot(mdot_arr, delta_grad, '.', color='black')
+        #     plt.plot( mdot, delta, 'X', color='red')
+        #     plt.axhline(y=0, ls='dashed', color='gray')
+        #     plt.show()
+            print('ERROR! More than two solutions found. Selsecting the first solution.')
             return mdot[-1]
 
         if len(mdot) < 1:
             return np.nan
 
         return mdot[-1]
+
+    def get_mdot2(self, mdot_arr, core_grads, wind_grads):
+        '''
+        Returns mdot[-1] and grad[-1], if self.set_fit_poly_to_grads == None. Otherwise, mdot and 0.
+        :param mdot_arr:
+        :param core_grads:
+        :param wind_grads:
+        :return:
+        '''
+
+        def get_monotonically_rising(x, y, z):
+
+            res_x = []
+            res_y = []
+            res_z = []
+
+            res_y = np.append(res_y, y[0])
+            res_x = np.append(res_x, x[0])
+            res_z = np.append(res_z, z[0])
+
+            for i in range(1, len(y)-1):
+                if y[i] > y[i-1]:
+                    res_x = np.append(res_x, x[i])
+                    res_y = np.append(res_y, y[i])
+                    res_z = np.append(res_z, z[i])
+                else:
+                    break
+
+            if len(res_x) > 1: return res_x, res_y, res_z
+            else: raise ValueError('No rising part found')
+
+        # delta_grad = np.subtract(core_grads, wind_grads)
+
+        mdot_arr_s, core_grads_s, wind_grads_s = Math.x_y_z_sort(mdot_arr, core_grads, wind_grads)
+
+        if self.set_fit_poly_to_grads!=None and self.set_fit_poly_to_grads!='':
+            # Warning. This method may and will lead to large error, as the gradients always have a lot of
+            # numerical noise
+            mdot_arr_c, core_grads_c, wind_grads_c \
+                = get_monotonically_rising(mdot_arr_s[::-1], core_grads_s[::-1], wind_grads_s[::-1])
+
+            delta_grad_c = np.subtract(core_grads, wind_grads)
+
+            mdot_arr, delta_grad = Math.fit_polynomial(mdot_arr_c, delta_grad_c, self.set_fit_poly_to_grads, 500)
+
+            if self.set_do_plot_native_tech:
+                self.plot_additional('mdot', 'delta_grad_u', mdot_arr, delta_grad, '--', 'gray')
+
+            mdot, grad = Math.interpolated_intercept(mdot_arr, np.zeros(len(delta_grad)), delta_grad)
+        else:
+            mdot, grad = Math.interpolated_intercept(mdot_arr_s, core_grads_s, wind_grads_s)
+
+        if len(mdot) > 2:
+        #     plt.plot(mdot_arr, delta_grad, '.', color='black')
+        #     plt.plot( mdot, delta, 'X', color='red')
+        #     plt.axhline(y=0, ls='dashed', color='gray')
+        #     plt.show()
+            print('ERROR! More than two solutions found. Selsecting the first solution.')
+            return mdot[-1], grad[-1]
+
+        if len(mdot) < 1:
+            return np.nan, np.nan
+
+        return mdot[-1], grad[-1]
 
     def main_cycle(self):
 
@@ -1739,28 +1939,42 @@ class NativeMassLoss(PlotProfiles):
             self.plot_wind_all('mdot', '.', 'red')
         # self.plot_wind_all('mdot', '-', 'gray')
 
+
+        out_grads = np.zeros(3)
+
+
         for i in range(len(self.sm_cls)):
 
             mdot = self.sm_cls[i].get_col('mdot')[-1]
 
 
-            r_core, u_core = self.get_int_r_u_core(self.sm_cls[i], 'Uni', 1000, True) # select rising part = True
-            if self.set_do_plot_native_tech: self.plot_additional('r', 'u', r_core, u_core, '-', 'gray')
-            grad_core = np.gradient(r_core, u_core)
+            r_core, u_core = self.get_int_r_u_core(self.sm_cls[i],self.wnd_cls[i], self.set_int_method_core, self.set_depth, True) # select rising part = True
+            if self.set_do_plot_native_tech:
+                self.plot_additional('r', 'u', r_core, u_core, '-', 'gray')
+                self.plot_additional('r', 'u', r_core[-1], u_core[-1], 'X', 'blue')
+            # grad_core = np.gradient(r_core*Constants.solar_r, u_core)
+            grad_core = np.gradient(u_core, r_core * Constants.solar_r / 10**5)
 
 
-            r_wind, u_wind = self.get_r_u_wind(self.wnd_cls[i], 'Uni', 1000) # '' and 0 if no interpolation is needed.
-            if self.set_do_plot_native_tech: self.plot_additional('r', 'u', r_wind, u_wind, '-', 'gray')
-            grad_wind = np.gradient(r_wind, u_wind)
+            r_wind, u_wind = self.get_r_u_wind(self.wnd_cls[i], self.sm_cls[i], self.set_int_method_wind, self.set_depth) # '' and 0 if no interpolation is needed.
+            if self.set_do_plot_native_tech:
+                self.plot_additional('r', 'u', r_wind, u_wind, '-', 'gray')
+                self.plot_additional('r', 'u', r_wind[0], u_wind[0], 'X', 'red')
+            # grad_wind = np.gradient(r_wind*Constants.solar_r, u_wind)
+            grad_wind = np.gradient(u_wind, r_wind * Constants.solar_r / 10**5)
 
-            arr = np.vstack((arr, [mdot, (grad_core[-1]-grad_wind[0]) ]))
+            # --- --- --- out gradients --- -- --- ----
+            out_grads = np.vstack((out_grads, [ mdot, grad_core[self.set_use_gp_core] , grad_wind[0] ]))
+
+            # arr = np.vstack((arr, [mdot, (grad_core[self.set_use_gp_core]-grad_wind[0]) ]))
 
         if self.set_do_plot_native_tech:
-            self.plot_additional(None, 'delta_grad_u', arr[1:,0], arr[1:,1],'.','black')
-            self.plot_additional('mdot', 'delta_grad_u', arr[1:, 0], arr[1:, 1], '-', 'black')
+            self.plot_additional('mdot', 'delta_grad_u', out_grads[1:,0],
+                                 np.subtract(out_grads[1:,1], out_grads[1:,2]),'.','black')
+            # self.plot_additional('mdot', 'delta_grad_u', arr[1:, 0], arr[1:, 1], '-', 'black')
 
 
-        mdot_nat = self.get_mdot(arr[1:, 0], arr[1:, 1])
+        mdot_nat, grad_nat = self.get_mdot2(out_grads[1:, 0], out_grads[1:, 1], out_grads[1:, 2])
 
         if self.set_do_plot_native_tech:
             self.plot_vertial('mdot', 'delta_grad_u', mdot_nat, 'dashed', 'black')
@@ -1768,67 +1982,241 @@ class NativeMassLoss(PlotProfiles):
             plt.show()
 
         self.mdot_naitive = np.float(mdot_nat)
-        return np.float(mdot_nat)
+        self.grad_native = np.float(grad_nat)
+
+        out_grads = np.delete(out_grads, 0, 0)
+
+        # out_grads[0, 0] = np.float(mdot_nat)
+        # out_grads[0, 1] = np.float(grad_nat)
+        # out_grads[0, 2] = np.float(grad_nat)
+
+        out_grads[:, 1] = 10**5 * out_grads[:, 1]
+        out_grads[:, 2] = 10**5 * out_grads[:, 2]
+
+        return out_grads
 
 class Wind:
 
-    def __init__(self, wnd_cls):
+    def __init__(self, wnd_cls, sm_cls = list()):
 
         # self.swnd = sm_cls      # needed if tau < 2/3, if the wind is thin.
-        self.swnd = wnd_cls
+        self.swnds = wnd_cls
         self.set_depth = 1000
         self.v_n_arr = []
+        self.smdls = sm_cls
 
         self.set_interpol_method_ph_values = 'IntUni'
-
+        self.set_u_core_min = 0.5
+        self.cut_wind_beyound_ph = True
         # output
 
         self.out_names = []
 
+    # def get_coord_of_tau_ph(self, cl, v_n, tau_ph=2/3, method='IntUni'):
+    #
+    #     tau_arr = cl.get_col('tau')[::-1]
+    #     arr = cl.get_col(v_n)[::-1]
+    #
+    #     if tau_arr[-1] == 0.0:
+    #         tau_arr = tau_arr[:-1]
+    #         arr = arr[:-1]
+    #
+    #     if method == 'IntUni':
+    #
+    #         value = Math.interpolate_arr(tau_arr, arr, np.array([tau_ph]), self.set_interpol_method_ph_values)
+    #
+    #         if value == None or value == np.inf or value == -np.inf or value > arr.max() or value < arr.min():
+    #             print('Error wrong value of {} at tau={}, where tau[{}, {}]'.format(v_n, tau_ph, tau_arr.min(), tau_arr.max()))
+    #             r = cl.get_col('r')
+    #             plt.plot(arr, tau_arr, '.', color='black')
+    #             plt.axvline(x=value, ls='solid', color='blue')
+    #             plt.axvline(x=arr.max(), ls='dashed', color='red')
+    #             plt.axvline(x=arr.min(), ls='dashed', color='red')
+    #             plt.axhline(y=tau_ph, ls='solid', color='blue')
+    #             plt.xlabel(v_n)
+    #             plt.ylabel('tau')
+    #
+    #             mdot = cl.get_col('mdot')[-3]
+    #             plt.title('ERROR Out of TAU at Mdot: {}'.format(mdot))
+    #             plt.show()
+    #
+    #             # plt.plot(r, arr, '.', color='black')
+    #             # plt.axvline(x=value, ls='solid', color='blue')
+    #             # plt.axvline(x=arr.max(), ls='dashed', color='red')
+    #             # plt.axvline(x=arr.min(), ls='dashed', color='red')
+    #             # plt.xlabel('r')
+    #             # plt.ylabel(v_n)
+    #             # plt.show()
+    #             return np.nan
+    #             raise ValueError('Error in interpolation Photospheric Value for {} value is {}'.format(v_n, value))
+    #         else:
+    #             return value
+
+    def get_coord_of_tau_ph2(self, tau_wind_0, wcl, smcl, v_n):
+
+        value = None
+
+        tau_ph = np.float(2./3.)
+        mdot = smcl.get_col('mdot')[-1]
+        mass = "%.1f"%smcl.get_col('xm')[-1]
+        mdot_w = wcl.get_col('mdot')[10]
+
+        min_core_ind = Math.find_nearest_index(smcl.get_col('u'), self.set_u_core_min)
+        core_or_wind = 'wind'
 
 
-    def get_coord_of_tau_ph(self, cl, v_n, tau_ph=2/3, method='IntUni'):
 
-        tau_arr = cl.get_col('tau')[::-1]
-        arr = cl.get_col(v_n)[::-1]
+        # getting the tau[] and y_arr[] switching between wind and core, if wind tau[0] < 2/3
 
-        if tau_arr[-1] == 0.0:
-            tau_arr = tau_arr[:-1]
-            arr = arr[:-1]
+        tau_arr_wind = wcl.get_col('tau')
 
-        if method == 'IntUni':
+        if tau_wind_0 < tau_ph:
+            core_or_wind = 'core'
+            print('\t__Warning. Optically thin wind at Mdot: {}'.format("%.2f"%mdot))
+            if np.round(smcl.get_col('tau')[-1], 2)==np.round(tau_ph, 2):
 
-            value = Math.interpolate_arr(tau_arr, arr, np.array([tau_ph]), self.set_interpol_method_ph_values)
+                full_tau_arr = np.array(smcl.get_col('tau'))[min_core_ind:]
+                full_y_arr = np.array(smcl.get_col(v_n))[min_core_ind:]
 
-            if value == None or value == np.inf or value == -np.inf or value > arr.max() or value < arr.min():
-                print('Error wrong value of {} at tau={}, where tau[{}, {}]'.format(v_n, tau_ph, tau_arr.min(), tau_arr.max()))
-                r = cl.get_col('r')
-                plt.plot(arr, tau_arr, '.', color='black')
-                plt.axvline(x=value, ls='solid', color='blue')
-                plt.axvline(x=arr.max(), ls='dashed', color='red')
-                plt.axvline(x=arr.min(), ls='dashed', color='red')
-                plt.axhline(y=tau_ph, ls='solid', color='blue')
-                plt.xlabel(v_n)
-                plt.ylabel('tau')
+                if len(full_tau_arr) < 3:
+                    raise ValueError('Error. No core arrs left. Decrease the u_core_min. \n'
+                                     'Current u_min: {}, Ind:{} out of {} length, Mdot: {} M: {}'
+                                     .format(self.set_u_core_min, min_core_ind, len(smcl.get_col('u')), "%.2f" % mdot, mass))
 
-                mdot = cl.get_col('mdot')[-3]
-                plt.title('ERROR Out of TAU at Mdot: {}'.format(mdot))
-                plt.show()
-
-                # plt.plot(r, arr, '.', color='black')
-                # plt.axvline(x=value, ls='solid', color='blue')
-                # plt.axvline(x=arr.max(), ls='dashed', color='red')
-                # plt.axvline(x=arr.min(), ls='dashed', color='red')
-                # plt.xlabel('r')
-                # plt.ylabel(v_n)
-                # plt.show()
-                return np.nan
-                raise ValueError('Error in interpolation Photospheric Value for {} value is {}'.format(v_n, value))
             else:
-                return value
+                raise ValueError('Error. Last value of Tau in SM.DATA is NOT 2/3: Tau[-1]:{}, Mdot:{} M:{}'
+                                 .format(np.round(tau_arr_wind[-1], 2), "%.2f"%mdot, mass))
+        else:
+            core_or_wind = 'wind'
 
-    def main_wind_cycle(self):
+            if tau_arr_wind[0] == 0 and np.array(tau_arr_wind[1:]).min() > tau_ph:
+                raise ValueError('Tau[0] = 0. and Tau.min(){} > 2/3 Mdot: {} M: {}\n'
+                                 'Probably model is not relaxed / or something wrong with the wind'
+                                 .format(np.array(tau_arr_wind[1:]).min(), core_or_wind, "%.2f" % mdot, mass))
+
+            if self.cut_wind_beyound_ph:
+                max_ind = Math.find_nearest_index(tau_arr_wind, tau_ph)+1
+            else:
+                max_ind = len(tau_arr_wind)
+
+            full_tau_arr = wcl.get_col('tau')[:max_ind]
+            full_y_arr = wcl.get_col(v_n)[:max_ind]
+            # if len(full_tau_arr) < 4:
+                # raise ValueError('Error. No core arrs left. Decrease the u_core_min. \n'
+                                 # 'Current , Ind:{} out of {} length, Mdot: {}'
+                                 # .format(max_ind, len(smcl.get_col('u')), "%.2f" % mdot))
+
+        if len(full_tau_arr) == 0:
+            print('Error No Photsphere found Mdot: tau:[{}, {}]({}) {} M: {}'
+                             .format(wcl.get_col('tau')[0], wcl.get_col('tau')[-1], len(wcl.get_col('tau')),
+                                     core_or_wind, "%.2f" % mdot, mass))
+
+        # sometimes when tau[0] < 2/3 there is inf in the profile, this tries to get rid of them in the array
+        if np.inf in full_y_arr:
+            full_tau_arr = np.delete(full_tau_arr, np.where(full_y_arr==np.inf))
+            full_y_arr = np.delete(full_y_arr, np.where(full_y_arr==np.inf))
+        if -np.inf in full_y_arr:
+            full_tau_arr = np.delete(full_tau_arr, np.where(full_y_arr==-np.inf))
+            full_y_arr = np.delete(full_y_arr, np.where(full_y_arr==-np.inf))
+
+        full_tau_arr_sort, full_y_arr_sort = Math.x_y_z_sort(np.array(full_tau_arr, dtype=np.float),
+                                                   np.array(full_y_arr, dtype=np.float))
+
+        if np.round(full_tau_arr_sort.min(),2) > np.round((2/3), 1):
+            raise ValueError('Error! The Tau in the wind [{}, {}] \n No Photosphere found. Mdot: {} M:{}'
+                             .format("%.2f" % full_tau_arr_sort.min(), "%.2f"% full_tau_arr_sort.max(), "%.2f"%mdot, mass))
+
+        if not all(np.diff(full_tau_arr_sort) > 0.0):
+            print('Mdot:{} \n ARRAY diffs:{}'.format("%.2f"%mdot, np.diff(full_tau_arr_sort)))
+            raise ValueError('Sorting Failed')
+
+
+        if len(full_tau_arr_sort) >= 4:
+            value = Math.interpolate_arr(full_tau_arr_sort, full_y_arr_sort, np.array([tau_ph]),
+                                         self.set_interpol_method_ph_values)
+
+        elif len(full_tau_arr_sort) < 4 and len(full_tau_arr_sort) > 1:
+            print('\t__Warning. Less than 4 points in the wind. Using the 1dLinear intepolation.')
+            value = Math.interpolate_arr(full_tau_arr_sort, full_y_arr_sort, np.array([tau_ph]),
+                                         '1dLinear')
+
+        elif len(full_tau_arr_sort) == 1:
+            print('\t__Warning. ONLY 1 point in the wind. Using this point, as a photosphere.')
+            value = np.float(full_y_arr_sort)
+
+        elif len(full_tau_arr_sort) < 1:
+            raise ValueError('Error. No core arrs left. core/wind: {} Mdot: {} M:{}'
+                             .format(core_or_wind, "%.2f" % mdot, mass))
+
+        # if v_n == 't':
+        #     print('stop')
+
+        if value == None: raise ValueError('Photospheric value is not found. core/wind: {} tau_0: {} Mdot: {} M:{}'
+                             .format(core_or_wind, "%.2f" % tau_wind_0, "%.2f" % mdot, mass))
+        else: return value
+
+
+        # tau_arr = cl.get_col('tau')[::-1]
+        # arr = cl.get_col(v_n)[::-1]
+        #
+        # if tau_arr[-1] == 0.0:
+        #     tau_arr = tau_arr[:-1]
+        #     arr = arr[:-1]
+        #
+        # if method == 'IntUni':
+        #
+        #     value = Math.interpolate_arr(tau_arr, arr, np.array([tau_ph]), self.set_interpol_method_ph_values)
+        #
+        #     if value == None or value == np.inf or value == -np.inf or value > arr.max() or value < arr.min():
+        #         print('Error wrong value of {} at tau={}, where tau[{}, {}]'.format(v_n, tau_ph, tau_arr.min(), tau_arr.max()))
+        #         r = cl.get_col('r')
+        #         plt.plot(arr, tau_arr, '.', color='black')
+        #         plt.axvline(x=value, ls='solid', color='blue')
+        #         plt.axvline(x=arr.max(), ls='dashed', color='red')
+        #         plt.axvline(x=arr.min(), ls='dashed', color='red')
+        #         plt.axhline(y=tau_ph, ls='solid', color='blue')
+        #         plt.xlabel(v_n)
+        #         plt.ylabel('tau')
+        #
+        #         mdot = cl.get_col('mdot')[-3]
+        #         plt.title('ERROR Out of TAU at Mdot: {}'.format(mdot))
+        #         plt.show()
+        #
+        #         # plt.plot(r, arr, '.', color='black')
+        #         # plt.axvline(x=value, ls='solid', color='blue')
+        #         # plt.axvline(x=arr.max(), ls='dashed', color='red')
+        #         # plt.axvline(x=arr.min(), ls='dashed', color='red')
+        #         # plt.xlabel('r')
+        #         # plt.ylabel(v_n)
+        #         # plt.show()
+        #         return np.nan
+        #         raise ValueError('Error in interpolation Photospheric Value for {} value is {}'.format(v_n, value))
+        #     else:
+        #         return value
+
+    def get_wind_sp_tau(self, wnd_cl):
+
+        tau = wnd_cl.get_col('tau')  # Checking Tau #--------------------------------------------------------
+        mdot = wnd_cl.get_value('mdot', 10)
+        tau_val = tau[0]
+
+        if tau[0] == 0 and tau[1] > (2 / 3): tau_val = tau[1]
+        if tau[0] < (2 / 3) and tau[1] < (2 / 3):
+            tau_val = tau[0]
+            tau_ph = tau[0]
+            print('\t__Warning! Tau[0] < 2/3 ({}) For mdot: {}'.format(tau_val, mdot))
+
+            # raise ValueError('Tau[0, and 1] < 2/3 [{} {}] (mdot:{})'.format(tau[0], tau[1], mdot))
+        if tau[0] > 10000: raise ValueError('Suspicious value of tau[0] {} Mdot: {} M: '.format(tau[0],
+                                                                                            "%.2f"%mdot))
+
+
+        return tau_val
+
+    def main_wind_cycle2(self):
         '''
+        This version of the FUnction relies on the SM.DATA file as well
+
         Returns a 2d array with mdot a first row, and rest - rows for v_n,
         (if append0 or append1 != False: it will append before photosph. value, also the 0 or/and 1 value.
         '''
@@ -1836,34 +2224,26 @@ class Wind:
         # self.v_n_arr = self.v_n_arr
         out_arr = np.zeros(2 + len(self.v_n_arr))
 
+        tau_ph = 2. / 3.
 
+        for i in range(len(self.swnds)):
+            wind_row = []
 
-        for cl in self.swnd:
-            arr = []
-            tau_ph = 2/3 # Main definition. (May changed because of otpically thin winds)
-
-            mdot = cl.get_value('mdot', 10)     # Checking Mdot # ------------------------------------------------------
+            mdot = self.smdls[i].get_col('mdot')[-1]
             if mdot == 0 or mdot == np.inf or mdot == -np.inf or mdot < -10**10 or mdot > 0:
                 raise ValueError('Unphysical value of mdot: {}'.format(mdot))
-            arr = np.append(arr, mdot)
 
+            wind_row = np.append(wind_row, mdot)
 
-            tau = cl.get_col('tau')             # Checking Tau #--------------------------------------------------------
-            tau_val = tau[0]
+            # getting the wind tau, But if this tau is 0. (<2/3) use the last tau from sm.data file
+            wind_sp_tau = self.get_wind_sp_tau(self.swnds[i])
+            if wind_sp_tau == 0.:
+                wind_row = np.append(wind_row, self.smdls[i].get_col('tau')[-1])
+            else:
+                wind_row = np.append(wind_row, wind_sp_tau)
 
-            if tau[0]==0 and tau[1]>(2/3): tau_val = tau[1]
-            if tau[0] < (2/3) and tau[1] < (2/3):
-                tau_val = tau[0]
-                tau_ph = tau[0]
-                print('\t__Warning! Tau[0] < 2/3 ({}) For mdot: {}'.format(tau_val, mdot))
-
-                # raise ValueError('Tau[0, and 1] < 2/3 [{} {}] (mdot:{})'.format(tau[0], tau[1], mdot))
-            if tau[0] > 10000: raise ValueError('Suspicious value of tau[0] {}'.format(tau[0]))
-
-            arr = np.append(arr, tau_val)   # Optical depth at the sonic point
-
-
-            for v_n_cond in self.v_n_arr:   # appending all photosphereic (-ph) or index given (-0, -1, ... -n) values
+            # appending all photosphereic (-ph) or index given (-0, -1, ... -n) values
+            for v_n_cond in self.v_n_arr:
                 v_n = v_n_cond.split('-')[0]
                 cond= v_n_cond.split('-')[-1]
 
@@ -1874,24 +2254,33 @@ class Wind:
 
 
                 if cond == 'ph':
-                    value = self.get_coord_of_tau_ph(cl, v_n, tau_ph, 'IntUni')
+                    value = self.get_coord_of_tau_ph2(wind_sp_tau, self.swnds[i], self.smdls[i], v_n)
                 else:
-                    value = cl.get_value(v_n, cond)
+                    value = self.swnds[i].get_value(v_n, cond)
 
                 if value == None: raise ValueError('Wind parameter {} does not obtained (None)'.format(v_n_cond))
 
-                if value == -np.inf or value == np.inf:
-                    plt.plot(cl.get_col('r'), cl.get_col('tau'), '.', color='red')
+                # check of the value
+                if value == -np.inf or value == np.inf or value == np.nan:
+                    plt.plot(self.swnds[i].get_col('tau'), self.swnds[i].get_col(v_n), 'x', color='red')
+                    plt.plot(self.swnds[i].get_col('tau'), self.swnds[i].get_col(v_n), '-', color='red')
+                    plt.ylabel(Labels.lbls(v_n))
+                    plt.xlabel(Labels.lbls('tau'))
+                    plt.axvline(x=tau_ph, color='black')
+                    plt.title('ERROR wrong photospheric value: {} Mdot: {}'.format(value, "%.2f"%mdot))
                     # plt.plot(cl.get_col('r'), cl.get_col(v_n), '.', color='black')
 
                     plt.show()
                     raise ValueError('unphysical value for {}'.format(v_n_cond))
 
+                # if v_n == 't':
+                #     print('T_ph[{}]: {}'.format("%.2f"%mdot, "%.2f"% value))
 
-                arr = np.append(arr, value)
+
+                wind_row = np.append(wind_row, value)
 
 
-            out_arr = np.vstack((out_arr, arr))
+            out_arr = np.vstack((out_arr, wind_row))
 
         out_arr = np.delete(out_arr, 0, 0)
 
@@ -1913,6 +2302,78 @@ class Wind:
 
         return head, out_arr
 
+    # def main_wind_cycle(self):
+    #     '''
+    #     Returns a 2d array with mdot a first row, and rest - rows for v_n,
+    #     (if append0 or append1 != False: it will append before photosph. value, also the 0 or/and 1 value.
+    #     '''
+    #
+    #     # self.v_n_arr = self.v_n_arr
+    #     out_arr = np.zeros(2 + len(self.v_n_arr))
+    #
+    #     for i in range(len(self.swnds)):
+    #         arr = []
+    #         tau_ph = 2/3 # Main definition. (May changed because of otpically thin winds)
+    #
+    #         mdot = self.swnds[i].get_value('mdot', 10)     # Checking Mdot # ------------------------------------------------------
+    #         if mdot == 0 or mdot == np.inf or mdot == -np.inf or mdot < -10**10 or mdot > 0:
+    #             raise ValueError('Unphysical value of mdot: {}'.format(mdot))
+    #         arr = np.append(arr, mdot)
+    #
+    #         tau_val = self.get_tau(self.swnds[i], self.smdls[i])
+    #         arr = np.append(arr, tau_val)   # Optical depth at the sonic point
+    #
+    #
+    #         for v_n_cond in self.v_n_arr:   # appending all photosphereic (-ph) or index given (-0, -1, ... -n) values
+    #             v_n = v_n_cond.split('-')[0]
+    #             cond= v_n_cond.split('-')[-1]
+    #
+    #             if v_n == 'mdot':
+    #                 raise NameError('Mdot is already appended')
+    #             if v_n == 'tau':
+    #                 raise NameError('Tau-sp is appended by default as a first value of array')
+    #
+    #
+    #             if cond == 'ph':
+    #                 value = self.get_coord_of_tau_ph(self.swnds[i], v_n, tau_ph, 'IntUni')
+    #             else:
+    #                 value = self.swnds[i].get_value(v_n, cond)
+    #
+    #             if value == None: raise ValueError('Wind parameter {} does not obtained (None)'.format(v_n_cond))
+    #
+    #             if value == -np.inf or value == np.inf:
+    #                 plt.plot(self.swnds[i].get_col('r'), self.swnds[i].get_col('tau'), '.', color='red')
+    #                 # plt.plot(cl.get_col('r'), cl.get_col(v_n), '.', color='black')
+    #
+    #                 plt.show()
+    #                 raise ValueError('unphysical value for {}'.format(v_n_cond))
+    #
+    #
+    #             arr = np.append(arr, value)
+    #
+    #
+    #         out_arr = np.vstack((out_arr, arr))
+    #
+    #     out_arr = np.delete(out_arr, 0, 0)
+    #
+    #     # --- HEAD of the table (array)
+    #
+    #     head = []
+    #     head.append('mdot-1')
+    #     head.append('tau-sp')
+    #
+    #     for v_n in self.v_n_arr:
+    #         head.append(v_n)
+    #
+    #     if len(head) != len(out_arr[0,:]):raise ValueError('out_names{} != out_array{}'.format(len(head), len(out_arr[0,:])))
+    #
+    #     self.out_names = head
+    #     self.out_arr = out_arr
+    #
+    #     # if len(head) != len(out_arr): raise ValueError('Arrays not equal: {} != {}'.format(len(head), len(out_arr)))
+    #
+    #     return head, out_arr
+
 class SavingOutput:
     def __init__(self):
 
@@ -1921,6 +2382,8 @@ class SavingOutput:
         self.set_dirs_not_to_be_included = []
         self.set_sp_fold_head = None
         self.set_extension='.data'
+
+        self.full_out_name = None
 
         self.set_v_n_delimeter = '    '
 
@@ -1931,14 +2394,17 @@ class SavingOutput:
         SP3_ga_z0008_10sm_y10
         using the initial folders, where the sm.data files are located
         '''
-        out_name = self.set_sp_fold_head
-        for i in range(len(self.set_input_dirs)):
-            if self.set_input_dirs[i] not in self.set_dirs_not_to_be_included and self.set_input_dirs[i] != '..':
-                out_name = out_name + self.set_input_dirs[i]
-                if i < len(self.set_input_dirs) - 1:
-                    out_name = out_name + '_'
-        out_name = out_name + self.set_extension
-        return out_name
+        if self.full_out_name == None:
+            out_name = self.set_sp_fold_head
+            for i in range(len(self.set_input_dirs)):
+                if self.set_input_dirs[i] not in self.set_dirs_not_to_be_included and self.set_input_dirs[i] != '..':
+                    out_name = out_name + self.set_input_dirs[i]
+                    if i < len(self.set_input_dirs) - 1:
+                        out_name = out_name + '_'
+            out_name = out_name + self.set_extension
+            return out_name
+        else:
+            return self.full_out_name
 
     def save_out_arr(self, out_names, out_arr):
 
@@ -1952,7 +2418,11 @@ class SavingOutput:
             tmp = tmp + head[i] + self.set_v_n_delimeter
         head__ = tmp
 
-        np.savetxt(self.set_output_dir + fname, table, '%.5f', '  ', '\n', head__, '')
+
+        if self.full_out_name == None:
+            np.savetxt(self.set_output_dir + fname, table, '%.5f', '  ', '\n', head__, '')
+        else:
+            np.savetxt(self.full_out_name, table, '%.5f', '  ', '\n', head__, '')
 
         print(' \n********* TABLE: {} IS SAVED IN {} *********\n'.format(fname, self.set_sp_fold_head))
 
@@ -2207,11 +2677,78 @@ class CommonMethods:
 
         return CommonMethods.cr_append_critical_row(sp_names, sp_array, cr_names, cr_row, 0.)
 
+    @staticmethod
+    def check_winds(wndcls):
+
+        mdot_tau=np.zeros(4)
+        rm_mdot = []
+
+        for wndcl in wndcls:
+            tau = tau1 = wndcl.get_col('tau')
+            if len(tau)>1:
+
+                mdot = wndcl.get_col('mdot')[-1]
+                tau0 = tau[0]
+                tau1 = tau[1]
+                taun = tau[-1]
+
+                mdot_tau = np.vstack((mdot_tau, [mdot, tau0, tau1, taun]))
+
+                if taun > 0.1:
+                    rm_mdot = np.append(rm_mdot, mdot)
+                    print('Mdot: {} tau[-1]: {}'.format("%.2f"%mdot,"%.2f"% taun))
+
+        print('Result of the wind check: \n {}'.format(mdot_tau))
+        for i in range(len(rm_mdot)):
+            print('rm {}* '.format("%.2f"%((-1)*rm_mdot[i])))
+        print('== CHECK FINISHED ==')
+
+    @staticmethod
+    def rm_cls_large_tau0(smcls, wndcls):
+
+        mdot_tau = np.zeros(4)
+        rm_mdot = []
+
+        smcls_ = []
+        wndcls_ = []
+
+        for i in range(len(wndcls)):
+            tau = wndcls[i].get_col('tau')
+            if len(tau) > 1:
+
+                mdot = wndcls[i].get_col('mdot')[-1]
+                m = smcls[i].get_col('xm')[-1]
+                tau0 = tau[0]
+                tau1 = tau[1]
+                taun = tau[-1]
+
+                mdot_tau = np.vstack((mdot_tau, [mdot, tau0, tau1, taun]))
+
+                if taun > 0.1:
+                    rm_mdot = np.append(rm_mdot, mdot)
+                    # print('Mdot: {} tau[-1]: {}'.format("%.2f" % mdot, "%.2f" % taun))
+                    print('\t M: {} mdot: {} | SM and wnd files are excluded.'.format("%.1f"%m, "%.2f"%mdot))
+                else:
+                    smcls_.append(smcls[i])
+                    wndcls_.append(wndcls[i])
+
+            else:
+                smcls_.append(smcls[i])
+                wndcls_.append(wndcls[i])
+
+        print('Result of the wind check: \n {}'.format(mdot_tau))
+        for i in range(len(rm_mdot)):
+            print('rm {}* '.format("%.2f" % ((-1) * rm_mdot[i])))
+        print('== CHECK FINISHED ==')
+
+        if len(smcls_) < 1: raise ValueError('No files left after removing the ones with tau[0] > 1')
+
+        return smcls_, wndcls_
 
 
 '''======================================================MAIN========================================================'''
 
-def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y, new_fold='/'):
+def sp_wind_main(smfiles, wndfiles, input_dir, sp_dir_fname):
 
     mdl = []
     wnd = []
@@ -2226,19 +2763,20 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y, new_fold='/'):
         wnd.append(Read_Wind_file.from_wind_dat_file(file))
     swnd = CommonMethods.sort_smfiles(wnd, 'mdot', -1)
 
+    smdl, swnd = CommonMethods.rm_cls_large_tau0(smdl, swnd)
 
     # --------------------------------------------------| SETTINGS for sm.data |----------------------------------------
     sp = SonicPointAlgorithm(smdl)
-    sp.v_n_sonic =     ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp'] # sp - means 'at sonic point'
+    sp.v_n_sonic =     ['kappa-sp', 'L/Ledd-sp', 'rho-sp', 'mfp-sp'] # sp - means 'at sonic point'
     sp.v_n_core_surf = ['l-1', 'xm-1', 'He4-0', 'He4-1', 'mdot-1']  # 1 means surface, 0 means core
     sp.v_n_env =       ['t-env', 'u-env', 'r-env', 'm-env']         # env - menas envelope coordinate
 
     sp.ts_lim = 3.18 # set 5.18 if only iron bump needed
 
-    sp.set_check_for_mult_sp=True
-    sp.set_compute_envelope=True
-    sp.set_delited_outer_points=False
-    sp.set_if_not_found_use_last=True
+    sp.set_check_for_mult_sp    = True
+    sp.set_compute_envelope     = True
+    sp.set_delited_outer_points = False
+    sp.set_if_not_found_use_last= True
 
     sp.main_sonic_cycle()
 
@@ -2246,11 +2784,13 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y, new_fold='/'):
     sp_out_arr = sp.out_arr
 
     # --------------------------------------------------| SETTINGS for .wind |------------------------------------------
-    wd = Wind(swnd)
+    wd = Wind(swnd, smdl) # smdl optionary
 
     wd.v_n_arr = ['r-ph', 't-ph'] # in addition to tau # ph - means photosphere (tau=2/3)
+    wd.set_u_core_min = 0.5
+    wd.cut_wind_beyound_ph = True
 
-    wd.main_wind_cycle()
+    wd.main_wind_cycle2()
 
     wd_out_names = wd.out_names
     wd_out_arr = wd.out_arr
@@ -2262,24 +2802,45 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y, new_fold='/'):
     n_mdot = NativeMassLoss(smdl, swnd)
 
     n_mdot.set_v_ns = [['mdot', 'delta_grad_u'], ['r', 'u']]  # [['mdot', 'delta_grad_u']]#
-    n_mdot.upper_wind_bound = 'u=300'
-    n_mdot.set_use_poly_fit_core = True
-    n_mdot.set_use_poly_fit_wind = True
 
-    n_mdot.set_do_plot_native_tech=True
+    n_mdot.upper_wind_bound    = 'u=300'
+    n_mdot.set_int_method_core = ''
+    n_mdot.set_int_method_wind = ''
+    n_mdot.frac_of_us_to_int   =  0.4 # cut core u/us | 1.0 to set off
+    n_mdot.set_use_gp_core     = -1   # which grad gp to use from core
 
-    n_mdot.main_cycle()
+    n_mdot.set_fit_poly_to_grads = None  # WARNIND ! using poly to fid the delta_grads.
+
+    n_mdot.set_find_exact_sonic_point       = True
+    n_mdot.set_use_first_wind_for_core_sp   = False
+    n_mdot.set_do_fix_first_wind_point      = True
+    n_mdot.set_use_poly_fit_core            = True
+    n_mdot.set_use_poly_fit_wind            = True
+
+    n_mdot.set_do_plot_native_tech          = False
+
+    mdot_grads = n_mdot.main_cycle()
 
     mdot_nat = n_mdot.mdot_naitive
 
-    # PlotProfile.self_plot_tph_teff(smdl, swnd)
+    # ----------- POLYNOMIAL ------------------
 
+    n_mdot.set_int_method_core              = 'Uni'
+    n_mdot.set_int_method_wind              = 'Uni'
+
+    n_mdot.set_do_plot_native_tech          = False
+
+    mdot_grads_p = n_mdot.main_cycle()
+
+
+
+    # PlotProfile.self_plot_tph_teff(smdl, swnd)
     # ------------------------------------------
 
     cr2 = ExtrapolateCriticals(out_names, out_arr, 'mdot-1', mdot_nat)
 
-    cr2.set_v_ns_cr = ['kappa-sp', 'L/Ledd-sp', 'HP-sp', 'mfp-sp', 'tau-sp', 'r-sp', 't-sp', 'r-ph', 't-ph']  # for extrapolating (must also ne in sonic v_ns)
-    cr2.set_do_plots = True
+    cr2.set_v_ns_cr = ['kappa-sp', 'L/Ledd-sp', 'rho-sp', 'mfp-sp', 'tau-sp', 'r-sp', 't-sp', 'r-ph', 't-ph']  # for extrapolating (must also ne in sonic v_ns)
+    cr2.set_do_plots = False
     cr2.set_extrapol_lim_t = [6.5, 5.18] # if some sonic models should be not used for extra/interpol
 
     cr2.main_extrapol_cycle()
@@ -2287,30 +2848,43 @@ def sp_wind_main(smfiles, wndfiles, input_dir, out_fname_z_m_y, new_fold='/'):
     cr_names = cr2.out_crit_names
     cr_row = cr2.out_crit_row
 
+    # append the gradients
+    out_names, out_arr = CommonMethods.combine_two_tables_by_v_n(out_names, out_arr,
+                                                                 ['mdot-1', 'grad_c-sp', 'grad_w-sp'], mdot_grads,
+                                                                 'mdot-1')
+    out_names, out_arr = CommonMethods.combine_two_tables_by_v_n(out_names, out_arr,
+                                                                 ['mdot-1', 'grad_c_p-sp', 'grad_w_p-sp'],
+                                                                 mdot_grads_p, 'mdot-1')
+
+
     out_names, out_arr = CommonMethods.cr_combine_sp_criticals(out_names, out_arr, cr_names, cr_row, mdot_nat,
                                                                None, None)
     out_names, out_arr = CommonMethods.cr_fill_mask(out_names, out_arr, ['l-1', 'xm-1', 'He4-0', 'He4-1'], 1, 0.)
+
 
     # --------------------------------------------------| SETTINGS for PLOTTING |---------------------------------------
     pp = PlotProfiles(smdl, swnd, out_names, out_arr)
 
     pp.set_v_ns = [['r', 'u'], ['r', 't'], ['r', 'kappa'], ['t', 'L/Ledd'], ['t', 'tau']]
 
-    fig = plt.figure()
-    pp.set_plot_ax(fig)
-    pp.set_labels_for_all()
-    pp.plot_sm_all()
-    pp.plot_wind_all()
-    pp.plot_out_arr_points()
-    plt.legend()
-    plt.show()
+    # fig = plt.figure()
+    # pp.set_plot_ax(fig)
+    # pp.set_labels_for_all()
+    # pp.plot_sm_all()
+    # pp.plot_wind_all()
+    # pp.plot_out_arr_points()
+    # plt.legend()
+    # plt.show()
 
     # --------------------------------------------------| SETTINGS for SAVING |-----------------------------------------
 
     save = SavingOutput()
+
+    save.full_out_name = sp_dir_fname
+
     save.set_dirs_not_to_be_included = ['sse', 'ga_z002','ga_z0008', 'vnedora', 'media', 'HDD']
     save.set_input_dirs = input_dir
-    save.set_output_dir = '../data/sp_w_files{}'.format(new_fold) + out_fname_z_m_y
+    save.set_output_dir = output_dir
     save.set_sp_fold_head = 'SP'
 
     save.save_out_arr(out_names, out_arr)
@@ -2391,9 +2965,10 @@ def ga_crit_main(smfiles, input_dir, out_fname_z_m_y):
 
     # --------------------------------------------------| SETTINGS for SAVING |-----------------------------------------
     save = SavingOutput()
+
     save.set_dirs_not_to_be_included = ['sse', 'ga_z002','ga_z002_2', 'ga_z0008','ga_z0008_2', 'vnedora', 'media', 'HDD']
     save.set_input_dirs = input_dir
-    save.set_output_dir = '../data/sp_cr_files/' + out_fname_z_m_y
+    save.set_output_dir = out_fname_z_m_y# '../data/sp_cr_files/' + out_fname_z_m_y
     save.set_sp_fold_head = 'SP'
 
     save.save_out_arr(out_names, out_arr)
@@ -2427,39 +3002,54 @@ output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
 sse_locaton = '/media/vnedora/HDD/sse/'
 
-def load_files(z, m_set, y_set, sp=False, deep_fold=''):
+def load_files(z, m_set, y_set, sp_read=None):
+
+# '../data/sp_w_files' + out_fname_z_m_y
+
+    sp_fold_location = '../data/'
 
     for m in m_set:
         for y in y_set:
             root_name = 'ga_z' + z + '/'
-            folder_name = str(m)+'sm/y'+str(y)+'/'
-            out_name = str(m) + 'z' + z + '/'
+            folder_name = str(m)+'sm/y'+str(y)+'/' + sp_read
+            out_fname_z_m_y = str(m) + 'z' + z + '/'
 
-            print('COMPUTING: ({}) {} , to be saved in {}'.format(root_name, folder_name, out_name))
+            # output_dir = '../data/sp55_w_files/' + sp_save + out_fname_z_m_y
+            #
+            # head = 'SP/'
+            # sp_fold_name = sp_fold_location + head + root_name + folder_name
+            #
+            # print('COMPUTING: ({}) {}'.format(root_name, folder_name))
 
-            # smfiles_ga = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
 
-            if sp: sp='sp55/' + deep_fold
-            else: sp=''
+            smfiles_sp  = get_files(sse_locaton + root_name, [folder_name], [], 'sm.data')
 
-            smfiles_sp  = get_files(sse_locaton + root_name, [folder_name+sp], [], 'sm.data')
+            if sp_read != '':
 
-            if deep_fold!='' and deep_fold!=None: deep_fold = '_' + deep_fold + '/'
-            else: deep_fold = '/'
-            if sp:
-                wind_fls    = get_files(sse_locaton + root_name, [folder_name+sp], [], 'wind')
+                spdir_loc = '../data/'
 
-                cr = sp_wind_main(smfiles_sp, wind_fls, smfiles_sp[0].split('/')[:-1], out_name, deep_fold)
+                sp_dir = 'SP/' + 'z{}/'.format(z) + '{}sm/'.format(m) + 'y{}/'.format(y)
+                name = 'SP_{}sm_y{}'.format(m, y)
+                for dir in sp_read.split('/'):
+                    name = name + '_{}'.format(dir)
+                name = name + '.data'
+
+                full = spdir_loc + sp_dir + name
+
+                wind_fls    = get_files(sse_locaton + root_name, [folder_name], [], 'wind')
+                cr = sp_wind_main(smfiles_sp, wind_fls, smfiles_sp[0].split('/')[:-1], full)
             else:
-                ga = ga_crit_main(smfiles_sp, smfiles_sp[0].split('/')[:-1], out_name)
+                output_dir = '../data/sp_cr_files/' + out_fname_z_m_y
+                ga = ga_crit_main(smfiles_sp, smfiles_sp[0].split('/')[:-1], output_dir)
 
 
 
             print('m:{}, y:{} DONE'.format(m,y))
 
 
-# 11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
-load_files('002', [14], [10], True, 'b075/')
+# 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30 # 16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
+
+load_files('0008', [14], [10], 'sp55_d/prec/') # 'b1_v2200/'
 
 def manual(full_path, sp=True):
     sm_files = get_files('', [full_path], [], 'sm.data')
@@ -2471,4 +3061,4 @@ def manual(full_path, sp=True):
     else:
         ga = ga_crit_main(sm_files, sm_files[0].split('/')[:-1], out_name)
 
-# manual('/media/vnedora/HDD/sse/ga_z002_2/20sm/y10/test/')
+# manual('/media/vnedora/HDD/sse/ga_z002/20sm/y10/sp55_prec_tst2/')

@@ -31,6 +31,10 @@ from FilesWork import Files
 # from PhysMath import Opt_Depth_Analythis
 # from FilesWork import SP_file_work
 
+def get_z_from_fh(fh, zgal = 0.02):
+    return zgal * 10**(fh)
+
+# sys.exit(get_z_from_fh(-0.49))
 
 def get_files(compath, req_dirs, requir_files, extension):
     comb = []
@@ -54,25 +58,55 @@ def get_files(compath, req_dirs, requir_files, extension):
 
     return comb
 
+# for i in [9,8,7,6,5]:
+#     print('mkdir y{}/sp55_d; mkdir y{}/sp55_d/prec'.format(i,i))
+#     print('cp y10/sp55_d/prec/*.dat y{}/sp55_d/prec/'.format(i))
+#     print('cp y10/sp55_d/prec/*.sh y{}/sp55_d/prec/'.format(i))
+#     print('cp y{}/sp/3.50.bin1 y{}/sp55_d/prec/'.format(i,i))
+
 # for i in range(1,9):
-#     # print('mkdir y{}; '.format(i))
+#     print('mkdir y{}; '.format(i))
 #
 #     print('cp ../../ga_z002/10sm/y{}/fy{}.bin1 y{}/; '.format(i, i, i))
 #     print('cp ../ev_m.dat y{}/; '.format(i))
 #     print('cp ../fred.sh y{}; '.format(i))
 #     print('cp ../run_mass_loss.py y{}'.format(i))
 
+# for i in range(10,31):
+#     print('cp ref_m.dat *.sh {}sm/y{}/sp55_d/prec/;'.format(i, 10))
+    # print('cp {}sm/y{}/sp/3.50.bin1 {}sm/y{}/sp55_d/prec/;'.format(i, 10, i, 10))
+    # print('cd {}sm/y{}/sp55_d/prec/; rm 3* 4* 5* 6*; sse; cd ga_z0008;'.format(i, 10))
+    # print('mkdir {}z0004'.format(i))
 
-# for i in range(10,30):
-#     print('cp ga_z0008_old/{}sm/{}ev.plot1 ga_z0008/{}sm/'.format(i, i, i))
+# for i in range(10,31):
 #     for j in range(1,11):
-#         print('cp *.sh *.dat {}sm/y{}/'.format(i, j))
-# #         # print('rm ga_z002_2/{}sm/y{}/fy{}.bin1'.format(i, j, j))
-# #         print('cp ga_z002_2tmp/{}sm/y{}/fy{}.bin1 ga_z0008_2/{}sm/y{}/'.format(i, j, j, i, j))
-#         print('cp ga_z0008_2tmp/{}sm/y{}/*.bin1 '
-#               'ga_z0008_2tmp/{}sm/y{}/*.plot1 '
-#               'ga_z0008_2tmp/{}sm/y{}/*sm.data '
-#               'ga_z0008_2/{}sm/y{}/'
+#         print('mkdir {}sm/; mkdir {}sm/y{}/; '.format(i, i, j))
+              # 'mkdir {}sm/y{}/sp55_d/; mkdir {}sm/y{}/sp55_d/prec/; '
+              # 'mkdir {}sm/y{}/sp55_d/prec/b09_v2200/;'.format(i,i,j, i,j, i,j, i,j))
+#     print('rm {}sm/y10/sp55_d/prec/3.5*'.format(i))
+# # # #     # print('rm -r {}sm/y10/sp55/; mkdir {}sm/y10/sp55_d'.format(i,i))
+# #     print('cp {}sm/y10/sp/3.50.bin1 {}sm/y10/sp55_d/prec/'.format(i, i))
+# #     print('cp ref_m.dat {}sm/y10/sp55/'.format(i))
+# # #     # print('cp auto_*.sh {}sm/y10/sp55_d/'.format(i))
+# # #
+#     print('mkdir {}sm/y10/sp55_d/; mkdir {}sm/y10/sp55_d/prec/; '
+#           'cp auto_ev2.sh auto_rename.sh ref_m.dat {}sm/y10/sp55_d/prec/; '
+#           'cp {}sm/y10/sp/3.50.bin1 {}sm/y10/sp55_d/prec/'
+#           .format(i,i,i,i,i,i))
+#     print('cp {}sm/y10/sp/3.50.bin1 {}sm/y10/sp55_d/prec/'.format(i,i))
+    # print('rm {}sm/y10/sp55_d/b1_v2200/3.*; rm {}sm/y10/sp55_d/b1_v2200/4.*; rm {}sm/y10/sp55_d/b1_v2200/5.*'.format(i,i,i))
+    # print('cp {}sm/y10/sp55_d/5.50.bin1 {}sm/y10/sp55_u/b1_v2200/'.format(i,i))
+    # print('cp ref_m.dat {}sm/y10/'.format(i))
+    # print('cp auto_ev2.sh {}sm/y10/sp55_d/b1_13vesc/'.format(i))
+# #     print('cp ga_z0008_old/{}sm/{}ev.plot1 ga_z0008/{}sm/'.format(i, i, i))
+#     for j in range(1,10):
+#         # print('cp *.sh *.dat {}sm/y{}/'.format(i, j))
+# # #         # print('rm ga_z002_2/{}sm/y{}/fy{}.bin1'.format(i, j, j))
+#         print('cp ga_z002_2tmp/{}sm/y{}/fy{}.bin1 ga_z0008_2/{}sm/y{}/'.format(i, j, j, i, j))
+#         print('cp ga_z0004_tmp/{}sm/y{}/*.bin1 '
+#               'ga_z0004_tmp/{}sm/y{}/*.plot1 '
+#               'ga_z0004_tmp/{}sm/y{}/*sm.data '
+#               'ga_z0004/{}sm/y{}/'
 #               .format(i,j, i,j, i,j, i,j))
         # print('mv {}sm/y{}/sp_files {}sm/y{}/sp'.format(i, j, i, j))
         # print('cp auto_* ref_m.dat re_m.dat check.py {}sm/y{}/; '.format(i, j)) # EVE
@@ -201,8 +235,9 @@ sse_locaton = '/media/vnedora/HDD/sse/'
 #     print('\t__ With Conditions: z:{}, m:{}, yc:{}, the {} sp_files selected.'.format(req_z, req_m, req_yc, len(zmy_files)))
 #     print('\n')
 #     return zmy_files
-
-
+def fe_h_to_metal(fe_h,z_gal = 0.02):
+    return 10**(fe_h)*z_gal
+# sys.exit(fe_h_to_metal(-1.50)) # ave
 '''===============================================SETTING=FILES======================================================'''
 # spfiles = []
 # opalfile =[]
@@ -244,7 +279,7 @@ sse_locaton = '/media/vnedora/HDD/sse/'
 # ntbl.get_new_opal(0.008)
 from PhysMath import Physics
 print('T_eff:', 10**Physics.steph_boltz_law_t_eff(5.139, 3.4))
-
+print('v_esc:', Physics.get_v_esc(20,1.3))
 '''===========================================GRAY=ATMPOSPHERE=ANALYSYS=============================================='''
 # from FilesWork import Read_Atmosphere_File
 # atm=Read_Atmosphere_File(opalfile)
@@ -346,8 +381,8 @@ from FilesWork import Read_Atmosphere_File
 # save_atm_table('t_eff', obsfile, atmfile, opalfile, 'Fe')
 
 from FilesWork import OPAL_work
-# make = OPAL_work('gal', 'Fe', 1000)
-# make.set_plots_clean=False
+# make = OPAL_work('lmc', 'Fe', 1000, False) # False to load the cases-limits
+# make.set_plots_clean=True
 #
 # make.save_t_k_rho(3.2, None, 1000)
 # make.from_t_k_rho__to__t_lm_rho(1.0)
@@ -356,24 +391,34 @@ from FilesWork import OPAL_work
 
 
 from FilesWork import SP_file_work
-spcls = SP_file_work(0.1, 'gal','wd', output_dir, plot_dir)
-spcls.set_clean_plots = True
-spcls.set_extrapol_pars = [0, 0, 0, 0] # in %: v, ^, <-, ->
-spcls.set_int_or_pol = 'pol' # to save
-spcls.set_init_fit_method='1dLinear'
-spcls.invert_xaxis = False
-
+spcls = SP_file_work(0.1, 'lmc', 'Fe', 'wd', ['prec'])
+spcls.set_clean_plots       = True
+spcls.set_extrapol_pars     = [0, 0, 0, 0] # in %: v, ^, <-, ->         | Problem with 5.47 > 5.469 in x_y_z method...
+spcls.set_int_or_pol        = 'pol' # to save
+spcls.set_init_fit_method   = '1dLinear'
+spcls.invert_xaxis          = False
+spcls.set_do_tech_plots     = False
+spcls.set_check_x_y_z_arrs  = True
 # spcls.save_y_yc_z_relation('l', 'lm',  True)
 # spcls.save_y_yc_z_relation('lm', 'r',  True)
 # spcls.save_y_yc_z_relation('lm', 'l',  True)
 # spcls.save_min_max_lm('lm')
 # spcls.save_y_yc_z_relation('lm', 'r',  True)
 
-# spcls.save_t_llm_mdot('lm', 1.0, 'Fe', 500, 'max', True) # for sHRD
-
+# spcls.save_t_llm_mdot('lm', 1.0, 'Fe', 500, 'min', False) # for sHRD
+# spcls.save_t_llm_mdot_const_r('lm', 0.9, 'HeII', 1.0, 500, 'min', True)
 
 # spcls.test()
+spcls.set_xy_int_method      = 'Uni'
+spcls.set_xz_int_method      = 'poly4'
+spcls.set_yz_int_method      = '1dLinear'
+spcls.set_load_cond          = 'ts>5.0'     # reading only Fe bunp sols
 
+# spcls.plot_2_x_y_z_for_yc('mdot', 'lm', 'a_p', 1.0, 500, 'max', False, True)
+# spcls.save_beta_x_y_vinf('mdot', 'lm', 'grad_c_p', [1.15,1.0], 100, 'max', False)
+# spcls.plot_beta_x_y_vinf_3d('mdot', 'lm', 'vinf', [0.10, 1.00, 1.10])
+
+# spcls.wind()
 
 # spcls.save_min_max_lm('l')
 # # spcls.separate_sp_by_fname()
@@ -382,8 +427,8 @@ spcls.invert_xaxis = False
 
 # spcls.save_x_y_yc_evol_relation('m', 'ys')
 
-# spcls.plot_x_y_z_for_yc('mdot', 'lm', 't_eff', 1.0, 500, 'max', False, True)
-# spcls.save_x_y_z('mdot', 'lm', 't_eff', 500, 'max', False, '1dLinear') #    Uni, IntUni, 1dLinear, 1dCubic methods availabel
+# spcls.plot_x_y_z_for_yc('mdot', 'lm', 'grad_c_p', 1.0, 500, 'max', False, True)
+# spcls.save_x_y_z('mdot', 'lm', 'grad_c_p', 500, 'max', False, '1dLinear') #    Uni, IntUni, 1dLinear, 1dCubic methods availabel
 # spcls.plot_x_y_z('t', 'lm', 'r', [1.0], 100, 'min', True)
 
 # spcls.plot_t_llm_mdot_for_yc(1.0, 'lm', 1.0, 'Fe', 'min')
@@ -393,16 +438,58 @@ spcls.invert_xaxis = False
 # spcls.save_t_llm_mdot_const_r('lm', 1.0, 'Fe', 1.0, 500, 'min', True)
 # spcls.separate_sp_by_crit_val('Yc', 0.1)
 
+
+from MainClasses import Critical_Mdot
+mdot = Critical_Mdot('lmc', 'Fe', 1.0, 'lmc')
+# mdot.save_yc_llm_mdot_cr()      # yc_lm_l, yc_lm_r are used and should be for [10] Yc values
+# mdot.save_yc_llm_mdot_cr_const_r(1.0)
+# mdot.plot_test_min_mdot(1.0)
+
 '''=====================================================ATMOSPHERE==================================================='''
 from FilesWork import Read_Atmosphere_File
 # atm = Read_Atmosphere_File(Files.get_atm_file('gal'), 'gal')
 # atm.plot_tstar_rt('t_*','rt','t_eff', 'gal')
 '''=======================================================TABLES====================================================='''
-
+m  = '20'
+yc = '10'
+z  = '0008'
 from MainClasses import Table
-# tbl = Table(get_files(sse_locaton + 'ga_z002/', ['20sm/y10/sp/'], [], 'sm.data'))
-# tbl.latex_table(['mdot-', 'teff-', 't-', 'teff/ts4-', 'mfp-', 'mfp/c-', 'HP-', 'tpar-'],
-#                 [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+
+tbl = Table(
+
+    # get_files(sse_locaton, ['ga_z002/16sm/y10/sp55_d/prec/',
+    #                         'ga_z004/16sm/y10/sp55_d/prec/'],
+    #           ['5.00'], 'sm.data'),
+    #
+    # get_files('../data/sp55_w_files/', ['16z002/', '16z004/'],
+    #           ['SP_16sm_y10_sp55_d_prec','SP_ga_z004_16sm_y10_sp55_d_prec'], '.data'))
+
+    get_files(sse_locaton, ['ga_z002/20sm/y10/sp55_d/prec/',
+                            'ga_z002/20sm/y9/sp55_d/prec/',
+                            'ga_z002/20sm/y8/sp55_d/prec/',
+                            'ga_z002/20sm/y7/sp55_d/prec/',
+                            'ga_z002/20sm/y6/sp55_d/prec/',
+                            'ga_z002/20sm/y5/sp55_d/prec/' ],
+              ['4.00'], 'sm.data'),
+    get_files('../data/sp55_w_files/', ['20z002/'], ['SP_20sm_y10_sp55_d_prec', 'SP_20sm_y9_sp55_d_prec', 'SP_20sm_y8_sp55_d_prec',
+                                                     'SP_20sm_y7_sp55_d_prec', 'SP_20sm_y6_sp55_d_prec', 'SP_20sm_y5_sp55_d_prec'], '.data'))
+
+
+    # get_files(sse_locaton + 'ga_z{}/'.format(z), ['{}sm/y{}/sp55_d/'.format(m,yc)],
+    #           ['3.50', '4.00', '4.50', '5.00','5.50', '5.90'], 'sm.data'),
+    # get_files('../data/sp55_w_files/', ['{}z{}/'.format(m,z)], [], '.data')[0])
+
+tbl.set_use_only_spfls = True
+
+
+print('\n<<< TABLE FOR : z: {} M: {} Yc: {} >>>'.format(z, m, yc))
+tbl.latex_table(['Yc-1', 'l-1', 'lm-1', 'kappa-sp', 't-sp', 'r-sp', 'L/Ledd-sp', 'mfp-sp', 'u-sp', 'a_p-sp', 'tau-sp', 't-ph'], #'tau-sp', 'r-ph', 't-ph'],
+                [0.2, 0.2, 0.2, 0.2, 0.2, 0.3, 0.2,0.2,0.2,0.3,0.1,0.2] # 0.2, 0.2, 0.2]
+                )
+#
+# tbl.latex_table(['mdot-', 'teff/ts4-', 'u-', 'Pg/P_total-', 'grad_u-', 'mfp/c-', 'tpar-'],
+#                 [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+
 # sys.exit('FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK')
 
 from MainClasses import PrintTable
@@ -412,36 +499,34 @@ from MainClasses import PrintTable
 
 '''====================================================MAIN=METHODS=================================================='''
 
-from MainClasses import HRD
-hrd = HRD('gal')
-hrd.set_obs_file = 'gal_wne'
-# hrd.plot_hrd('t_eff', 'lm', True)
-# hrd.plot_hrd_treks('t_eff','lm')
-
-
 from MainClasses import GenericMethods # 'ga_z0008/15sm/y10/', 'ga_z002/15sm/y10/', 'ga_z004/15sm/y10/',
-sm = GenericMethods(get_files(sse_locaton + 'ga_z002/', ['10sm/y10/', '11sm/y10/', '12sm/y10/','13sm/y10/','14sm/y10/','15sm/y10/'], ['4.50'], 'sm.data'))
+# '10sm/y10/sp55/', '15sm/y10/sp55/', '20sm/y10/sp55/','25sm/y10/sp55/','30sm/y10/sp55/'
+# sm = GenericMethods(get_files(sse_locaton + 'ga_z002/', ['10sm/y10/sp55/', '11sm/y10/sp55/', '12sm/y10/sp55/', '13sm/y10/sp55/', '14sm/y10/sp55/', '15sm/y10/sp55/',], ['4.50'], 'sm.data'))
 # sm.inflection_point('r','u',None)
-# sm.plot_multiple_inflect_point('r', 'rho', True, None, 12)
+# sm.plot_multiple_inflect_point('r', 'u', True, None, 12)
 
 
-# comb = Combine()
-#
+comb = Combine()
+
 # comb.set_metal = 'gal'
-# comb.set_sp_files = select_sp_files(spfiles, [], [], [])
-# comb.set_sm_files = get_files(sse_locaton + 'ga_z0004/', ['10sm/y10/'], ['6.90'], 'sm.data')
+comb.set_sp_files = []#select_sp_files(spfiles, [], [], []) # '4.00','4.50','5.00','5.50'
+comb.set_sm_files = get_files(sse_locaton + 'ga_z004/', ['16sm/y10/sp55_d/prec/'], ['4.00', '4.50', '5.00'], 'sm.data')
+comb.set_sm_files2= get_files(sse_locaton + 'ga_z002/', ['16sm/y10/sp55_d/prec/'], ['4.00', '4.50', '5.00'], 'sm.data')
 # # get_files(sse_locaton + 'ga_z002/', ['10sm/y10/sp55/'], ['3.50'], 'sm.data') # MANUAL SET FOR SM FILES
-# comb.set_obs_file = obsfile
-# comb.set_plot_files = get_files(sse_locaton + 'ga_z002/', [], [], '.plot1')
+# comb.set_obs_file = None
+# comb.set_plot_files = get_files(sse_locaton + 'ga_z0008/', [], [], '.plot1')
 #
 #
 # comb.set_files()
 
 
 
-# comb.sp_xy_last_points('m','l','mdot', 4)
+# comb.sp_xy_last_points('mdot','L/Ledd','mdot', 3)
 
-# comb.xy_profile('t','kappa','mdot','lm', True, True) # Pg/P_total
+# comb.tst()
+# comb.xy_profile('t','u','mdot','lm', True, True) # Pg/P_total
+# comb.xy_profile('r','L/Ledd','mdot','lm', True, True) # Pg/P_total
+
 # comb.dxdy_profile('r', 'kappa', 'mdot', 'lm', False, True)
 # comb.xyy_profile('t','Pg/P_total', 'L/Ledd','mdot', 'HP', 'mfp', True, True)
 # comb.xy_last_points('r','u','mdot',False)
@@ -457,31 +542,92 @@ sm = GenericMethods(get_files(sse_locaton + 'ga_z002/', ['10sm/y10/', '11sm/y10/
 # comb.plot_t_mdot_lm()
 # comb.plot_t_l_mdot('lm', 0, True, False, 5.22, None)
 # comb.min_mdot_sp('lm', 1.)
+
+from PhysMath import Constants, Math
+from FilesWork import PlotBackground2
+def tst():
+    def beta_law(r, r0, v0, vinf, beta):
+        return (v0 + (vinf - v0) * ((1 - (r0 / r)) ** beta))
+        # return vinf*((1 - (r0 / r))**beta)
+
+    def diff_beta_law(r, r0, vinf, beta):
+        return (r0 * vinf * beta / (r**2)) * (1 - (r0 / r)) ** (beta - 1)
+
+
+
+    rs = 1.0
+    vs = 40
+
+    betas = np.mgrid[0.5:1.50:100j]
+    vinfs = np.mgrid[1400:3000:200j]
+
+    grads = np.zeros((len(betas), len(vinfs)))
+    ass = np.zeros((len(betas), len(vinfs)))
+
+    radii = np.mgrid[rs:(rs+1):10j]
+
+    for i in range(len(betas)):
+        for j in range(len(vinfs)):
+
+            vels = beta_law(radii, radii[0], vs, vinfs[j], betas[i])
+            grad_ = np.gradient(vels, radii * Constants.solar_r / 10**5)
+
+            grad = diff_beta_law(radii[1:] * Constants.solar_r / 10**5, radii[0] * Constants.solar_r / 10**5, vinfs[j], betas[i]) #* np.diff(radii)[0] * Constants.solar_r / 10**5
+            grad0 = interpolate.UnivariateSpline(radii[1:], grad)(radii[0])
+            grad = np.append(grad0, grad)
+
+            grads[i, j] = grad_[0] * 10**5
+
+            ass[i, j] = np.array(vels * grad_)[0]
+
+    print(grads)
+
+    res_grad = Math.combine(vinfs, betas, grads)
+    res_a = Math.combine(vinfs, betas, ass)
+
+    PlotBackground2.plot_color_table(res_grad, 'v_inf', 'beta', 'grad_c', 'gal', 'Fe')
+    # PlotBackground2.plot_color_table(res_a, 'v_inf', 'beta', 'a', 'gal', 'Fe')
+
+
+# tst()
 '''-------------------------------------------------------CRITICAL MDOT---------------------------------------------'''
-from MainClasses import Critical_Mdot
-mdot = Critical_Mdot('gal', 'Fe', 1.0, 'gal')
-# mdot.save_yc_llm_mdot_cr()      # yc_lm_l, yc_lm_r are used and should be for [10] Yc values
-# mdot.save_yc_llm_mdot_cr_const_r(1.0)
-# mdot.plot_test_min_mdot(1.0)
+from MainClasses import HRD
+# hrd = HRD('lmc', 'Fe')
+# hrd.set_obs_file = 'gal_wne'
+# hrd.plot_hrd('t_eff', 'lm', True)
+# hrd.plot_hrd_treks('t_eff','lm')
+
 
 
 from MainClasses import Plot_Critical_Mdot
-cr = Plot_Critical_Mdot('gal', 'Fe', 1.0)
-# cr.plot_natives('mdot', 'rs')
+cr = Plot_Critical_Mdot('lmc', 'Fe', 1.0)
+# cr.plot_natives('mdot', 'lm')
 # cr.plot_cr_mdot('lm',1.0,None,None,True)
 # cr.plot_cr_mdot_obs('lm',1.0,None,None,True)
 # cr.plot_cr_mdot_obs_trecks('lm',1.0,None,None,True)
-# cr.plot_cr_mdot_obs_trecks_back('lm', 'tau', 1.0,None,None,True)
+# cr.plot_cr_mdot_obs_trecks_back('lm', 'vinf', 1.0,None,None,True)
+# cr.save_stars_affiliation()
+# cr.plot_cr_3d_betas('mdot','lm','vinf', [0.9,1.0,1.1])
+
+cr.set_fill_gray = False
+cr.plot_mult_2d_betas('mdot','lm','vinf', [0.50, 1.00, 1.15])
+
 # --- --- ---
 from MainClasses import Plot_Sonic_HRD
-shrd = Plot_Sonic_HRD('gal', 'Fe', 1.0)
+shrd = Plot_Sonic_HRD('lmc', 'HeII', 0.9)
 
 
 # shrd.plot_sonic_hrd(1.0, 'lm')
 # shrd.plot_sonic_hrd_set('lm', [1.0], 1.0, 0.1)
 # shrd.plot_sonic_hrd_const_r('lm', 1., [1.0])
 
-# shrd.plot_ts_y('t_eff', 1.0, 'lm', 'tau')
+shrd.plot_ts_y('t_eff', 1.0, 'lm', None)
+
+
+from MainClasses import Plot_Two_sHRDs
+shrds = Plot_Two_sHRDs(['lm', 'lm'], ['lmc', 'lmc'], ['Fe', 'HeII'], [1.0, 0.9], [None, 1.0], [1.0, 1.0])
+
+# shrds.plot_two_shrd()
 
 '''=================================================MULTIPLE=BUMP=METHODS============================================'''
 
@@ -672,8 +818,8 @@ from MainClasses import Plot_Tow_Sonic_HRDs
 
 
 
-folder = '/media/vnedora/HDD/sse/ga_z002/10sm/y10/sp55/b075/'
-mdot='3.50'
+folder = '/media/vnedora/HDD/sse/ga_z0004/20sm/y10/sp55/'
+mdot='5.50'
 
 from FilesWork import Read_Wind_file
 wind = Read_Wind_file.from_wind_dat_file(folder + '{}.wind'.format(mdot))
@@ -818,7 +964,7 @@ def plot_core_wind(x_v_n, y_v_n, smcls, wndcls, metal, log):
     ax.legend()
     plt.show()
 
-plot_core_wind('r', 'u', smfl, wind, 'gal', False)
+plot_core_wind('t', 'u', smfl, wind, 'gal', False)
 # plot_tau('r', 'tau', smfl, wind, opalfile, True)
 # tsm = smfl.get_col('t')
 #

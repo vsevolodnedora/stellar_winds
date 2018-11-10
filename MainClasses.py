@@ -2161,7 +2161,7 @@ class HRD(PlotObs):
         self.set_inverse_x = True
 
         self.set_clean            = True
-        self.set_use_gaia         = False
+        self.set_use_gaia         = True
         self.set_use_atm_file     = True
         self.set_load_yc_l_lm     = True
         self.set_load_yc_nan_lmlim= True
@@ -2175,6 +2175,11 @@ class HRD(PlotObs):
 
         self.set_patches_or_lines = 'lines'
         self.set_patches_or_lines_alpha = 0.5
+        self.set_patches_or_lines_alpha_fits = 0.8
+        self.set_patches_or_lines_color_fits = 'blue'
+
+        self.set_list_metals_fit = [self.metal]
+        self.set_list_bumps_fit  = [self.bump]
 
         self.set_clump_used = 4
         self.set_clump_modified = 4
@@ -2277,27 +2282,42 @@ class HRD(PlotObs):
 
         return ax
 
-    def plot_fits(self, ax, v_n_x, v_n_y, x_arr, metals, hatch='///'):
+    def plot_fits(self, ax, obs_metal, v_n_x, v_n_y, x_arr, metals, bumps, hatch='/'):
 
         def get_linestyle(metal):
-            if metal == 'gal' or  metal == 'gal_th':
+            if metal == 'gal':
                 return '--'
-            if metal == '2gal' or  metal == '2gal_th':
+
+            if metal == '2gal' or metal == '2lmc':
                 return '-.'
-            if metal == 'lmc' or  metal == 'lmc_th':
+
+            if metal == 'lmc':
                 return '-'
 
+            if metal == 'smc':
+                return ':'
+
+        if len(metals) != len(bumps): raise IOError('Metals != bumps')
 
         y_arrs = np.zeros(len(x_arr))
         for metal in metals:
-            y_arr = Fits.get_gal_fit(v_n_x, v_n_y, x_arr, metal, self.set_clump_modified, self.set_use_gaia)
-            ax.plot(x_arr, y_arr, get_linestyle(metal), color='black', alpha=self.set_patches_or_lines_alpha)
+            if obs_metal == 'gal':
+                y_arr = Fits.get_gal_fit(v_n_x, v_n_y, x_arr, metal, self.set_clump_modified, self.set_use_gaia)
+            elif obs_metal == 'lmc':
+                y_arr = Fits.get_lmc_fit(v_n_x, v_n_y, x_arr, metal, self.bump)
+            else:
+                raise IOError('FITS: Obs_metal gal and lmc are only supproted so far')
+
+
+            ax.plot(x_arr, y_arr, get_linestyle(metal), color=self.set_patches_or_lines_color_fits,
+                    alpha=self.set_patches_or_lines_alpha_fits)
 
             y_arrs = np.vstack((y_arrs, y_arr))
 
         y_arrs = np.delete(y_arrs, 0, 0)
 
-        ax.fill_between(x_arr, y_arrs[0, :], y_arrs[-1, :], hatch=hatch, alpha=self.set_patches_or_lines_alpha)
+        if len(metals) > 0:
+            ax.fill_between(x_arr, y_arrs[0, :], y_arrs[-1, :], hatch=hatch, alpha=self.set_patches_or_lines_alpha_fits)
 
     def plot_hrd_treks(self, x_v_n, l_or_lm):
 
@@ -2433,7 +2453,11 @@ class HRD(PlotObs):
 
         if obs:
             # self.plot_obs_l_l_comparison(ax)
-            self.plot_obs_all_x_llm(ax, l_or_lm, v_n_x, 1.0, True, True)
+            stars_n, x_coords, y_coords = self.plot_obs_all_x_llm(ax, l_or_lm, v_n_x, 1.0, False, True) # return ax = false
+
+            self.plot_fits(ax, self.set_metal, v_n_x, l_or_lm, x_coords,
+                           self.set_list_metals_fit,  # ['lmc', 'gal', '2gal']
+                           self.set_list_bumps_fit)
 
         # ax.set_title('HRD')
         ax.set_xlabel(Labels.lbls(v_n_x), fontsize=self.set_label_size)
@@ -2444,7 +2468,6 @@ class HRD(PlotObs):
         # y_min, y_max = ax.get_ylim()
 
 
-        # self.plot_fits(ax, v_n_x, l_or_lm, np.array([x_min, x_max]), ['2gal_th', 'lmc_th'])
 
         if self.set_inverse_x:
             plt.gca().invert_xaxis() # inverse x axis
@@ -3438,7 +3461,7 @@ class Plot_Critical_Mdot(PlotObs):
         self.set_patches_or_lines = 'lines'
         self.set_patches_or_lines_alpha = 0.5
 
-        self.set_clean              = True
+        self.set_clean              = False
         self.set_use_gaia           = True
         self.set_use_atm_file       = True
         self.set_load_yc_l_lm       = True
@@ -3449,7 +3472,7 @@ class Plot_Critical_Mdot(PlotObs):
         self.set_do_plot_evol_err   = True
         self.set_do_plot_line_fit   = False
 
-        self.set_fill_gray          = True
+        self.set_fill_gray          = False
 
         self.set_label_sise = 12
 
@@ -3540,24 +3563,24 @@ class Plot_Critical_Mdot(PlotObs):
         return x_coord, y_coord, labels
 
 
-    def plot_natives(self, x_v_n, y_v_n):
-
-        fig = plt.figure()
-        fig.subplots_adjust(hspace=0.2, wspace=0.3)
-        ax = fig.add_subplot(1, 1, 1)
-        show_plot = True
-
-        self.plot_native_models(ax, x_v_n, y_v_n, self.metal, 'wd')
-
-        ax.minorticks_on()
-        ax.set_xlabel(Labels.lbls(x_v_n), fontsize=self.set_label_sise)
-        ax.set_ylabel(Labels.lbls(y_v_n), fontsize=self.set_label_sise)
-
-        if self.set_inverse_x: ax.invert_xaxis()
-        plt.xticks(fontsize=self.set_label_sise)
-        plt.yticks(fontsize=self.set_label_sise)
-        plt.savefig('tst')
-        plt.show()
+    # def plot_natives(self, x_v_n, y_v_n):
+    #
+    #     fig = plt.figure()
+    #     fig.subplots_adjust(hspace=0.2, wspace=0.3)
+    #     ax = fig.add_subplot(1, 1, 1)
+    #     show_plot = True
+    #
+    #     self.plot_native_models(ax, x_v_n, y_v_n, self.metal, 'wd')
+    #
+    #     ax.minorticks_on()
+    #     ax.set_xlabel(Labels.lbls(x_v_n), fontsize=self.set_label_sise)
+    #     ax.set_ylabel(Labels.lbls(y_v_n), fontsize=self.set_label_sise)
+    #
+    #     if self.set_inverse_x: ax.invert_xaxis()
+    #     plt.xticks(fontsize=self.set_label_sise)
+    #     plt.yticks(fontsize=self.set_label_sise)
+    #     plt.savefig('tst')
+    #     plt.show()
 
     def get_cr_mdot(self, l_or_lm, yc_val, r_cr = None):
         '''
@@ -3643,7 +3666,7 @@ class Plot_Critical_Mdot(PlotObs):
         return mdot, llm
 
 
-    def plot_cr_mdot_obs(self, l_or_lm, yc_val, r_cr = None, ax = None, fill_gray=True, obs_err=True, evol_err=True):
+    def plot_cr_mdot_obs(self, l_or_lm, yc_val, r_cr = None, ax = None, obs_err=True, evol_err=True):
 
         show_plot = False
         if ax == None: # if the plotting class is not given:
@@ -3652,9 +3675,13 @@ class Plot_Critical_Mdot(PlotObs):
             ax = fig.add_subplot(1,1,1)
             show_plot = True
 
-        self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax)
+            mdot_grid, lm_grid = self.plot_cr_mdot(l_or_lm, yc_val, r_cr, ax)
+
+            # self.plot_fits(ax, self.set_metal, 'mdot_cr', l_or_lm, mdot_grid, ['2lmc', 'smc'],
+            #                [self.set_bump, self.set_bump])
 
         self.plot_obs_all_x_llm(ax, l_or_lm, 'mdot', yc_val, obs_err, evol_err)
+
 
 
         if show_plot:
@@ -3665,7 +3692,7 @@ class Plot_Critical_Mdot(PlotObs):
             ax.set_xlabel(Labels.lbls('mdot'), fontsize=self.set_label_sise)
             ax.set_ylabel(Labels.lbls(l_or_lm), fontsize=self.set_label_sise)
 
-            self.plot_native_models(ax, 'mdot', l_or_lm, self.metal, 'wd')
+            # self.plot_native_models(ax, 'mdot', l_or_lm, self.metal, 'wd')
 
             plt.xticks(fontsize=self.set_label_sise)
             plt.yticks(fontsize=self.set_label_sise)
@@ -3772,6 +3799,7 @@ class Plot_Critical_Mdot(PlotObs):
             clb.ax.set_title(Labels.lbls('Yc'), fontsize=self.set_label_size)
 
         return ax
+
     def plot_cr_mdot_obs_trecks(self, l_or_lm, yc_val, r_cr = None, ax = None, fill_gray=True, obs_err=True, evol_err=True):
 
         self.set_plot_files = Files.get_plot_files(self.metal)
@@ -4552,7 +4580,7 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
         self.lim_t1, self.lim_t2 =   T_kappa_bump.t_for_bump(bump) # 5.25, 5.45 #
 
-        self.set_exrtrapolation = [0, 0, 0, 0] # <-, ->, v, ^
+        self.set_exrtrapolation = [0, 0, 0, 30] # <-, ->, v, ^
         self.set_show_extrap_borders = True
 
         obs_metal = metal
@@ -4567,19 +4595,20 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
         self.set_clump_modified = 4
 
         self.set_clean              = False
-        self.set_use_gaia           = False
+        self.set_use_gaia           = True
         self.set_use_atm_file       = True
         self.set_load_yc_l_lm       = True
         self.set_load_yc_nan_lmlim  = True
         self.set_check_lm_for_wne   = True
-        self.set_check_affiliation  = True
+        self.set_check_affiliation  = False
 
         self.set_patches_or_lines   = 'lines' # lines2 are X shaped
         self.set_patches_or_lines_alpha = 0.5
+        self.set_patches_or_lines_alpha_fits = 0.3
 
         self.set_do_plot_obs_err    = True
         self.set_do_plot_evol_err   = True
-        self.set_do_plot_line_fit   = False
+        self.set_do_plot_line_fit   = True
 
         self.set_if_evol_err_out = 't1' # t1 for Fe bump; t2 for HeII bump (inverse)
 
@@ -4589,8 +4618,8 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
         self.set_alpha=1.0
         self.set_show_contours=False
 
-        self.set_list_metals_fit = ['2lmc', 'lmc']   # 'smc', ['lmc', 'gal', '2gal'] # ['lmc', 'gal', '2gal']
-        self.set_list_bumps_fit  =  [self.set_bump, self.set_bump]
+        self.set_list_metals_fit = []#['lmc', 'gal', '2gal']   # 'smc', ['lmc', 'gal', '2gal'] # ['lmc', 'gal', '2gal']
+        self.set_list_bumps_fit  =  []#[self.bump,self.bump,self.bump]
 
     # INTERNAL METHODS
     def plot_multiple_natives(self, ax, v_n_x, v_n_y, metals, cr_or_wds, adds):
@@ -4678,7 +4707,7 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
         return x_coord, y_coord, labels
 
-    def plot_fits(self, ax, obs_metal, v_n_x, v_n_y, x_arr, metals, bumps, hatch='///'):
+    def plot_fits(self, ax, obs_metal, v_n_x, v_n_y, x_arr, metals, bumps, hatch='/'):
 
         def get_linestyle(metal):
             if metal == 'gal':
@@ -4702,15 +4731,17 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
             elif obs_metal == 'lmc':
                 y_arr = Fits.get_lmc_fit(v_n_x, v_n_y, x_arr, metal, self.bump)
             else:
-                raise IOError('Obs_metal gal and lmc are only supproted so far')
+                raise IOError('FITS: Obs_metal gal and lmc are only supproted so far')
 
-            ax.plot(x_arr, y_arr, get_linestyle(metal), color='black', alpha=self.set_patches_or_lines_alpha)
+
+            ax.plot(x_arr, y_arr, get_linestyle(metal), color='black', alpha=self.set_patches_or_lines_alpha_fits)
 
             y_arrs = np.vstack((y_arrs, y_arr))
 
         y_arrs = np.delete(y_arrs, 0, 0)
 
-        ax.fill_between(x_arr, y_arrs[0, :], y_arrs[-1, :], hatch=hatch, alpha=self.set_patches_or_lines_alpha)
+        if len(metals) > 0:
+            ax.fill_between(x_arr, y_arrs[0, :], y_arrs[-1, :], hatch=hatch, alpha=self.set_patches_or_lines_alpha_fits)
 
     # EXTERNAL METHODS
     def plot_sonic_hrd(self, yc_val, l_or_lm, ax=None):
@@ -4879,7 +4910,7 @@ class Plot_Sonic_HRD(PlotObs, PlotBackground2):
 
         self.plot_all_obs_ts_y_mdot(ax, v_n_y, t_llm_mdot, l_or_lm, self.lim_t1, self.lim_t2, True)
 
-        self.plot_fits(ax, self.set_metal, 'ts', v_n_y, t_llm_mdot[0, 1:], ['lmc', '2lmc', 'smc'], [self.set_bump, self.set_bump, self.set_bump])
+        self.plot_fits(ax, self.set_metal, 'ts', v_n_y, t_llm_mdot[0, 1:], self.set_list_metals_fit, self.set_list_bumps_fit)
 
         x = np.mgrid[ax.get_xlim()[0]:ax.get_xlim()[-1]:100j]
         y = x

@@ -23,15 +23,20 @@ import os
 #-----------------------------------------------------------CLASSES-----------------------------------------------------
 
 from PhysMath import Math, Physics, Constants
+# import PhysMath as pm
 from OPAL import Read_Table, Row_Analyze, Table_Analyze, OPAL_Interpol, New_Table
 
 # ====================================================| SETTINGS CLASSES |=============================================#
+
+# pm.Math.ind
+
+
 
 class Files:
 
     output_dir   = '../data/output/'
     plot_dir     = '../data/plots/'
-    sse_locaton  = '/media/vnedora/HDD/sse/'
+    sse_locaton  = '/media/vsevolod/HDD/sse/'
 
 
 
@@ -282,9 +287,15 @@ class Fits:
              (-1.927) + (1.174*x) z = 0.04  D=10 Warning. WN8 could not be displayed.
              (-0.735) + (0.971*x) z = 0.008 D=10 Warning No WN4 or WN5 are displayed. (wrong slope by a lot)
 
+             --- OLD (Mdot unchanged) ---
              (-5.966) + (1.938*x) GAIA z = 0.02
              (-2.695) + (1.313*x) GAIA z = 0.04
              (-3.453) + (1.482*x) GAIA z = 0.008
+
+             --- NEW (Mdot changed as well) ---
+             (-4.726) + (1.706*x) GAIA z = 0.02
+             (-4.426) + (1.637*x) GaIA z = 0.04
+             (-4.110) + (1.604*x) GAIA z = 0.008
 
             ts-teff
              (18.816) + (-2.652*x) z = 0.02
@@ -295,9 +306,13 @@ class Fits:
              (18.503) + (-2.589*x) z = 0.04  D=10 Warning. WN8 could not be displayed.
              (8.467) +  (-0.729*x)  z = 0.008 D=10 Warning No WN4 or WN5 are displayed. (wrong slope by a lot)
 
+             --- OLD mdot ---
              (11.471) + (-1.271*x) GAIA z = 0.02
              (18.389) + (-2.559*x) GAIA z = 0.04
              (7.046) + (-0.446*x) GAIA z = 0.008
+
+             --- NEW mdot ---
+             (7.178) + (-0.463*x) GAIA z = 0.02
 
              teff-lm
              (4.878) + (-0.117*x)     z = 0.02
@@ -362,6 +377,10 @@ class Fits:
             return a_ + b_ * teff
             # return a + (b/d)*(teff-c)
 
+        eq_x(-4.726 , 1.706 , 13.255, -1.611, None)
+
+        eq_x(-4.726, 1.706, 7.178, -0.463, None)
+        eq_x(-1.617, 1.119, 18.847, -2.658, None) # GAL Hamman, z=0.02
         eq_x(-3.453, 1.482, 7.046, -0.446, None)
         # eq_x(-2.695, 1.313, 18.389, -2.559, None)
         # eq_x(-5.966, 1.938, 11.471, -1.271,  None)
@@ -375,116 +394,116 @@ class Fits:
         eq_x(-2.688, 1.325, 16.740, -2.271, None) # gal D=10
 
 
-    @staticmethod
-    def get_teff_lm(x_arr, metal, clump, gaia):
-
-
-
-        if metal == 'gal_th' and clump == 4 and gaia == False:
-            return (6.322) + (-0.422*x_arr)
-
-        if metal == '2gal_th' and clump == 4 and gaia == False:
-            return (6.254) + (-0.409*x_arr)
-
-        if metal == 'lmc_th' and clump == 4 and gaia == False:
-            return (6.654) + (-0.490*x_arr)
-
-        # clumping D=10
-        if metal == 'gal' and clump == 10 and gaia == False:
-            return (4.878) + (-0.117*x_arr)
-
-        if metal == 'gal_th' and clump == 10 and gaia == False:
-            return (7.079) + (-0.583*x_arr)
-
-        if metal == '2gal_th' and clump == 10 and gaia == False:
-            return (6.463) + (-0.453*x_arr)
-
-        if metal == 'lmc_th' and clump == 10 and gaia == False:
-            return (10.543) + (-1.332*x_arr)
-
-        # GAIA --------------------------------------------
-
-        # if metal == 'gal' and clump == 4 and gaia == True:
-        #     return (11.525) + (-1.525*x_arr)
-
-        if metal == 'gal_th' and clump == 4 and gaia == True:
-            return (11.525) + (-1.525*x_arr)
-
-        if metal == '2gal_th' and clump == 4 and gaia == True:
-            return (6.740) + (-0.513*x_arr)
-
-        if metal == 'lmc_th' and clump == 4 and gaia == True:
-            return (19.960) + (-3.323*x_arr)
-
-        else:
-            raise NameError('Fit is abailable only for *gal* (no dependance on the analysis)')
-
-    @staticmethod
-    def get_ts_teff(x, metal, clump, gaia):
-
-        if metal == 'gal' and clump == 4 and gaia == False:
-            return (18.847) + (-2.658*x)
-
-        if metal == '2gal' and clump == 4 and gaia == False:
-            return (19.838) + (-2.829*x)
-
-        if metal == 'lmc' and clump == 4 and gaia == False:
-            return (14.713) + (-1.902*x)
-
-        # ------------ CLUMPING 10 ----------------
-
-        if metal == 'gal' and clump == 10 and gaia == False:
-            return (16.740) + (-2.271*x)
-
-        if metal == '2gal' and clump == 10 and gaia == False:
-            return (18.503) + (-2.589*x)
-
-        if metal == 'lmc' and clump == 10 and gaia == False:
-            return (8.467) + (-0.729*x)
-
-        # ----------- GAIA ------------------------
-
-        if metal == 'gal' and clump == 4 and gaia == True:
-            return (11.471) + (-1.271*x)
-
-        if metal == '2gal' and clump == 4 and gaia == True:
-            return (18.389) + (-2.559*x)
-
-        if metal == 'lmc' and clump == 4 and gaia == True:
-            return (7.046) + (-0.446*x)
-
-    @staticmethod
-    def get_ts_lm(x, metal, clump, gaia):
-
-        if metal == 'gal' and clump == 4 and gaia == False:
-            return (-1.617) + (1.119*x)
-
-        if metal == '2gal' and clump == 4 and gaia == False:
-            return (-1.859) + (1.157*x)
-
-        if metal == 'lmc' and clump == 4 and gaia == False:
-            return (-0.556) + (0.932*x)
-
-        # Changing clumping --------------------------------------
-        if metal == 'gal' and clump == 10 and gaia == False:
-            return (-2.688) + (1.325*x)
-
-        if metal == '2gal' and clump == 10 and gaia == False:
-            return (-1.927) + (1.174*x)
-
-        if metal == 'lmc' and clump == 10 and gaia == False:
-            return (-0.735) + (0.971*x)
-
-        # GAIA ---------------------------------------------------
-
-        if metal == 'gal' and clump == 4 and gaia == True:
-            return (-5.966) + (1.938*x)
-
-        if metal == '2gal' and clump == 4 and gaia == True:
-            return (-2.695) + (1.313*x)
-
-        if metal == 'lmc' and clump == 4 and gaia == True:
-            return (-3.453) + (1.482*x)
+    # @staticmethod
+    # def get_teff_lm(x_arr, metal, clump, gaia):
+    #
+    #
+    #
+    #     if metal == 'gal_th' and clump == 4 and gaia == False:
+    #         return (6.322) + (-0.422*x_arr)
+    #
+    #     if metal == '2gal_th' and clump == 4 and gaia == False:
+    #         return (6.254) + (-0.409*x_arr)
+    #
+    #     if metal == 'lmc_th' and clump == 4 and gaia == False:
+    #         return (6.654) + (-0.490*x_arr)
+    #
+    #     # clumping D=10
+    #     if metal == 'gal' and clump == 10 and gaia == False:
+    #         return (4.878) + (-0.117*x_arr)
+    #
+    #     if metal == 'gal_th' and clump == 10 and gaia == False:
+    #         return (7.079) + (-0.583*x_arr)
+    #
+    #     if metal == '2gal_th' and clump == 10 and gaia == False:
+    #         return (6.463) + (-0.453*x_arr)
+    #
+    #     if metal == 'lmc_th' and clump == 10 and gaia == False:
+    #         return (10.543) + (-1.332*x_arr)
+    #
+    #     # GAIA --------------------------------------------
+    #
+    #     # if metal == 'gal' and clump == 4 and gaia == True:
+    #     #     return (11.525) + (-1.525*x_arr)
+    #
+    #     if metal == 'gal_th' and clump == 4 and gaia == True:
+    #         return (11.525) + (-1.525*x_arr)
+    #
+    #     if metal == '2gal_th' and clump == 4 and gaia == True:
+    #         return (6.740) + (-0.513*x_arr)
+    #
+    #     if metal == 'lmc_th' and clump == 4 and gaia == True:
+    #         return (19.960) + (-3.323*x_arr)
+    #
+    #     else:
+    #         raise NameError('Fit is abailable only for *gal* (no dependance on the analysis)')
+    #
+    # @staticmethod
+    # def get_ts_teff(x, metal, clump, gaia):
+    #
+    #     if metal == 'gal' and clump == 4 and gaia == False:
+    #         return (18.847) + (-2.658*x)
+    #
+    #     if metal == '2gal' and clump == 4 and gaia == False:
+    #         return (19.838) + (-2.829*x)
+    #
+    #     if metal == 'lmc' and clump == 4 and gaia == False:
+    #         return (14.713) + (-1.902*x)
+    #
+    #     # ------------ CLUMPING 10 ----------------
+    #
+    #     if metal == 'gal' and clump == 10 and gaia == False:
+    #         return (16.740) + (-2.271*x)
+    #
+    #     if metal == '2gal' and clump == 10 and gaia == False:
+    #         return (18.503) + (-2.589*x)
+    #
+    #     if metal == 'lmc' and clump == 10 and gaia == False:
+    #         return (8.467) + (-0.729*x)
+    #
+    #     # ----------- GAIA mdot ------------------------
+    #
+    #     if metal == 'gal' and clump == 4 and gaia == True:
+    #         return (7.178) + (-0.463*x)
+    #
+    #     if metal == '2gal' and clump == 4 and gaia == True:
+    #         return (16.409) + (-2.194*x)
+    #
+    #     if metal == 'lmc' and clump == 4 and gaia == True:
+    #         return (1.892) + (0.531*x)
+    #
+    # @staticmethod
+    # def get_ts_lm(x, metal, clump, gaia):
+    #
+    #     if metal == 'gal' and clump == 4 and gaia == False:
+    #         return (-1.617) + (1.119*x)
+    #
+    #     if metal == '2gal' and clump == 4 and gaia == False:
+    #         return (-1.859) + (1.157*x)
+    #
+    #     if metal == 'lmc' and clump == 4 and gaia == False:
+    #         return (-0.556) + (0.932*x)
+    #
+    #     # Changing clumping --------------------------------------
+    #     if metal == 'gal' and clump == 10 and gaia == False:
+    #         return (-2.688) + (1.325*x)
+    #
+    #     if metal == '2gal' and clump == 10 and gaia == False:
+    #         return (-1.927) + (1.174*x)
+    #
+    #     if metal == 'lmc' and clump == 10 and gaia == False:
+    #         return (-0.735) + (0.971*x)
+    #
+    #     # GAIA ---------------------------------------------------
+    #
+    #     if metal == 'gal' and clump == 4 and gaia == True:
+    #         return (-4.726) + (1.706*x)
+    #
+    #     if metal == '2gal' and clump == 4 and gaia == True:
+    #         return (-4.426) + (1.637*x)
+    #
+    #     if metal == 'lmc' and clump == 4 and gaia == True:
+    #         return (-4.110) + (1.604*x)
 
     @staticmethod
     def get_gal_fit(v_n_x, v_n_y, x_arr, metal, clump, gaia):
@@ -557,13 +576,13 @@ class Fits:
             # ----------- GAIA ------------------------
 
             if metal == 'gal' and clump == 4 and gaia == True:
-                return (11.471) + (-1.271 * x)
+                return (13.255) + (-1.611*x)
 
             if metal == '2gal' and clump == 4 and gaia == True:
-                return (18.389) + (-2.559 * x)
+                return (16.409) + (-2.194*x)
 
             if metal == 'lmc' and clump == 4 and gaia == True:
-                return (7.046) + (-0.446 * x)
+                return (1.892) + (0.531*x)
 
         def get_ts_lm(x, metal, clump, gaia):
 
@@ -589,13 +608,21 @@ class Fits:
             # GAIA ---------------------------------------------------
 
             if metal == 'gal' and clump == 4 and gaia == True:
-                return (-5.966) + (1.938 * x)
+                return (-4.726) + (1.706*x)
 
             if metal == '2gal' and clump == 4 and gaia == True:
-                return (-2.695) + (1.313 * x)
+                return (-4.256) + (1.606*x)
 
             if metal == 'lmc' and clump == 4 and gaia == True:
-                return (-3.453) + (1.482 * x)
+                return (-4.104) + (1.603*x)
+
+        def get_teff_lm_theor_fit(x, metal, clump, gaia):
+
+            if metal == 'gal' and clump == 4 and gaia == False:
+                return (6.317) + (-0.421 * x)
+
+            if metal == 'gal' and clump == 4 and gaia == True:
+                return (9.311) + (-1.059*x)
 
         # ------------------------------------------------
 
@@ -605,8 +632,12 @@ class Fits:
         if v_n_x == 'ts' and v_n_y == 't_eff':
             return get_ts_teff(x_arr, metal, clump, gaia)
 
+        # if v_n_x == 't_eff' and v_n_y == 'lm':
+        #     return get_teff_lm(x_arr, metal, clump, gaia)
+
         if v_n_x == 't_eff' and v_n_y == 'lm':
-            return get_teff_lm(x_arr, metal, clump, gaia)
+            # theoretical fits based on the ts-lm and ts-teff relations
+            return get_teff_lm_theor_fit(x_arr, metal, clump, gaia)
 
     @staticmethod
     def get_lmc_fit(v_n_x, v_n_y, x_arr, metal, bump):
@@ -6546,6 +6577,10 @@ class Read_Observables:
             l = self.get_gaia_lum(star_n)[0]
             return l
 
+        if v_n == 'mdot' and self.metal.split('/')[-1] == 'gal' and self.set_use_gaia:
+            mdot = self.get_gaia_mdot(star_n)[0]
+            return mdot
+
         ind_star = np.where(self.numers[:, 0] == star_n)[0][0]
         ind_v_n = self.num_v_n.index(v_n)
         value = self.numers[ind_star, ind_v_n]
@@ -6610,11 +6645,28 @@ class Read_Observables:
     # ------------------------GAIA & ATMOSPHERE ------------------------------------------------------------------------
 
     def get_gaia_lum(self, star_n):
+        '''
+        returns [l, ll, ul]
+        :param star_n:
+        :return:
+        '''
         if star_n not in self.gaia_table[:, 0]:
             raise ValueError('Star: {} is not in the GAIA list: {}'.format(star_n, self.gaia_table[:, 0]))
         ind = Math.find_nearest_index(self.gaia_table[:, 0], star_n)
         # print(ind)
         return np.array([self.gaia_table[ind, 2], self.gaia_table[ind, 3], self.gaia_table[ind, 4]])
+
+    def get_gaia_mdot(self, star_n):
+        '''
+        Returns [mdot, lmdot, umdot], assuming that in the input file [star_n, l, ll, ul, mdot, lmdot, umdot]
+        :param star_n:
+        :return:
+        '''
+        if star_n not in self.gaia_table[:, 0]:
+            raise ValueError('Star: {} is not in the GAIA list: {}'.format(star_n, self.gaia_table[:, 0]))
+        ind = Math.find_nearest_index(self.gaia_table[:, 0], star_n)
+        # print(ind)
+        return np.array([self.gaia_table[ind, 5], self.gaia_table[ind, 6], self.gaia_table[ind, 7]])
 
     def get_t_eff_from_atmosphere(self, star_n):
 
@@ -6623,10 +6675,41 @@ class Read_Observables:
 
         return Math.interpolate_value_table(self.atm_table_teff, [tstar, rt])
 
+
+
+
+
+
+
+
+
+
+
+    def rescale_rt_for_gaia(self, star_n, rt_old):
+
+        self.set_use_gaia = False
+        mdot_old = self.get_num_par('mdot', star_n)
+
+        self.set_use_gaia = True
+        mdot_new = self.get_gaia_mdot(star_n)[0]
+
+        rt_new = (2/3) * (mdot_old - mdot_new) + rt_old
+
+        print('_____rt_old:{}, rt_new:{}, as mdot_old:{} and mdot_new:{}'.
+              format(rt_old,rt_new,mdot_old,mdot_new))
+
+        return rt_new
+
+
     def get_y_from_atmosphere(self, v_n, star_n):
 
         tstar = self.get_num_par('t_*', star_n)
         rt = self.get_num_par('lRt', star_n)
+
+        if self.set_use_gaia:
+            rt = self.rescale_rt_for_gaia(star_n, rt)
+
+
         if v_n == 'r_eff':
             return Math.interpolate_value_table(self.atm_table_reff, [tstar, rt])
         if v_n == 't_eff':
@@ -6640,6 +6723,9 @@ class Read_Observables:
 
         tstar     = self.get_num_par('t_*', star_n)
         rt        = self.get_num_par('lRt', star_n)
+
+        if self.set_use_gaia:
+            rt = self.rescale_rt_for_gaia(star_n, rt)
 
         if v_n == 't_eff':
             t1 = Math.interpolate_value_table(self.atm_table_teff, [tstar + tstar_err, rt + rt_err])
@@ -6815,6 +6901,16 @@ class Read_Observables:
         mdot_err = Files.get_obs_err_mdot(self.metal)
 
         mdot = self.get_num_par('mdot', star_n)
+
+        if self.metal == 'gal':
+
+            if self.set_use_gaia:
+                mdot_err1 = self.get_gaia_mdot(star_n)[0] - self.get_gaia_mdot(star_n)[1]
+                mdot_err2 = self.get_gaia_mdot(star_n)[2] - self.get_gaia_mdot(star_n)[0]
+
+                print('star: {}, l:{} , l_lower: {}, l_upper: {}'.format(star_n, mdot, mdot_err1, mdot_err2))
+
+                return self.get_gaia_mdot(star_n)[1], self.get_gaia_mdot(star_n)[2]
 
         return mdot - mdot_err, mdot + mdot_err
 
@@ -7313,6 +7409,7 @@ class PlotObs(Read_Observables):
 
         if len(self.stars_n) != len(x_coord): raise ValueError('not all stars plotted WHY?')
         if return_ax: return ax
+
         return self.stars_n, x_coord, llm_obs
 
     def plot_3d_obs_all_x_llm(self, ax, v_n_x, l_or_lm, yc_val, y_slices, separator=100):

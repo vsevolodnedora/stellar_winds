@@ -122,10 +122,9 @@ def get_files(compath, req_dirs, requir_files, extension):
 
 
 
-
 output_dir  = '../data/output/'
 plot_dir    = '../data/plots/'
-sse_locaton = '/media/vnedora/HDD/sse/'
+sse_locaton = '/media/vsevolod/HDD/sse/'
 
 # gal_plotfls = get_files(sse_locaton + 'ga_z002/', ['10sm/', '11sm/', '12sm/', '13sm/', '14sm/', '15sm/', '16sm/',
 #                                                    '17sm/', '18sm/', '19sm/', '20sm/', '21sm/', '22sm/', '23sm/',
@@ -592,15 +591,15 @@ def tst():
 # tst()
 '''-------------------------------------------------------CRITICAL MDOT---------------------------------------------'''
 from MainClasses import HRD
-# hrd = HRD('lmc', 'Fe')
-# hrd.set_obs_file = 'gal_wne'
+hrd = HRD('gal', 'Fe')
+hrd.set_obs_file = 'gal_wne'
 # hrd.plot_hrd('t_eff', 'lm', True)
 # hrd.plot_hrd_treks('t_eff','lm')
 
 
 
 from MainClasses import Plot_Critical_Mdot
-cr = Plot_Critical_Mdot('lmc', 'Fe', 1.0)
+cr = Plot_Critical_Mdot('gal', 'Fe', 1.0)
 # cr.plot_natives('mdot', 'lm')
 # cr.plot_cr_mdot('lm',1.0,None,None,True)
 # cr.plot_cr_mdot_obs('lm',1.0,None,None,True)
@@ -610,11 +609,11 @@ cr = Plot_Critical_Mdot('lmc', 'Fe', 1.0)
 # cr.plot_cr_3d_betas('mdot','lm','vinf', [0.9,1.0,1.1])
 
 cr.set_fill_gray = False
-cr.plot_mult_2d_betas('mdot','lm','vinf', [0.50, 1.00, 1.15])
+# cr.plot_mult_2d_betas('mdot','lm','vinf', [0.50, 1.00, 1.15]) # | For Wind Model Fitting (Beta-law)
 
 # --- --- ---
 from MainClasses import Plot_Sonic_HRD
-shrd = Plot_Sonic_HRD('lmc', 'HeII', 0.9)
+shrd = Plot_Sonic_HRD('gal', 'Fe', 1.0)
 
 
 # shrd.plot_sonic_hrd(1.0, 'lm')

@@ -790,8 +790,8 @@ class Math:
         y = table[1:, 0]
         z = table[1:,1:]
 
-        x_val = xy_val[0]
-        y_val = xy_val[1]
+        x_val = xy_val[0] # tstar
+        y_val = xy_val[1] # rt
 
 
         # x_i = Math.find_nearest_index(x, x_val)
